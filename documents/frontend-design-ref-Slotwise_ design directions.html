@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Slotwise: design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Manrope:wght@400;600;800&family=Sora:wght@400;600;700&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+:root{--pg:#f1f4f5;--pg-ink:#1b2127;--pg-mut:#5d6a74;--pg-line:#d6dde2;--pg-card:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--pg:#14181c;--pg-ink:#e8edf0;--pg-mut:#9aa7b1;--pg-line:#2a323a;--pg-card:#1c2228}}
+:root[data-theme="dark"]{--pg:#14181c;--pg-ink:#e8edf0;--pg-mut:#9aa7b1;--pg-line:#2a323a;--pg-card:#1c2228}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--pg-ink);font:16px/1.5 Figtree,system-ui,sans-serif}
+.top,.stage{max-width:1040px;margin:0 auto;padding:0 20px}
+.top{padding-top:28px}
+h1{font:700 28px/1.2 Sora,system-ui,sans-serif;margin:0 0 6px}
+.top p{margin:0;color:var(--pg-mut);max-width:62ch}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 16px}
+.tabs button{font:600 14px Figtree,system-ui,sans-serif;border:1px solid var(--pg-line);background:var(--pg-card);color:var(--pg-ink);padding:10px 16px;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--pg-ink);color:var(--pg);border-color:var(--pg-ink)}
+.tabs button:focus-visible{outline:3px solid #2b6cff;outline-offset:2px}
+.stage{margin-bottom:48px}
+.theme{display:none;border-radius:24px;padding:24px;background:var(--bg);color:var(--ink);font-family:var(--fb)}
+.theme.show{display:block}
+.cap{margin:0 0 16px;color:var(--mut);font-size:14px}
+[data-t=mist]{--bg:#e3eee9;--panel:#fff;--ink:#12372f;--mut:#557469;--line:#c9dbd3;--acc:#1f8a6b;--on:#fff;--r:18px;--bw:1px;--fh:'Young Serif',Georgia,serif;--fb:Figtree,system-ui,sans-serif;--sh:0 10px 28px rgba(18,55,47,.09)}
+[data-t=cobalt]{--bg:#fff;--panel:#f2f4ff;--ink:#0e1433;--mut:#4c5799;--line:#0e1433;--acc:#2b4bff;--on:#fff;--r:10px;--bw:2px;--fh:Sora,system-ui,sans-serif;--fb:Sora,system-ui,sans-serif;--sh:6px 6px 0 #0e1433}
+[data-t=amber]{--bg:#0f1b2d;--panel:#172740;--ink:#eaf0f8;--mut:#93a4bc;--line:#263a59;--acc:#ffb020;--on:#1a1203;--r:14px;--bw:1px;--fh:Manrope,system-ui,sans-serif;--fb:Manrope,system-ui,sans-serif;--sh:0 12px 30px rgba(0,0,0,.35)}
+.app{display:grid;gap:18px}
+.widget,.dash{background:var(--panel);border:var(--bw) solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.wh{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:var(--bw) solid var(--line)}
+.logo{display:flex;align-items:center;gap:8px;font:700 18px var(--fh)}
+.logo i{width:16px;height:16px;border-radius:50%;background:var(--acc)}
+.steps{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+.steps b{font-weight:600;padding:3px 10px;border:var(--bw) solid var(--line);border-radius:999px}
+.steps b:first-child{background:var(--acc);border-color:var(--acc);color:var(--on)}
+.wbody{display:grid;gap:22px;padding:20px}
+h3{font:700 15px var(--fh);margin:0 0 10px}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.svc{display:grid;gap:8px}
+.svc button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px 14px;background:transparent;border:var(--bw) solid var(--line);border-radius:calc(var(--r) - 6px);cursor:pointer}
+.svc button.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,var(--panel))}
+.svc small{display:block;color:var(--mut);font-size:12.5px}
+.svc em{font-style:normal;font-weight:700}
+.month{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.month span{font-size:12px;color:var(--mut);padding:2px 0}
+.month button,.strip button{background:transparent;border:0;border-radius:10px;cursor:pointer;aspect-ratio:1;font-size:14px}
+.month button.on,.strip button.on,.slots button.on{background:var(--acc);color:var(--on)}
+.month button:disabled,.slots button:disabled{opacity:.35;cursor:not-allowed}
+.month button:disabled.full,.slots button:disabled{text-decoration:line-through}
+.strip{display:none;gap:8px}
+.strip button{flex:1;min-width:0;aspect-ratio:auto;padding:10px 4px;border:var(--bw) solid var(--line);display:grid;gap:2px}
+.strip small{color:inherit;opacity:.75;font-size:12px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.slots button{padding:10px 6px;border:var(--bw) solid var(--line);border-radius:calc(var(--r) - 6px);background:transparent;cursor:pointer}
+.tz{margin:10px 0 0;font-size:12.5px;color:var(--mut)}
+.wf{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px;border-top:var(--bw) solid var(--line)}
+.sum b{display:block}
+.sum span,.toast{color:var(--mut);font-size:13.5px}
+.cta{background:var(--acc);color:var(--on);border:var(--bw) solid var(--acc);padding:12px 22px;border-radius:calc(var(--r) - 4px);font-weight:700;cursor:pointer}
+.dh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:14px 20px;border-bottom:var(--bw) solid var(--line)}
+.dh span{color:var(--mut);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:16px 20px 4px}
+.stats strong{display:block;font:700 22px var(--fh)}
+.stats span{font-size:12.5px;color:var(--mut)}
+.list{list-style:none;margin:0;padding:8px 20px 16px}
+.list li{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:var(--bw) solid var(--line)}
+.list time{font-weight:700;width:46px}
+.list li>span{flex:1}
+.list small{display:block;color:var(--mut);font-size:12.5px}
+.tag{font-style:normal;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;border:var(--bw) solid var(--acc);color:var(--acc)}
+[data-t=mist] .app{max-width:560px;margin:0 auto}
+[data-t=cobalt] .cta{box-shadow:4px 4px 0 var(--ink)}
+[data-t=cobalt] .svc button.on{background:var(--acc);color:var(--on)}
+[data-t=cobalt] .svc button.on small{color:var(--on)}
+[data-t=amber] .month{display:none}
+[data-t=amber] .strip{display:flex}
+@media (min-width:900px){
+ [data-t=cobalt] .wbody{grid-template-columns:1fr 1.1fr .9fr}
+ [data-t=amber] .app{grid-template-columns:1.5fr 1fr;align-items:start}
+}
+</style>
+</head>
+<body>
+<div class="top">
+<h1>Slotwise: design directions</h1>
+<p>Three of the eight shippable themes for the booking widget and site-owner dashboard. Slotwise keeps all of them as selectable options in Branding (plus accent, layout and brand loader) — this page is for comparing the look and feel, not picking a single locked design.</p>
+<div class="tabs" role="tablist" aria-label="Design directions"></div>
+</div>
+<div class="stage"></div>
+
+<template id="tpl">
+<div class="app">
+<section class="widget" aria-label="Booking widget">
+ <header class="wh"><span class="logo"><i></i>Slotwise</span><span class="steps"><b>1 Service</b><b>2 Time</b><b>3 Details</b></span></header>
+ <div class="wbody">
+  <div><h3>Choose a service</h3><div class="svc">
+   <button class="on" data-n="Deep home clean"><span>Deep home clean<small>2 h · crew of 2</small></span><em>$120</em></button>
+   <button data-n="Standard clean"><span>Standard clean<small>1.5 h · 1 cleaner</small></span><em>$80</em></button>
+   <button data-n="Move-out clean"><span>Move-out clean<small>3 h · crew of 3</small></span><em>$210</em></button>
+  </div></div>
+  <div><h3>Pick a day</h3><div class="month"></div><div class="strip"></div></div>
+  <div><h3>Pick a time</h3><div class="slots"></div><p class="tz">Times shown in your time zone</p></div>
+ </div>
+ <footer class="wf"><div class="sum"><b></b><span></span></div><div><span class="toast" role="status"></span> <button class="cta">Confirm booking</button></div></footer>
+</section>
+<aside class="dash" aria-label="Owner dashboard">
+ <div class="dh"><b>Today</b><span>Mon 16 Nov, sample data</span></div>
+ <div class="stats"><div><strong>48</strong><span>bookings this week</span></div><div><strong>2.1%</strong><span>no-show rate</span></div><div><strong>$4,860</strong><span>revenue</span></div></div>
+ <ul class="list">
+  <li><time>09:00</time><span>Amira K.<small>Deep home clean</small></span><em class="tag">Paid</em></li>
+  <li><time>11:30</time><span>Daniel R.<small>Standard clean</small></span><em class="tag">Deposit</em></li>
+  <li><time>14:00</time><span>Studio Nine<small>Move-out clean</small></span><em class="tag">Reminder sent</em></li>
+ </ul>
+</aside>
+</div>
+</template>
+
+<script>
+(function(){
+var themes=[
+ ['mist','Mist','Calm and light. Suits salons, clinics and wellness studios.'],
+ ['cobalt','Cobalt','Bold with hard edges. Suits agencies and design-led brands.'],
+ ['amber','Amber night','Dark with a week strip. Suits busy field-service teams.']
+];
+var times=['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','15:30','16:00','16:30'];
+var taken=[1,4,7,10];
+var tabs=document.querySelector('.tabs'),stage=document.querySelector('.stage'),tpl=document.getElementById('tpl');
+function dl(n){return new Date(2026,10,n).toLocaleDateString('en-US',{weekday:'short',day:'numeric',month:'short'});}
+function build(d){
+ var m=d.querySelector('.month'),s=d.querySelector('.strip'),t=d.querySelector('.slots'),h='';
+ 'SMTWTFS'.split('').forEach(function(c){h+='<span>'+c+'</span>';});
+ for(var n=1;n<=30;n++){
+  var dis=n<16,full=(n===21||n===22||n===28||n===29);
+  h+='<button data-d="'+n+'"'+((dis||full)?' disabled':'')+(full?' class="full"':'')+(n===18?' class="on"':'')+'>'+n+'</button>';
+ }
+ m.innerHTML=h;
+ var sh='';
+ for(var k=16;k<=22;k++){
+  var w=new Date(2026,10,k).toLocaleDateString('en-US',{weekday:'short'});
+  sh+='<button data-d="'+k+'"'+((k===21||k===22)?' disabled':'')+(k===18?' class="on"':'')+'><small>'+w+'</small>'+k+'</button>';
+ }
+ s.innerHTML=sh;
+ t.innerHTML=times.map(function(x,i){return '<button data-t="'+x+'"'+(taken.indexOf(i)>-1?' disabled':'')+(x==='10:00'?' class="on"':'')+'>'+x+'</button>';}).join('');
+ var st={n:'Deep home clean',d:18,t:'10:00'};
+ function sum(){d.querySelector('.sum b').textContent=st.n;d.querySelector('.sum span').textContent=dl(st.d)+', '+st.t;}
+ sum();
+ d.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b||b.disabled)return;
+  if(b.closest('.svc')){d.querySelectorAll('.svc button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');st.n=b.dataset.n;}
+  else if(b.dataset.d){d.querySelectorAll('[data-d]').forEach(function(x){x.classList.toggle('on',x.dataset.d===b.dataset.d);});st.d=+b.dataset.d;}
+  else if(b.dataset.t){d.querySelectorAll('.slots button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');st.t=b.dataset.t;}
+  else if(b.classList.contains('cta')){var o=d.querySelector('.toast');o.textContent='Booking confirmed';setTimeout(function(){o.textContent='';},2500);}
+  sum();
+ });
+}
+function show(k){
+ stage.querySelectorAll('.theme').forEach(function(x){x.classList.toggle('show',x.dataset.t===k);});
+ tabs.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-selected',x.dataset.k===k);});
+}
+themes.forEach(function(x){
+ var b=document.createElement('button');b.setAttribute('role','tab');b.dataset.k=x[0];b.textContent=x[1];b.onclick=function(){show(x[0]);};tabs.appendChild(b);
+ var d=document.createElement('div');d.className='theme';d.dataset.t=x[0];
+ var p=document.createElement('p');p.className='cap';p.textContent=x[2];d.appendChild(p);
+ d.appendChild(tpl.content.cloneNode(true));stage.appendChild(d);build(d);
+});
+show('mist');
+})();
+</script>
+</body>
+</html>

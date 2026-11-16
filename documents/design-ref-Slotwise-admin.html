@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Slotwise admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Manrope:wght@400;600;800&family=Sora:wght@400;600&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f4f8;--pn:#fff;--ink:#0f1b2d;--mut:#5b6b82;--ln:#e1e6ee;--ac:#f5a000;--on:#1a1203;--at:#9a5b00;--ok:#16895b;--sf:#fff3d6;--sh:0 1px 2px rgba(15,27,45,.06),0 10px 28px rgba(15,27,45,.06);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme=dark]{--bg:#0b1524;--pn:#132238;--ink:#eaf0f8;--mut:#93a4bc;--ln:#223553;--ac:#ffb020;--on:#1a1203;--at:#ffb020;--ok:#3ccf95;--sf:#2c2616;--sh:0 10px 28px rgba(0,0,0,.35)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,system-ui,sans-serif;transition:background .3s,color .3s}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100%}
+.sb{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;height:calc(100vh - env(safe-area-inset-top,0px));padding:20px 14px;border-right:1px solid var(--ln);background:var(--pn);display:flex;flex-direction:column;gap:4px;transition:background .3s}
+.lg{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;padding:0 10px 16px}
+.lg i{width:18px;height:18px;border-radius:50%;background:var(--ac)}
+.nv{display:flex;gap:11px;align-items:center;width:100%;padding:9px 12px;border:0;background:none;color:var(--mut);border-radius:10px;font-weight:600;cursor:pointer;text-align:left}
+.nv svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nv:hover{background:var(--bg);color:var(--ink)}
+.nv.on{background:var(--sf);color:var(--at)}
+.bs{margin-top:auto;padding:12px;border:1px solid var(--ln);border-radius:12px;font-size:13px}
+.bs small{display:block;color:var(--mut)}
+.mn{padding:24px 28px 56px;min-width:0}
+.tb{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-weight:800;font-size:26px;line-height:1.2;margin:0}
+.tb p{margin:2px 0 0;color:var(--mut)}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--ln);border-radius:999px;padding:3px;flex-wrap:wrap}
+.seg button{border:0;background:none;color:var(--mut);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px;cursor:pointer}
+.seg .on{background:var(--ac);color:var(--on)}
+.tsw{background:var(--pn)}
+.vw{animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(8px)}}
+.cd{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:18px;box-shadow:var(--sh);transition:background .3s}
+.cd h2{font-weight:800;font-size:15px;margin:0 0 12px}
+.sub{margin:-6px 0 6px;color:var(--mut);font-size:13px}
+.stk{display:grid;gap:14px;align-content:start}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:14px}
+.kp span{color:var(--mut);font-size:13px}
+.kp b{display:block;font-weight:800;font-size:29px;line-height:1.2}
+.kp .dl{font-size:12.5px;font-weight:700;color:var(--ok)}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.hd h2{margin:0}
+.ch{width:100%;height:auto;display:block}
+.ln{stroke-dasharray:1;stroke-dashoffset:1;animation:dr 1.4s .1s ease forwards}
+.ar{opacity:0;animation:fi 1s .7s forwards}
+@keyframes dr{to{stroke-dashoffset:0}}
+@keyframes fi{to{opacity:1}}
+.fr{margin:12px 0}
+.fr div:first-child{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.fb{height:10px;border-radius:99px;background:var(--bg);overflow:hidden}
+.fb i{display:block;height:100%;width:0;background:var(--ac);border-radius:99px;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.it{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--ln)}
+.it time{font-weight:800;width:46px}
+.it>span{flex:1}
+.it small,.row small{display:block;color:var(--mut);font-size:12.5px}
+.pl{width:8px;height:8px;border-radius:50%;background:var(--ok);position:relative;display:inline-block;margin-right:6px}
+.pl::after{content:'';position:absolute;inset:0;border-radius:50%;background:inherit;animation:pl 1.8s infinite}
+@keyframes pl{to{transform:scale(3.2);opacity:0}}
+.tag{display:inline-block;font-style:normal;font-weight:700;font-size:12px;padding:3px 10px;border-radius:99px;background:var(--sf);color:var(--at);white-space:nowrap}
+.tag.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.tag.mu{background:var(--bg);color:var(--mut)}
+.wr{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;min-width:640px}
+.tbl th,.tbl td{text-align:left;padding:11px 8px;border-top:1px solid var(--ln);white-space:nowrap}
+.tbl th{font-size:12.5px;color:var(--mut);font-weight:600;border-top:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 0;border-top:1px solid var(--ln)}
+.row>div:last-child{display:flex;align-items:center;gap:8px;flex:none}
+select,input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px;max-width:100%}
+input[type=number]{width:76px}
+.sw{width:42px;height:24px;border-radius:99px;border:0;background:var(--ln);position:relative;cursor:pointer;transition:background .25s;flex:none}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .25s}
+.sw.on{background:var(--ac)}
+.sw.on::after{transform:translateX(18px)}
+.btn{background:var(--pn);border:1px solid var(--ln);padding:8px 14px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer}
+.btn:hover{border-color:var(--ac)}
+.ts{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;transform:translateY(12px);transition:.3s;pointer-events:none;z-index:9}
+.ts.on{opacity:1;transform:none}
+.bw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:14px;align-items:start}
+.sws{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sws button{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;outline-offset:2px}
+.sws .on{border-color:var(--ink)}
+input[type=color]{width:34px;height:34px;padding:0;border:0;background:none;border-radius:8px;cursor:pointer}
+input[type=range]{accent-color:var(--ac);width:150px}
+.fr2{position:relative;border:1px solid var(--ln);border-radius:14px;background:var(--bg);padding:16px;min-height:430px;overflow:hidden;--pbg:#fff;--pink:#0f1b2d;--pln:#e1e6ee;--pac:#f5a000;--pon:#1a1203;--pr:14px;--pd:12px}
+.sk{height:9px;border-radius:6px;background:var(--ln);margin:9px 0;width:70%}
+.fr2[data-l=popup]::before{content:'';position:absolute;inset:0;background:rgba(10,15,25,.5);z-index:1}
+.pv{position:relative;z-index:2;background:var(--pbg);color:var(--pink);border:1px solid var(--pln);border-radius:var(--pr);padding:calc(var(--pd) * 1.4);max-width:340px;margin:14px auto 0;box-shadow:0 14px 34px rgba(0,0,0,.16);transition:all .3s}
+.pv button{cursor:pointer}
+.ph{display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:10px}
+.ph i{width:14px;height:14px;border-radius:50%;background:var(--pac)}
+.pc button{display:flex;justify-content:space-between;width:100%;text-align:left;padding:var(--pd);margin-bottom:6px;background:transparent;border:1px solid var(--pln);border-radius:calc(var(--pr) - 4px)}
+.pc .on{border-color:var(--pac);background:color-mix(in srgb,var(--pac) 16%,var(--pbg))}
+.pc small{display:block;opacity:.7;font-size:12px}
+.pw{display:flex;gap:6px;margin:10px 0}
+.pw button{flex:1;padding:8px 0;border:1px solid var(--pln);border-radius:calc(var(--pr) - 6px);background:transparent;font-size:13px}
+.pw .on,.ps .on{background:var(--pac);color:var(--pon);border-color:var(--pac)}
+.ps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.ps button{padding:8px 0;border:1px solid var(--pln);border-radius:calc(var(--pr) - 6px);background:transparent;font-size:13px}
+.pb{width:100%;padding:calc(var(--pd) + 1px);font-weight:800;border-radius:calc(var(--pr) - 4px);background:var(--pac);color:var(--pon);border:1.5px solid var(--pac)}
+.fr2[data-b=outline] .pb{background:transparent;color:var(--pink)}
+.fr2[data-b=soft] .pb{background:color-mix(in srgb,var(--pac) 22%,var(--pbg));color:var(--pink);border-color:transparent}
+.pf{display:block;text-align:center;opacity:.6;font-size:11.5px;margin-top:10px}
+.fab{display:none;position:absolute;right:16px;bottom:16px;padding:12px 20px;border-radius:999px;background:var(--pac);color:var(--pon);font-weight:800;border:0;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+.fr2[data-l=floating] .pv{display:none}
+.fr2[data-l=floating] .fab{display:block}
+.fr2.ns .pst,.fr2.np .ppr,.fr2.nd .pdu,.fr2.nb .pf{display:none}
+.ldr{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:color-mix(in srgb,var(--pbg) 88%,transparent);backdrop-filter:blur(2px)}
+.fr2[data-loading=1] .ldr{display:flex}
+.ldr-mark{width:52px;height:52px;position:relative}
+.ldr-mark svg{width:100%;height:100%;display:block}
+.ldr[data-style=pulse] .ldr-slot{transform-origin:center;animation:ldr-pulse 1.1s ease-in-out infinite}
+.ldr[data-style=spin] .ldr-ring{transform-origin:center;animation:ldr-spin 1s linear infinite}
+.ldr[data-style=draw] .ldr-s{stroke-dasharray:120;stroke-dashoffset:120;animation:ldr-draw 1.4s ease forwards infinite}
+.ldr[data-style=calendar] .ldr-dot{animation:ldr-blink 1s steps(1) infinite}
+@keyframes ldr-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.18);opacity:.55}}
+@keyframes ldr-spin{to{transform:rotate(360deg)}}
+@keyframes ldr-draw{0%{stroke-dashoffset:120}45%{stroke-dashoffset:0}55%{stroke-dashoffset:0}100%{stroke-dashoffset:-120}}
+@keyframes ldr-blink{0%,49%{opacity:1}50%,100%{opacity:.2}}
+.ldr span{font-size:12.5px;font-weight:700;color:var(--pink);opacity:.8}
+.thg{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin:2px 0 12px}
+.thb{display:grid;gap:8px;padding:8px;border:1px solid var(--ln);border-radius:12px;background:none;cursor:pointer;text-align:left;font-weight:600;font-size:13px}
+.thb i{display:block;height:44px;border-radius:8px;border:1px solid color-mix(in srgb,var(--c) 18%,transparent);background:linear-gradient(var(--a),var(--a)) 12px 28px/34px 8px no-repeat,linear-gradient(var(--c),var(--c)) 12px 12px/54% 6px no-repeat,var(--b)}
+.thb.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
+.pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.pp{display:flex;flex-direction:column;gap:10px}
+.pp.cur{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
+.pp>b{font-size:30px;font-weight:800}
+.pp>b small{font-size:13px;color:var(--mut);font-weight:600}
+.pp ul{margin:0;padding-left:18px;color:var(--mut);font-size:13.5px;flex:1}
+.stp{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--ln)}
+.stp i{width:18px;height:18px;border-radius:50%;border:2px solid var(--ln);flex:none;margin-top:2px;transition:all .3s}
+.stp.ok i{background:var(--ok);border-color:var(--ok)}
+pre{margin:0;padding:14px;border-radius:12px;background:var(--bg);border:1px solid var(--ln);overflow-x:auto;font:12.5px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre}
+@media (max-width:980px){.bw{grid-template-columns:1fr}}
+@media (max-width:860px){.app{grid-template-columns:1fr}.sb{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:12px;border-right:0;border-bottom:1px solid var(--ln)}.lg{padding:0 8px 0 4px}.nv{width:auto;white-space:nowrap}.bs{display:none}.mn{padding:18px 16px 48px}.row{flex-wrap:wrap}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.ln{stroke-dashoffset:0}.ar{opacity:1}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="sb" id="nav" aria-label="Main"><div class="lg"><i></i>Slotwise</div></nav>
+<main class="mn">
+<div class="tb"><div><h1 id="t"></h1><p id="s"></p></div>
+<div class="seg tsw" role="group" aria-label="Theme"><button data-v="light">Light</button><button data-v="dark">Amber night</button></div></div>
+<div id="view"></div>
+</main>
+</div>
+<div class="ts" id="ts" role="status"></div>
+<script>
+(function(){
+var $=function(s,e){return(e||document).querySelector(s)},$$=function(s,e){return[].slice.call((e||document).querySelectorAll(s))};
+var RM=matchMedia('(prefers-reduced-motion:reduce)').matches,root=document.documentElement;
+var IC={overview:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',bookings:'M4 5h16v16H4zM4 10h16M9 3v4M15 3v4',services:'M4 6h16M4 12h16M4 18h10',availability:'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',notifications:'M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0',payments:'M3 6h18v12H3zM3 10h18',branding:'M12 3a9 9 0 000 18c1.5 0 2-1 2-2s-1-2 0-3 3 0 5-1a9 9 0 00-7-12z',integrations:'M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0zM12 17v4',settings:'M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6',plans:'M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z'};
+var T={overview:['Overview','How your bookings are doing'],bookings:['Bookings','Every appointment in one place'],services:['Services and rules','What customers can book, and how'],availability:['Availability','Working hours and time off'],notifications:['Notifications','Reminders by email, SMS and WhatsApp'],payments:['Payments','Deposits, fees and refunds'],branding:['Branding and install','Pick a theme, style the widget, then install it on your site'],integrations:['Integrations','Connect calendars, video and tools'],plans:['Plans and billing','Your plan, usage and upgrades'],settings:['Settings','Business, team, privacy and API']};
+var H=[];for(var i=6;i<23;i++)H.push((i<10?'0':'')+i+':00');
+var CFG={
+services:[['Services','Turn services on or off. Edit details any time.',[{l:'Deep home clean',d:'2 h · $120 · crew of 2',t:'tg',v:1},{l:'Standard clean',d:'1.5 h · $80',t:'tg',v:1},{l:'Move-out clean',d:'3 h · $210 · crew of 3',t:'tg',v:1},{l:'Office clean (group)',d:'4 h · $260 · up to 4 staff',t:'tg',v:0},{l:'Add a service',d:'Duration, price, buffers and intake questions',t:'btn',v:'Add service'}]],['Booking rules','',[{l:'Minimum notice',t:'sel',o:['1 hour','4 hours','12 hours','24 hours'],v:'4 hours'},{l:'Booking window',d:'How far ahead people can book',t:'sel',o:['2 weeks','1 month','3 months','6 months'],v:'3 months'},{l:'Buffer between bookings',t:'sel',o:['None','10 min','15 min','30 min'],v:'15 min'},{l:'Approve bookings manually',t:'tg',v:0},{l:'Allow recurring bookings',d:'Weekly, fortnightly or monthly',t:'tg',v:1},{l:'Waitlist with auto-offer',d:'The next person gets 15 minutes to claim a freed slot',t:'tg',v:1},{l:'Service-area check',d:'By postcode or radius',t:'tg',v:1}]]],
+availability:[['Weekly hours','Applies to all staff unless overridden',['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(function(d,i){return{l:d,t:'hrs',v:i<6?1:0,a:'09:00',b:i==5?'13:00':'17:00'}})],['Time off','',[{l:'Block public holidays',t:'tg',v:1},{l:'Two-way calendar sync',d:'Personal events block slots',t:'tg',v:1},{l:'Add time off',d:'Holidays, training days, closures',t:'btn',v:'Add time off'}]]],
+notifications:[['Email','',[{l:'Booking confirmation',t:'tg',v:1},{l:'Reminder',d:'Sent before the appointment',t:'sel',o:['2 hours','24 hours','48 hours'],v:'24 hours'},{l:'Follow-up and review request',t:'tg',v:1}]],['SMS and WhatsApp','Customers must opt in',[{l:'SMS reminders',d:'Uses SMS credits',t:'tg',v:1},{l:'WhatsApp reminders',t:'tg',v:0},{l:'Quiet hours',d:'No messages during these hours',t:'sel',o:['Off','21:00 to 08:00','22:00 to 07:00'],v:'21:00 to 08:00'}]],['Templates','',[{l:'Tone',t:'sel',o:['Friendly','Professional','Short'],v:'Friendly'},{l:'Message templates',t:'btn',v:'Open editor'}]]],
+payments:[['Stripe','Money goes straight to your account. Slotwise takes no commission.',[{l:'Stripe account',d:'Connected as Studio Nine',t:'tag',v:'Connected'},{l:'Currency',t:'sel',o:['USD','EUR','GBP','AED'],v:'USD'},{l:'Collect payment',t:'sel',o:['Full amount','Deposit','Pay on site'],v:'Deposit'},{l:'Deposit amount',t:'num',v:30,u:'%'}]],['Policies','',[{l:'Free cancellation until',t:'sel',o:['2 hours','24 hours','48 hours'],v:'24 hours'},{l:'Late-cancel and no-show fee',d:'Charged to the saved card',t:'num',v:25,u:'%'},{l:'Save card for no-show protection',t:'tg',v:1},{l:'Coupons',t:'tg',v:1},{l:'Tax',t:'sel',o:['None','Included in price','Added at checkout'],v:'Added at checkout'}]]],
+integrations:[['Calendars and video','',[{l:'Google Calendar',d:'Two-way sync',t:'tg',v:1},{l:'Outlook',t:'tg',v:0},{l:'Zoom',d:'Adds a meeting link to each booking',t:'tg',v:0},{l:'Google Meet',t:'tg',v:1}]],['Tools','',[{l:'Zapier',t:'tg',v:1},{l:'Make',t:'tg',v:0},{l:'HubSpot',t:'tg',v:0},{l:'Mailchimp',t:'tg',v:1}]],['Webhooks','',[{l:'booking.created',d:'https://example.com/hooks/booking',t:'tg',v:1},{l:'booking.cancelled',d:'https://example.com/hooks/cancel',t:'tg',v:1},{l:'New endpoint',t:'btn',v:'Add webhook'}]]],
+settings:[['Business','',[{l:'Business name',t:'txt',v:'Studio Nine'},{l:'Time zone',t:'sel',o:['Auto-detect','UTC','Europe/London','America/New_York','Asia/Dubai','Asia/Singapore'],v:'Auto-detect'},{l:'Language',t:'sel',o:['English','Español','Français','Deutsch','Italiano'],v:'English'}]],['Team and roles','',[{l:'Amira Khan',d:'Owner',t:'tag',v:'Full access'},{l:'Daniel Reed',d:'Manager',t:'tag',v:'Bookings and reports'},{l:'Invite a teammate',t:'btn',v:'Invite'}]],['Privacy','',[{l:'Cookie-free widget',t:'tg',v:1},{l:'Data retention',t:'sel',o:['12 months','24 months','Forever'],v:'24 months'},{l:'Customer data',d:'Export or delete on request',t:'btn',v:'Export CSV'}]],['API','',[{l:'API key',d:'sw_live_••••••••8f2k',t:'btn',v:'Regenerate'}]],['Danger zone','',[{l:'Delete this site’s data',d:'This cannot be undone',t:'btn',v:'Delete…'}]]]
+};
+function ctl(r){
+ if(r.t=='tg')return'<button class="sw'+(r.v?' on':'')+'" role="switch" aria-checked="'+(r.v?'true':'false')+'" aria-label="'+r.l+'"></button>';
+ if(r.t=='sel')return sel(r.o,r.v,r.l);
+ if(r.t=='num')return'<input type="number" value="'+r.v+'" aria-label="'+r.l+'"><span>'+r.u+'</span>';
+ if(r.t=='txt')return'<input type="text" value="'+r.v+'" aria-label="'+r.l+'">';
+ if(r.t=='tag')return'<em class="tag ok">'+r.v+'</em>';
+ if(r.t=='btn')return'<button class="btn">'+r.v+'</button>';
+ return'<button class="sw'+(r.v?' on':'')+'" role="switch" aria-checked="'+(r.v?'true':'false')+'" aria-label="'+r.l+'"></button>'+sel(H,r.a,'From')+'<span>to</span>'+sel(H,r.b,'To');
+}
+function sel(o,v,l){return'<select aria-label="'+l+'">'+o.map(function(x){return'<option'+(x==v?' selected':'')+'>'+x+'</option>'}).join('')+'</select>'}
+function cfg(id){return'<div class="stk">'+CFG[id].map(function(g){return'<section class="cd"><h2>'+g[0]+'</h2>'+(g[1]?'<p class="sub">'+g[1]+'</p>':'')+g[2].map(function(r){return'<div class="row"><div><b>'+r.l+'</b>'+(r.d?'<small>'+r.d+'</small>':'')+'</div><div>'+ctl(r)+'</div></div>'}).join('')+'</section>'}).join('')+'</div>'}
+var ST={r:'30 days',f:'All'};
+var RG={'7 days':{k:[48,4860,78,2.1],n:7,f:1},'30 days':{k:[196,19840,74,2.6],n:30,f:4},'90 days':{k:[571,58200,71,3.1],n:90,f:11.5}};
+function seg(arr,cur,a){return'<div class="seg">'+arr.map(function(x){return'<button data-'+a+'="'+x+'"'+(x==cur?' class="on"':'')+'>'+x+'</button>'}).join('')+'</div>'}
+function chart(n,s){
+ var p=[],mx=0,w=600,h=180,i;for(i=0;i<n;i++){var v=20+12*Math.sin(i/(n>30?6:2)+s)+7*Math.sin(i*1.3)+i*(n>30?.05:.5);p.push(v);mx=Math.max(mx,v)}
+ var d=p.map(function(v,i){return(i?'L':'M')+(i*w/(n-1)).toFixed(1)+' '+(h-v/(mx*1.1)*h).toFixed(1)}).join('');
+ return'<svg viewBox="0 0 600 190" class="ch" role="img" aria-label="Bookings per day"><defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--ac)" stop-opacity=".35"/><stop offset="1" stop-color="var(--ac)" stop-opacity="0"/></linearGradient></defs><path class="ar" d="'+d+'L600 '+h+'L0 '+h+'Z" fill="url(#gr)"/><path class="ln" pathLength="1" d="'+d+'" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function ov(){
+ var R=RG[ST.r],k=R.k,K=[['Bookings',k[0],'','',0,'+12%'],['Revenue',k[1],'$','',0,'+9%'],['Utilization',k[2],'','%',0,'+4%'],['No-show rate',k[3],'','%',1,'-0.8%']];
+ var fn=[['Widget views',2480],['Day picked',1320],['Time picked',910],['Paid',624]],mx=2480;
+ return'<div class="g4">'+K.map(function(x,i){return'<div class="cd kp"><span>'+x[0]+'</span><b data-n="'+x[1]+'" data-p="'+x[2]+'" data-s="'+x[3]+'" data-d="'+x[4]+'">0</b><span class="dl'+(i==3?'':'')+'">'+x[5]+' vs last period</span></div>'}).join('')+'</div>'
+ +'<div class="g2"><section class="cd"><div class="hd"><h2>Bookings per day</h2>'+seg(['7 days','30 days','90 days'],ST.r,'r')+'</div>'+chart(R.n,R.n)+'</section>'
+ +'<section class="cd"><h2>Where customers drop off</h2>'+fn.map(function(f){var v=Math.round(f[1]*R.f);return'<div class="fr"><div><span>'+f[0]+'</span><b>'+v.toLocaleString('en-US')+'</b></div><div class="fb"><i data-w="'+Math.round(f[1]/mx*100)+'"></i></div></div>'}).join('')+'</section></div>'
+ +'<div class="g2"><section class="cd"><h2>Today</h2>'+[['09:00','Amira K.','Deep home clean','Paid','ok'],['11:30','Daniel R.','Standard clean','Deposit',''],['14:00','Northwind Co.','Move-out clean','Reminder sent','mu']].map(function(x){return'<div class="it"><time>'+x[0]+'</time><span>'+x[1]+'<small>'+x[2]+'</small></span><em class="tag '+x[4]+'">'+x[3]+'</em></div>'}).join('')+'</section>'
+ +'<section class="cd"><h2>Staff utilization</h2>'+[['Lena',86],['Omar',72],['Priya',64],['Jonas',41]].map(function(x){return'<div class="fr"><div><span>'+x[0]+'</span><b>'+x[1]+'%</b></div><div class="fb"><i data-w="'+x[1]+'"></i></div></div>'}).join('')+'<div class="it"><span class="pl"></span><span>Hana L. just booked a Deep home clean for Thursday</span></div></section></div>';
+}
+var BK=[['#1042','Amira K.','Deep home clean','Mon 16 Nov, 09:00','Lena','$120','Paid'],['#1043','Daniel R.','Standard clean','Mon 16 Nov, 11:30','Omar','$80','Deposit'],['#1044','Northwind Co.','Move-out clean','Mon 16 Nov, 14:00','Lena, Omar','$210','Pending'],['#1045','Sofia M.','Deep home clean','Tue 17 Nov, 10:00','Omar','$120','Paid'],['#1046','Chris T.','Standard clean','Wed 18 Nov, 13:00','Lena','$80','Cancelled'],['#1047','Hana L.','Deep home clean','Thu 19 Nov, 09:30','Priya','$120','Paid']];
+function bk(){
+ var c={Paid:'ok',Deposit:'',Pending:'',Cancelled:'mu'};
+ return'<section class="cd"><div class="hd"><h2>All bookings</h2>'+seg(['All','Paid','Deposit','Pending','Cancelled'],ST.f,'f')+'</div><div class="wr"><table class="tbl"><thead><tr><th>ID</th><th>Customer</th><th>Service</th><th>When</th><th>Staff</th><th>Amount</th><th>Status</th></tr></thead><tbody>'+BK.filter(function(b){return ST.f=='All'||b[6]==ST.f}).map(function(b){return'<tr><td>'+b[0]+'</td><td><b>'+b[1]+'</b></td><td>'+b[2]+'</td><td>'+b[3]+'</td><td>'+b[4]+'</td><td>'+b[5]+'</td><td><em class="tag '+c[b[6]]+'">'+b[6]+'</em></td></tr>'}).join('')+'</tbody></table></div></section>';
+}
+var B={theme:'light',ac:'#f5a000',r:14,font:'Manrope',btn:'solid',den:'comfortable',layout:'inline',name:'Studio Nine',staff:1,price:1,dur:1,badge:1,loader:1,ldr:'pulse',th:0};
+var LDR=[['pulse','Slot pulse'],['spin','Clock spin'],['draw','S draw'],['calendar','Calendar blink']];
+var SWC=['#f5a000','#2b4bff','#12a373','#e0457b','#7c4dff','#0f1b2d'];
+function sg(k,arr){return'<div class="seg" data-k="'+k+'">'+arr.map(function(a){return'<button data-v="'+a[0]+'"'+(B[k]==a[0]?' class="on"':'')+'>'+a[1]+'</button>'}).join('')+'</div>'}
+function tg(k,l,d){return'<div class="row"><div><b>'+l+'</b>'+(d?'<small>'+d+'</small>':'')+'</div><div><button class="sw'+(B[k]?' on':'')+'" data-k="'+k+'" role="switch" aria-checked="'+(B[k]?'true':'false')+'" aria-label="'+l+'"></button></div></div>'}
+function rw(l,c,d){return'<div class="row"><div><b>'+l+'</b>'+(d?'<small>'+d+'</small>':'')+'</div><div>'+c+'</div></div>'}
+function br(){
+ return'<div class="bw"><div class="stk">'
+ +'<section class="cd"><h2>Theme and color</h2><p class="sub">Pick one of 8 themes, then fine-tune the accent color.</p><div class="thg">'+TH.map(function(t,i){return'<button class="thb'+(i==B.th?' on':'')+'" data-th="'+i+'" style="--a:'+t.ac+';--b:'+t.bg+';--c:'+t.ink+'"><i></i>'+t.n+'</button>'}).join('')+'</div>'
+ +rw('Accent color','<div class="sws" data-k="ac">'+SWC.map(function(c){return'<button data-v="'+c+'" style="background:'+c+'" aria-label="Accent '+c+'"'+(c==B.ac?' class="on"':'')+'></button>'}).join('')+'<input type="color" id="ci" data-k="ac" value="'+B.ac+'" aria-label="Custom color"></div>')+'</section>'
+ +'<section class="cd"><h2>Shape and type</h2>'+rw('Corner radius','<input type="range" min="0" max="28" value="'+B.r+'" data-k="r" aria-label="Corner radius">')
+ +rw('Font','<select data-k="font" aria-label="Font">'+['Match my site','Manrope','Figtree','Sora','Young Serif'].map(function(f){return'<option'+(f==B.font?' selected':'')+'>'+f+'</option>'}).join('')+'</select>')
+ +rw('Button style',sg('btn',[['solid','Solid'],['outline','Outline'],['soft','Soft']]))+rw('Density',sg('den',[['comfortable','Comfortable'],['compact','Compact']]))+'</section>'
+ +'<section class="cd"><h2>Layout and content</h2>'+rw('How it opens',sg('layout',[['inline','Inline'],['popup','Popup'],['floating','Floating button']]))
+ +rw('Business name','<input type="text" data-k="name" value="'+B.name+'" aria-label="Business name">','Shown at the top of the widget')
+ +tg('staff','Staff picker')+tg('price','Show prices')+tg('dur','Show durations')+tg('badge','Show “Powered by Slotwise”','Hide it on the Pro plan')+'</section>'
+ +'<section class="cd"><h2>Brand loader</h2><p class="sub">Shown while slots load. Uses Slotwise mark colors, tinted by your accent.</p>'
+ +tg('loader','Show brand loader','While availability and payment steps load')
+ +rw('Animation',sg('ldr',LDR),'Pick one motion; custom Lottie can be uploaded later')
+ +'<div class="row"><div><b>Preview loader</b><small>Plays over the live preview for 2 seconds</small></div><div><button class="btn" data-i="loader">Play preview</button></div></div></section></div>'
+ +'<div class="stk"><section class="cd"><h2>Live preview</h2><div class="fr2" id="fr"><div class="sk"></div><div class="sk" style="width:50%"></div><div class="sk"></div>'
+ +'<div class="ldr" id="ldr" data-style="'+B.ldr+'" aria-hidden="true"><div class="ldr-mark">'+ldrSvg()+'</div><span>Finding open slots…</span></div>'
+ +'<div class="pv"><div class="ph"><i></i><span id="pn"></span></div><div class="pc"><button class="on"><span>Deep home clean<small class="pdu">2 h</small><small class="pst">with Lena</small></span><b class="ppr">$120</b></button><button><span>Standard clean<small class="pdu">1.5 h</small><small class="pst">with Omar</small></span><b class="ppr">$80</b></button></div>'
+ +'<div class="pw"><button>Mon</button><button>Tue</button><button class="on">Wed</button><button>Thu</button></div><div class="ps"><button>09:00</button><button class="on">10:00</button><button>11:30</button></div><button class="pb">Confirm booking</button><span class="pf">Powered by Slotwise</span></div>'
+ +'<button class="fab">Book now</button></div></section>'
+ +'<section class="cd" id="inst">'+inst()+'</section></div></div>';
+}
+function ldrSvg(){
+ return'<svg viewBox="0 0 64 64" fill="none" aria-hidden="true">'
+ +'<rect class="ldr-slot" x="18" y="16" width="28" height="24" rx="4" stroke="var(--pac)" stroke-width="2.5" fill="color-mix(in srgb,var(--pac) 12%,transparent)"/>'
+ +'<circle class="ldr-dot" cx="38" cy="24" r="3" fill="var(--pac)"/>'
+ +'<circle class="ldr-ring" cx="42" cy="46" r="10" stroke="var(--pac)" stroke-width="2.5" fill="color-mix(in srgb,var(--pac) 10%,transparent)"/>'
+ +'<path d="M42 41v5l3.5 2" stroke="var(--pac)" stroke-width="2" stroke-linecap="round"/>'
+ +'<path class="ldr-s" d="M12 22c6-10 18-8 20 0s-8 10-4 16 16 4 18-6" stroke="var(--pac)" stroke-width="3" stroke-linecap="round" fill="none"/>'
+ +'</svg>';
+}
+var TH=[{n:'Amber light',bg:'#ffffff',ink:'#0f1b2d',ln:'#e1e6ee',ac:'#f5a000',r:14,f:'Manrope',b:'solid'},{n:'Amber night',bg:'#132238',ink:'#eaf0f8',ln:'#223553',ac:'#ffb020',r:14,f:'Manrope',b:'solid'},{n:'Mist',bg:'#f4faf7',ink:'#12372f',ln:'#c9dbd3',ac:'#1f8a6b',r:18,f:'Young Serif',b:'soft'},{n:'Cobalt',bg:'#ffffff',ink:'#0e1433',ln:'#0e1433',ac:'#2b4bff',r:10,f:'Sora',b:'solid'},{n:'Rosewater',bg:'#fff7f9',ink:'#3a1424',ln:'#f0d3dc',ac:'#e0457b',r:22,f:'Figtree',b:'solid'},{n:'Forest night',bg:'#0f1f1a',ink:'#e4f3ec',ln:'#1f3a31',ac:'#3ccf95',r:12,f:'Figtree',b:'outline'},{n:'Slate mono',bg:'#f6f7f8',ink:'#16181d',ln:'#d9dce1',ac:'#16181d',r:4,f:'Sora',b:'solid'},{n:'Violet dusk',bg:'#1a1530',ink:'#eee9ff',ln:'#2e2650',ac:'#9b7bff',r:16,f:'Manrope',b:'soft'}];
+var IN={s:0,c:0};
+function pick(i){var P=TH[i];B.th=i;B.ac=P.ac;B.r=P.r;B.font=P.f;B.btn=P.b;go('branding')}
+function inst(){
+ var d=[['Script registered','slotwise-widget 1.4.2, hosted, integrity checked',IN.s>0],['Applied to your site','Added to the site footer through Webflow’s Custom Code API',IN.s>0],['Site published','Webflow applies code changes when the site is published',IN.s>1],['Container placed',IN.c?IN.c+' containers on your pages':'Place one with the Designer panel, or use a floating button that needs none',IN.c>0]];
+ return'<h2>Install on your site</h2><p class="sub">Slotwise installs itself through Webflow. There is nothing to copy or paste.</p>'+d.map(function(x){return'<div class="stp'+(x[2]?' ok':'')+'"><i></i><div><b>'+x[0]+'</b><small style="display:block;color:var(--mut);font-size:12.5px">'+x[1]+'</small></div></div>'}).join('')+'<div class="hd" style="margin:14px 0 0">'+(IN.s==0?'<button class="btn" data-i="add">Add to site</button>':IN.s==1?'<button class="btn" data-i="pub">Publish site</button>':'<span class="tag ok">Live</span>')+'<button class="btn" data-i="place">Place container in Designer</button>'+(IN.s?'<button class="btn" data-i="rm">Remove from site</button>':'')+'</div><p class="sub" style="margin:12px 0 0">Remove from site deletes the script at site and page level, and the containers. Uninstalling the app also removes the script the next time the site is published.</p>';
+}
+function inAct(a){
+ if(a=='loader'){playLoader();return}
+ if(a=='add'){IN.s=1;tst('Script registered and applied. Publish to go live')}
+ else if(a=='pub'){IN.s=2;tst('Site published. Slotwise is live')}
+ else if(a=='place'){IN.c=Math.min(IN.c+1,3);tst('Container added in the Designer (demo)')}
+ else{IN.s=0;IN.c=0;tst('Removed the script and all containers')}
+ $('#inst').innerHTML=inst();
+}
+var ldrT;function playLoader(){
+ var fr=$('#fr'),el=$('#ldr');if(!fr||!B.loader){tst('Turn on brand loader first');return}
+ el.dataset.style=B.ldr;fr.dataset.loading='1';clearTimeout(ldrT);ldrT=setTimeout(function(){fr.dataset.loading='0'},2000);tst('Loader preview · '+B.ldr);
+}
+function pl(){
+ var y=ST.bl=='Yearly',P=[['Free',0,['1 staff, 1 location','25 bookings a month','Email reminders','Stripe payments','2 themes']],['Pro',15,['500 bookings a month','3 staff','Calendar sync','Deposits and SMS credits','4 themes']],['Business',39,['15 staff, multi-location','Unlimited bookings','Packages and waitlist','Analytics, webhooks, API','All 8 themes']],['Agency',99,['Unlimited client sites','White-label and client reports','Priority support','Custom themes']]];
+ return'<div class="hd" style="margin-bottom:14px"><span>Plans are per site. Slotwise takes no commission on bookings.</span>'+seg(['Monthly','Yearly'],ST.bl||'Monthly','bl')+'</div><div class="pg">'+P.map(function(p){var c=p[0]=='Pro';return'<section class="cd pp'+(c?' cur':'')+'"><h2>'+p[0]+(c?' <em class="tag ok">Current</em>':'')+'</h2><b>$'+Math.round(y?p[1]*.8:p[1])+'<small> a month'+(y?', billed yearly':'')+'</small></b><ul>'+p[2].map(function(f){return'<li>'+f+'</li>'}).join('')+'</ul><button class="btn" data-up="'+p[0]+'">'+(c?'Manage plan':p[1]>15?'Upgrade':'Switch')+'</button></section>'}).join('')+'</div><section class="cd" style="margin-top:14px"><h2>Usage this month</h2>'+[['Bookings','412 of 500',82],['SMS credits','180 of 500',36],['Staff seats','3 of 3',100],['Sites','2 of 3',67]].map(function(u){return'<div class="fr"><div><span>'+u[0]+'</span><b>'+u[1]+'</b></div><div class="fb"><i data-w="'+u[2]+'"></i></div></div>'}).join('')+'</section>';
+}
+function lum(h){var n=parseInt(h.slice(1),16);return((n>>16)*.299+(n>>8&255)*.587+(n&255)*.114)/255}
+function code(){
+ var ff=B.font=='Match my site'?'inherit':B.font;
+ if(B.tab=='css')return':root{\n  --sw-accent: '+B.ac+';\n  --sw-radius: '+B.r+'px;\n  --sw-font: '+ff+';\n  --sw-density: '+B.den+';\n  --sw-theme: '+B.theme+';\n}';
+ return'<script src="https://cdn.slotwise.app/widget.js"\n  data-site="sw_8f2k91"\n  data-theme="'+B.theme+'"\n  data-accent="'+B.ac+'"\n  data-radius="'+B.r+'"\n  data-font="'+ff+'"\n  data-button="'+B.btn+'"\n  data-density="'+B.den+'"\n  data-layout="'+B.layout+'"><\/script>';
+}
+function paint(){
+ var fr=$('#fr');if(!fr)return;
+ var P=TH[B.th],s=fr.style;
+ s.setProperty('--pbg',P.bg);s.setProperty('--pink',P.ink);s.setProperty('--pln',P.ln);
+ s.setProperty('--pac',B.ac);s.setProperty('--pon',lum(B.ac)>.6?'#1a1203':'#fff');s.setProperty('--pr',B.r+'px');s.setProperty('--pd',B.den=='compact'?'8px':'12px');
+ s.fontFamily=B.font=='Match my site'?'inherit':B.font+',system-ui,sans-serif';
+ fr.dataset.l=B.layout;fr.dataset.b=B.btn;
+ fr.classList.toggle('ns',!B.staff);fr.classList.toggle('np',!B.price);fr.classList.toggle('nd',!B.dur);fr.classList.toggle('nb',!B.badge);
+ var ldr=$('#ldr');if(ldr)ldr.dataset.style=B.ldr;
+ $('#pn').textContent=B.name;$('#ci').value=B.ac;
+ $$('.sws button').forEach(function(b){b.classList.toggle('on',b.dataset.v==B.ac)});
+}
+var tm;function tst(m){var e=$('#ts');e.textContent=m;e.classList.add('on');clearTimeout(tm);tm=setTimeout(function(){e.classList.remove('on')},1800)}
+function anim(){
+ $$('[data-n]').forEach(function(el){
+  var n=+el.dataset.n,d=+el.dataset.d,p=el.dataset.p,s=el.dataset.s;
+  function f(v){return p+v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+s}
+  if(RM){el.textContent=f(n);return}
+  var t0=performance.now();(function st(t){var k=Math.min(1,(t-t0)/1000);el.textContent=f(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(st)})(t0);
+ });
+ requestAnimationFrame(function(){requestAnimationFrame(function(){$$('[data-w]').forEach(function(el,i){el.style.transitionDelay=i*90+'ms';el.style.width=el.dataset.w+'%'})})});
+}
+function go(id){
+ ST.v=id;$$('.nv').forEach(function(b){b.classList.toggle('on',b.dataset.v==id)});
+ $('#t').textContent=T[id][0];$('#s').textContent=T[id][1];
+ var v=$('#view');v.innerHTML=id=='overview'?ov():id=='bookings'?bk():id=='branding'?br():id=='plans'?pl():cfg(id);
+ v.classList.remove('vw');void v.offsetWidth;v.classList.add('vw');
+ anim();if(id=='branding')paint();
+}
+$('#nav').insertAdjacentHTML('beforeend',Object.keys(T).map(function(k){return'<button class="nv" data-v="'+k+'"><svg viewBox="0 0 24 24"><path d="'+IC[k]+'"/></svg>'+T[k][0]+'</button>'}).join('')+'<div class="bs"><b>Studio Nine</b><small>Pro plan · 3 sites</small></div>');
+$('#nav').onclick=function(e){var b=e.target.closest('.nv');if(b)go(b.dataset.v)};
+function setTheme(t){root.dataset.theme=t;$$('.tsw button').forEach(function(b){b.classList.toggle('on',b.dataset.v==t)});try{localStorage.setItem('sw-theme',t)}catch(e){}}
+$('.tsw').onclick=function(e){var b=e.target.closest('button');if(b)setTheme(b.dataset.v)};
+var v=$('#view');
+v.onclick=function(e){
+ var b=e.target.closest('button');if(!b)return;
+ if(b.classList.contains('sw')){
+  if(b.dataset.k){B[b.dataset.k]=!B[b.dataset.k];b.classList.toggle('on',!!B[b.dataset.k]);b.setAttribute('aria-checked',B[b.dataset.k]?'true':'false');paint()}
+  else{b.classList.toggle('on');b.setAttribute('aria-checked',b.classList.contains('on')?'true':'false');tst('Changes saved')}
+ }else if(b.dataset.r){ST.r=b.dataset.r;go('overview')}
+ else if(b.dataset.f){ST.f=b.dataset.f;go('bookings')}
+ else if(b.dataset.bl){ST.bl=b.dataset.bl;go('plans')}
+ else if(b.dataset.i){inAct(b.dataset.i)}
+ else if(b.dataset.th!==undefined){pick(+b.dataset.th)}
+ else if(b.dataset.v!==undefined&&b.parentNode.dataset.k){var k=b.parentNode.dataset.k;B[k]=k=='ac'?b.dataset.v:b.dataset.v;$$('button',b.parentNode).forEach(function(x){x.classList.toggle('on',x==b)});paint()}
+ else if(b.classList.contains('btn')){tst(b.textContent+' (demo)')}
+};
+v.oninput=v.onchange=function(e){
+ var t=e.target;
+ if(t.dataset.k){B[t.dataset.k]=t.type=='range'?+t.value:t.value;paint()}
+ else if(t.matches('select,input')){tst('Changes saved')}
+};
+var sv='light';try{sv=localStorage.getItem('sw-theme')||'light'}catch(e){}
+setTheme(sv);go('overview');
+})();
+</script>
+</body>
+</html>

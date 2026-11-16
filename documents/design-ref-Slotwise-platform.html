@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Slotwise platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f4f8;--pn:#fff;--ink:#0f1b2d;--mut:#5b6b82;--ln:#e1e6ee;--ac:#f5a000;--on:#1a1203;--at:#9a5b00;--ok:#16895b;--bad:#c0392b;--sf:#fff3d6;--sh:0 1px 2px rgba(15,27,45,.06),0 10px 28px rgba(15,27,45,.06);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme=dark]{--bg:#0b1524;--pn:#132238;--ink:#eaf0f8;--mut:#93a4bc;--ln:#223553;--ac:#ffb020;--on:#1a1203;--at:#ffb020;--ok:#3ccf95;--bad:#ff6b6b;--sf:#2c2616;--sh:0 10px 28px rgba(0,0,0,.35)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100%}
+.sb{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;height:calc(100vh - env(safe-area-inset-top,0px));padding:20px 14px;border-right:1px solid var(--ln);background:var(--pn);display:flex;flex-direction:column;gap:4px}
+.lg{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;padding:0 10px 14px}
+.lg img{width:28px;height:28px;border-radius:8px;object-fit:cover;background:#111}
+.lg small{display:block;font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.02em}
+.nv{display:flex;gap:11px;align-items:center;width:100%;padding:9px 12px;border:0;background:none;color:var(--mut);border-radius:10px;font-weight:600;cursor:pointer;text-align:left}
+.nv svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nv:hover{background:var(--bg);color:var(--ink)}
+.nv.on{background:var(--sf);color:var(--at)}
+.bs{margin-top:auto;padding:12px;border:1px solid var(--ln);border-radius:12px;font-size:13px}
+.bs small{display:block;color:var(--mut)}
+.mn{padding:24px 28px 56px;min-width:0}
+.tb{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-weight:800;font-size:26px;line-height:1.2;margin:0}
+.tb p{margin:2px 0 0;color:var(--mut)}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--ln);border-radius:999px;padding:3px;flex-wrap:wrap}
+.seg button{border:0;background:none;color:var(--mut);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px;cursor:pointer}
+.seg .on{background:var(--ac);color:var(--on)}
+.tsw{background:var(--pn)}
+.vw{animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(8px)}}
+.cd{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:18px;box-shadow:var(--sh)}
+.cd h2{font-weight:800;font-size:15px;margin:0 0 12px}
+.sub{margin:-6px 0 10px;color:var(--mut);font-size:13px}
+.stk{display:grid;gap:14px;align-content:start}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:14px}
+.kp span{color:var(--mut);font-size:13px}
+.kp b{display:block;font-weight:800;font-size:29px;line-height:1.2}
+.kp .dl{font-size:12.5px;font-weight:700;color:var(--ok)}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.hd h2{margin:0}
+.it{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--ln)}
+.it>span{flex:1}
+.it small,.row small{display:block;color:var(--mut);font-size:12.5px}
+.tag{display:inline-block;font-style:normal;font-weight:700;font-size:12px;padding:3px 10px;border-radius:99px;background:var(--sf);color:var(--at);white-space:nowrap}
+.tag.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.tag.mu{background:var(--bg);color:var(--mut)}
+.tag.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.wr{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;min-width:720px}
+.tbl th,.tbl td{text-align:left;padding:11px 8px;border-top:1px solid var(--ln);white-space:nowrap}
+.tbl th{font-size:12.5px;color:var(--mut);font-weight:600;border-top:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 0;border-top:1px solid var(--ln)}
+.row>div:last-child{display:flex;align-items:center;gap:8px;flex:none;flex-wrap:wrap}
+select,input[type=text],input[type=number],input[type=password],textarea{background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px;max-width:100%}
+input[type=number]{width:88px}
+textarea{width:100%;min-height:88px;resize:vertical}
+.sw{width:42px;height:24px;border-radius:99px;border:0;background:var(--ln);position:relative;cursor:pointer;transition:background .25s;flex:none}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .25s}
+.sw.on{background:var(--ac)}
+.sw.on::after{transform:translateX(18px)}
+.btn{background:var(--pn);border:1px solid var(--ln);padding:8px 14px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer}
+.btn:hover{border-color:var(--ac)}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:var(--on)}
+.btn.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,var(--ln))}
+.ts{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;transform:translateY(12px);transition:.3s;pointer-events:none;z-index:9}
+.ts.on{opacity:1;transform:none}
+.pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.pp{display:flex;flex-direction:column;gap:10px}
+.pp>b{font-size:28px;font-weight:800}
+.pp>b small{font-size:13px;color:var(--mut);font-weight:600}
+.pp ul{margin:0;padding-left:18px;color:var(--mut);font-size:13.5px;flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--ln);font-size:12.5px;font-weight:600;color:var(--mut)}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.chip.off i{background:var(--mut)}
+.search{min-width:220px}
+.note{padding:12px 14px;border-radius:12px;background:var(--sf);border:1px solid color-mix(in srgb,var(--ac) 28%,var(--ln));font-size:13px;color:var(--at);margin-bottom:14px}
+@media (max-width:860px){.app{grid-template-columns:1fr}.sb{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:12px;border-right:0;border-bottom:1px solid var(--ln)}.lg{padding:0 8px 0 4px;min-width:140px}.nv{width:auto;white-space:nowrap}.bs{display:none}.mn{padding:18px 16px 48px}.row{flex-wrap:wrap}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="sb" id="nav" aria-label="Platform"><div class="lg"><img src="../public/logo.png" alt=""><div>Slotwise<small>Platform owner</small></div></div></nav>
+<main class="mn">
+<div class="tb"><div><h1 id="t"></h1><p id="s"></p></div>
+<div class="seg tsw" role="group" aria-label="Theme"><button data-v="light">Light</button><button data-v="dark">Amber night</button></div></div>
+<div id="view"></div>
+</main>
+</div>
+<div class="ts" id="ts" role="status"></div>
+<script>
+(function(){
+var $=function(s,e){return(e||document).querySelector(s)},$$=function(s,e){return[].slice.call((e||document).querySelectorAll(s))};
+var root=document.documentElement;
+var IC={activity:'M3 12h4l3-8 4 16 3-8h4',sites:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',customers:'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',plans:'M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z',stripe:'M3 6h18v12H3zM3 10h18',config:'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',audit:'M9 5h11M9 12h11M9 19h11M4 5h.01M4 12h.01M4 19h.01',settings:'M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6'};
+var T={activity:['Activity','Live platform health across all sites'],sites:['Sites','Activate, pause or inspect every installed site'],customers:['Customers','Workspaces and agency accounts'],plans:['Plans and prices','Edit what customers pay and get'],stripe:['Stripe','Platform Connect keys, webhooks and payout rules'],config:['Configuration','Feature flags, providers and global defaults'],audit:['Audit log','Who changed what, across the platform'],settings:['Settings','Owner team, security and danger zone']};
+var ST={sf:'All',cf:'All'};
+var SITES=[
+ {id:'sw_8f2k91',name:'Studio Nine',ws:'Studio Nine Agency',plan:'Pro',status:1,bookings:412,mrr:15,last:'2 min ago'},
+ {id:'sw_a91c22',name:'Northwind Clean',ws:'Northwind Co.',plan:'Business',status:1,bookings:1180,mrr:39,last:'11 min ago'},
+ {id:'sw_bb301',name:'Amira Wellness',ws:'Amira Khan',plan:'Free',status:1,bookings:18,mrr:0,last:'1 h ago'},
+ {id:'sw_c44d0',name:'Lens & Light',ws:'Agency Desk',plan:'Agency',status:0,bookings:0,mrr:0,last:'Paused by owner'},
+ {id:'sw_d12ef',name:'Tutorly',ws:'Tutorly HQ',plan:'Pro',status:1,bookings:260,mrr:15,last:'28 min ago'},
+ {id:'sw_e77aa',name:'Clinic One',ws:'Clinic One',plan:'Business',status:0,bookings:640,mrr:0,last:'Suspended · billing'}
+];
+var FEATS=[
+ {g:'P0 · Launch',items:[
+  {k:'booking_engine',l:'Core booking engine',d:'Services, staff, availability, double-book lock',v:1},
+  {k:'widget',l:'Embeddable widget',d:'Inline, popup, floating',v:1},
+  {k:'designer_ext',l:'Designer extension',d:'Place and style from Webflow Designer',v:1},
+  {k:'cms_sync',l:'CMS two-way sync',d:'Services, staff, locations from Webflow CMS',v:1},
+  {k:'stripe_connect',l:'Stripe Connect payments',d:'Full or deposit; no Slotwise commission',v:1},
+  {k:'email',l:'Email confirm + reminders',d:'Editable templates',v:1},
+  {k:'themes',l:'Multi-theme branding',d:'8 themes + accent, loader, CSS vars',v:1}
+ ]},
+ {g:'P1 · Advance past competitors',items:[
+  {k:'cal_sync',l:'Two-way calendar sync',d:'Google + Outlook',v:1},
+  {k:'waitlist',l:'Waitlist with auto-offer',d:'15-minute claim window',v:1},
+  {k:'packages',l:'Packages and memberships',d:'Prepaid sessions + renewals',v:1},
+  {k:'noshow',l:'No-show protection',d:'Card on file + late-cancel fee',v:1},
+  {k:'sms',l:'SMS and WhatsApp',d:'Credits + consent log',v:0},
+  {k:'portal',l:'Customer magic-link portal',d:'Reschedule, history, rebook',v:1},
+  {k:'analytics',l:'Funnel analytics',d:'Views → day → time → paid',v:1},
+  {k:'agency',l:'Agency multi-site mode',d:'White-label + clone settings',v:1}
+ ]},
+ {g:'P2 · Moat',items:[
+  {k:'ai',l:'AI owner assistant',d:'Plain-language booking insights',v:0},
+  {k:'smart_slots',l:'Smart slot ranking',d:'Tighten schedule gaps',v:0},
+  {k:'risk',l:'No-show risk scoring',d:'Suggest deposit when risk is high',v:0},
+  {k:'templates',l:'Industry templates',d:'Cleaning, salon, clinic, tutoring…',v:0},
+  {k:'seo',l:'LocalBusiness schema',d:'Generated from booking settings',v:0}
+ ]}
+];
+var PLANS=[
+ {n:'Free',price:0,bookings:25,staff:1,sites:1,themes:2},
+ {n:'Pro',price:15,bookings:500,staff:3,sites:1,themes:4},
+ {n:'Business',price:39,bookings:0,staff:15,sites:3,themes:8},
+ {n:'Agency',price:99,bookings:0,staff:0,sites:0,themes:8}
+];
+function seg(arr,cur,a){return'<div class="seg">'+arr.map(function(x){return'<button data-'+a+'="'+x+'"'+(x==cur?' class="on"':'')+'>'+x+'</button>'}).join('')+'</div>'}
+function sw(on,k){return'<button class="sw'+(on?' on':'')+'" data-k="'+k+'" role="switch" aria-checked="'+(on?'true':'false')+'"></button>'}
+function tst(m){var e=$('#ts');e.textContent=m;e.classList.add('on');clearTimeout(tst.t);tst.t=setTimeout(function(){e.classList.remove('on')},1800)}
+function activity(){
+ return'<div class="note">This console is for Slotwise owners only — not visible to site customers. Use it to watch installs, pause abusive sites, edit plans, and control Stripe / feature rollout.</div>'
+ +'<div class="g4">'
+ +[['Active sites',SITES.filter(function(s){return s.status}).length,'','', '+3 this week'],['MRR','$'+SITES.reduce(function(a,s){return a+(s.status?s.mrr:0)},0),'','','+12%'],['Bookings today','1,284','','','+8%'],['Failed payments','7','','','Needs review']].map(function(x){return'<div class="cd kp"><span>'+x[0]+'</span><b>'+x[1]+'</b><span class="dl">'+x[4]+'</span></div>'}).join('')
+ +'</div><div class="g2"><section class="cd"><h2>Live activity</h2>'
+ +[['2m','Studio Nine published widget v1.4.2','ok'],['11m','Northwind Clean hit 1,000 bookings this month','ok'],['28m','Tutorly upgraded Free → Pro','ok'],['1h','Lens & Light paused by agency owner','mu'],['3h','Clinic One suspended · Stripe invoice unpaid','bad'],['5h','New install · Amira Wellness (Free)','ok']].map(function(x){return'<div class="it"><time style="font-weight:800;width:36px">'+x[0]+'</time><span>'+x[1]+'</span><em class="tag '+x[2]+'">'+(x[2]=='ok'?'Live':x[2]=='bad'?'Alert':'Info')+'</em></div>'}).join('')
+ +'</section><section class="cd"><h2>Health</h2>'
+ +[['API uptime','99.98%'],['Job queue lag','1.2s'],['Email delivery','99.4%'],['Stripe webhook age','4s']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b></div><div><em class="tag ok">'+x[1]+'</em></div></div>'}).join('')
+ +'<div class="row"><div><b>Open support tickets</b><small>Billing and timezone edge cases</small></div><div><button class="btn">View 12</button></div></div></section></div>';
+}
+function sites(){
+ var list=SITES.filter(function(s){return ST.sf=='All'||(ST.sf=='Active'&&s.status)||(ST.sf=='Inactive'&&!s.status)});
+ return'<section class="cd"><div class="hd"><h2>All sites</h2><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+seg(['All','Active','Inactive'],ST.sf,'sf')+'<input class="search" type="text" placeholder="Search site or id" aria-label="Search sites"></div></div>'
+ +'<div class="wr"><table class="tbl"><thead><tr><th>Site</th><th>Workspace</th><th>Plan</th><th>Bookings</th><th>MRR</th><th>Last seen</th><th>Status</th><th></th></tr></thead><tbody>'
+ +list.map(function(s,i){return'<tr data-i="'+SITES.indexOf(s)+'"><td><b>'+s.name+'</b><small style="display:block;color:var(--mut)">'+s.id+'</small></td><td>'+s.ws+'</td><td>'+s.plan+'</td><td>'+s.bookings.toLocaleString()+'</td><td>$'+s.mrr+'</td><td>'+s.last+'</td><td><span class="chip'+(s.status?'':' off')+'"><i></i>'+(s.status?'Active':'Inactive')+'</span></td><td><button class="btn" data-act="toggle">'+(s.status?'Deactivate':'Activate')+'</button> <button class="btn" data-act="open">Open</button></td></tr>'}).join('')
+ +'</tbody></table></div></section>';
+}
+function customers(){
+ return'<div class="g2"><section class="cd"><h2>Workspaces</h2>'
+ +[['Studio Nine Agency','3 sites · Agency','Active'],['Northwind Co.','1 site · Business','Active'],['Agency Desk','8 sites · Agency','Active'],['Tutorly HQ','1 site · Pro','Active']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b><small>'+x[1]+'</small></div><div><em class="tag ok">'+x[2]+'</em><button class="btn">Impersonate</button></div></div>'}).join('')
+ +'</section><section class="cd"><h2>Owner actions</h2>'
+ +[['Force password reset','For compromised accounts'],['Export customer CSV','GDPR / finance'],['Clone settings between sites','Agency tooling']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b><small>'+x[1]+'</small></div><div><button class="btn">Run</button></div></div>'}).join('')
+ +'</section></div>';
+}
+function plans(){
+ return'<p class="sub" style="margin:0 0 14px">Changes here update checkout for new and renewing sites. Existing billed prices follow Stripe price IDs below.</p><div class="pg">'
+ +PLANS.map(function(p,i){return'<section class="cd pp" data-pi="'+i+'"><h2>'+p.n+'</h2><b>$<input type="number" data-f="price" value="'+p.price+'" aria-label="'+p.n+' price"><small> / month</small></b>'
+ +'<div class="row" style="border:0;padding:6px 0"><div><b>Bookings</b><small>0 = unlimited</small></div><div><input type="number" data-f="bookings" value="'+p.bookings+'"></div></div>'
+ +'<div class="row" style="padding:6px 0"><div><b>Staff seats</b><small>0 = unlimited</small></div><div><input type="number" data-f="staff" value="'+p.staff+'"></div></div>'
+ +'<div class="row" style="padding:6px 0"><div><b>Sites</b><small>0 = unlimited</small></div><div><input type="number" data-f="sites" value="'+p.sites+'"></div></div>'
+ +'<div class="row" style="padding:6px 0"><div><b>Themes</b></div><div><input type="number" data-f="themes" value="'+p.themes+'"></div></div>'
+ +'<button class="btn pri" data-act="save-plan">Save '+p.n+'</button></section>'}).join('')
+ +'</div><section class="cd" style="margin-top:14px"><h2>Stripe price IDs</h2><p class="sub">Map each plan to live and test prices.</p>'
+ +[['Pro monthly','price_pro_mo_live'],['Pro yearly','price_pro_yr_live'],['Business monthly','price_biz_mo_live'],['Agency monthly','price_agency_mo_live']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b></div><div><input type="text" value="'+x[1]+'" style="min-width:220px" aria-label="'+x[0]+'"></div></div>'}).join('')
+ +'</section>';
+}
+function stripe(){
+ return'<div class="stk"><section class="cd"><h2>Platform Stripe</h2><p class="sub">Slotwise platform account. Customer charges go to connected accounts; Slotwise takes no booking commission.</p>'
+ +[['Mode','<div class="seg" data-k="mode"><button data-v="test">Test</button><button data-v="live" class="on">Live</button></div>'],
+   ['Publishable key','<input type="text" value="pk_live_••••••••91a2" style="min-width:260px">'],
+   ['Secret key','<input type="password" value="sk_live_••••••••" style="min-width:260px">'],
+   ['Connect webhook secret','<input type="password" value="whsec_••••••••" style="min-width:260px">'],
+   ['Application fee','<span class="tag ok">0% · no commission</span>']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b></div><div>'+x[1]+'</div></div>'}).join('')
+ +'<div class="hd" style="margin-top:8px"><button class="btn pri">Save Stripe config</button><button class="btn">Send test webhook</button></div></section>'
+ +'<section class="cd"><h2>Connect defaults</h2>'
+ +[['Require onboarding before go-live',1],['Allow deposits',1],['Allow pay on site',1],['Save card for no-show protection',1]].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b></div><div>'+sw(x[1],'x')+'</div></div>'}).join('')
+ +'</section></div>';
+}
+function config(){
+ return FEATS.map(function(g){return'<section class="cd" style="margin-bottom:14px"><h2>'+g.g+'</h2><p class="sub">Flags control rollout without a deploy. Site owners only see features that are on and included in their plan.</p>'
+ +g.items.map(function(f){return'<div class="row"><div><b>'+f.l+'</b><small>'+f.d+'</small></div><div>'+sw(f.v,f.k)+'</div></div>'}).join('')
+ +'</section>'}).join('')
+ +'<section class="cd"><h2>Providers and defaults</h2>'
+ +[['Email provider','Postmark'],['SMS provider','Twilio'],['Default widget themes','All 8 enabled for Business+'],['Brand loader library','pulse · spin · draw · calendar'],['Data region default','EU optional at signup']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b></div><div><em class="tag mu">'+x[1]+'</em><button class="btn">Edit</button></div></div>'}).join('')
+ +'</section>';
+}
+function audit(){
+ return'<section class="cd"><div class="hd"><h2>Recent changes</h2>'+seg(['All','Billing','Sites','Config'],ST.cf,'cf')+'</div>'
+ +[['Today 13:04','You','Deactivated site sw_e77aa (Clinic One)','Sites'],
+   ['Today 11:22','You','Updated Pro price $15 → draft $19 (not published)','Billing'],
+   ['Yesterday','Sara M.','Enabled waitlist flag globally','Config'],
+   ['Mon','You','Rotated Stripe webhook secret','Billing'],
+   ['Sun','System','Suspended Lens & Light after owner pause','Sites']].map(function(x){return'<div class="it"><span><b>'+x[2]+'</b><small>'+x[0]+' · '+x[1]+'</small></span><em class="tag mu">'+x[3]+'</em></div>'}).join('')
+ +'</section>';
+}
+function settings(){
+ return'<div class="stk"><section class="cd"><h2>Owner team</h2>'
+ +[['You','Owner · full access'],['Sara M.','Ops · sites and support'],['Dev bot','API · read metrics']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b><small>'+x[1]+'</small></div><div><button class="btn">Edit</button></div></div>'}).join('')
+ +'<div class="row"><div><b>Invite teammate</b></div><div><button class="btn pri">Invite</button></div></div></section>'
+ +'<section class="cd"><h2>Security</h2>'
+ +[['Require 2FA for platform logins',1],['Session length','7 days'],['IP allowlist','Off']].map(function(x){return'<div class="row"><div><b>'+x[0]+'</b></div><div>'+(typeof x[1]==='number'?sw(x[1],'sec'):'<em class="tag mu">'+x[1]+'</em>')+'</div></div>'}).join('')
+ +'</section><section class="cd"><h2>Danger zone</h2>'
+ +'<div class="row"><div><b>Maintenance mode</b><small>Blocks new bookings platform-wide</small></div><div>'+sw(0,'maint')+'</div></div>'
+ +'<div class="row"><div><b>Export platform metrics</b></div><div><button class="btn">Download</button></div></div>'
+ +'<div class="row"><div><b>Rotate all platform secrets</b><small>Stripe, SMS, email</small></div><div><button class="btn bad">Rotate…</button></div></div></section></div>';
+}
+function go(id){
+ ST.v=id;$$('.nv').forEach(function(b){b.classList.toggle('on',b.dataset.v==id)});
+ $('#t').textContent=T[id][0];$('#s').textContent=T[id][1];
+ var map={activity:activity,sites:sites,customers:customers,plans:plans,stripe:stripe,config:config,audit:audit,settings:settings};
+ var v=$('#view');v.innerHTML=map[id]();v.classList.remove('vw');void v.offsetWidth;v.classList.add('vw');
+}
+$('#nav').insertAdjacentHTML('beforeend',Object.keys(T).map(function(k){return'<button class="nv" data-v="'+k+'"><svg viewBox="0 0 24 24"><path d="'+IC[k]+'"/></svg>'+T[k][0]+'</button>'}).join('')+'<div class="bs"><b>Platform</b><small>Owner access · Slotwise</small></div>');
+$('#nav').onclick=function(e){var b=e.target.closest('.nv');if(b)go(b.dataset.v)};
+function setTheme(t){root.dataset.theme=t;$$('.tsw button').forEach(function(b){b.classList.toggle('on',b.dataset.v==t)});try{localStorage.setItem('sw-plat-theme',t)}catch(e){}}
+$('.tsw').onclick=function(e){var b=e.target.closest('button');if(b)setTheme(b.dataset.v)};
+var v=$('#view');
+v.onclick=function(e){
+ var b=e.target.closest('button');if(!b)return;
+ if(b.classList.contains('sw')){b.classList.toggle('on');b.setAttribute('aria-checked',b.classList.contains('on')?'true':'false');tst('Flag updated')}
+ else if(b.dataset.sf){ST.sf=b.dataset.sf;go('sites')}
+ else if(b.dataset.cf){ST.cf=b.dataset.cf;go('audit')}
+ else if(b.dataset.act=='toggle'){
+  var tr=b.closest('tr');var s=SITES[+tr.dataset.i];s.status=s.status?0:1;s.last=s.status?'Just now':'Paused by platform';go('sites');tst((s.status?'Activated ':'Deactivated ')+s.name);
+ }
+ else if(b.dataset.act=='save-plan'){tst('Plan saved · sync Stripe prices before publish')}
+ else if(b.dataset.act=='open'){tst('Would open site admin (demo)')}
+ else if(b.classList.contains('btn')){tst(b.textContent.trim()+' (demo)')}
+};
+v.oninput=function(e){var t=e.target;if(t.dataset.f){var p=PLANS[+t.closest('[data-pi]').dataset.pi];p[t.dataset.f]=+t.value}};
+var sv='light';try{sv=localStorage.getItem('sw-plat-theme')||'light'}catch(e){}
+setTheme(sv);go('activity');
+})();
+</script>
+</body>
+</html>
