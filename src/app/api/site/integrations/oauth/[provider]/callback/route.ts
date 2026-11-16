@@ -1,0 +1,112 @@
+import { NextResponse } from "next/server";
+import { encryptSecret } from "@/lib/crypto";
+import {
+  decodeOAuthState,
+  exchangeOAuthCode,
+  normalizeIntegrationProvider,
+} from "@/lib/integrations-oauth";
+import { prisma } from "@/lib/prisma";
+import { appOrigin } from "@/lib/webflow";
+
+export const dynamic = "force-dynamic";
+
+type Ctx = { params: Promise<{ provider: string }> };
+
+export async function GET(request: Request, context: Ctx) {
+  const { provider: rawProvider } = await context.params;
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
+  const state = searchParams.get("state");
+  const oauthError = searchParams.get("error");
+
+  const origin = appOrigin();
+  const fail = (reason: string) =>
+    NextResponse.redirect(
+      `${origin}/dashboard/integrations?error=${encodeURIComponent(reason)}`,
+    );
+
+  if (oauthError) {
+    return fail(oauthError);
+  }
+  if (!code || !state) {
+    return fail("missing_code_or_state");
+  }
+
+  const decoded = decodeOAuthState(state);
+  if (!decoded) {
+    return fail("invalid_state");
+  }
+
+  const pathProvider = normalizeIntegrationProvider(rawProvider);
+  if (!pathProvider || pathProvider !== decoded.provider) {
+    // meet/google share google OAuth; allow path google ↔ google_calendar/meet via state
+    const pathFamily =
+      pathProvider === "google_calendar" || pathProvider === "meet"
+        ? "google"
+        : pathProvider === "outlook"
+          ? "microsoft"
+          : pathProvider;
+    const stateFamily =
+      decoded.provider === "google_calendar" || decoded.provider === "meet"
+        ? "google"
+        : decoded.provider === "outlook"
+          ? "microsoft"
+          : decoded.provider;
+    if (pathFamily !== stateFamily) {
+      return fail("provider_mismatch");
+    }
+  }
+
+  const provider = decoded.provider;
+
+  try {
+    const tokens = await exchangeOAuthCode(provider, code);
+    if (!tokens.accessToken) {
+      return fail("token_exchange_failed");
+    }
+
+    await prisma.siteIntegration.upsert({
+      where: { siteId_provider: { siteId: decoded.siteId, provider } },
+      create: {
+        siteId: decoded.siteId,
+        provider,
+        status: "connected",
+        accessTokenEncrypted: encryptSecret(tokens.accessToken),
+        refreshTokenEncrypted: tokens.refreshToken
+          ? encryptSecret(tokens.refreshToken)
+          : null,
+        externalAccountEmail: tokens.email || null,
+        meta: {
+          expiresIn: tokens.expiresIn ?? null,
+        },
+      },
+      update: {
+        status: "connected",
+        accessTokenEncrypted: encryptSecret(tokens.accessToken),
+        refreshTokenEncrypted: tokens.refreshToken
+          ? encryptSecret(tokens.refreshToken)
+          : null,
+        externalAccountEmail: tokens.email || null,
+        meta: {
+          expiresIn: tokens.expiresIn ?? null,
+        },
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        scope: "SITE",
+        action: "integration.oauth.connected",
+        siteId: decoded.siteId,
+        meta: { provider, email: tokens.email || null },
+      },
+    });
+
+    return NextResponse.redirect(
+      `${origin}/dashboard/integrations?connected=${encodeURIComponent(provider)}`,
+    );
+  } catch (e) {
+    console.error(e);
+    return fail(e instanceof Error ? e.message.slice(0, 120) : "oauth_failed");
+  }
+}

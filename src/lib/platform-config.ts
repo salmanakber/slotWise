@@ -28,6 +28,17 @@ export type PlatformPublicSettings = {
   twilioWhatsappFrom: string | null;
   webflowClientId: string | null;
   webflowClientSecretSet: boolean;
+  googleClientId: string | null;
+  googleClientSecretSet: boolean;
+  googleClientSecretHint: string | null;
+  microsoftClientId: string | null;
+  microsoftClientSecretSet: boolean;
+  microsoftClientSecretHint: string | null;
+  zoomClientId: string | null;
+  zoomClientSecretSet: boolean;
+  zoomClientSecretHint: string | null;
+  zapierSigningSecretSet: boolean;
+  zapierSigningSecretHint: string | null;
   aiProvider: string;
   openaiApiKeySet: boolean;
   openaiApiKeyHint: string | null;
@@ -99,6 +110,33 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       webflowClientSecretSet: Boolean(
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET,
       ),
+      googleClientId: row.googleClientId || process.env.GOOGLE_CLIENT_ID || null,
+      googleClientSecretSet: Boolean(
+        safeDecrypt(row.googleClientSecretEncrypted) || process.env.GOOGLE_CLIENT_SECRET,
+      ),
+      googleClientSecretHint: maskSecret(
+        safeDecrypt(row.googleClientSecretEncrypted) || process.env.GOOGLE_CLIENT_SECRET,
+      ),
+      microsoftClientId: row.microsoftClientId || process.env.MICROSOFT_CLIENT_ID || null,
+      microsoftClientSecretSet: Boolean(
+        safeDecrypt(row.microsoftClientSecretEncrypted) || process.env.MICROSOFT_CLIENT_SECRET,
+      ),
+      microsoftClientSecretHint: maskSecret(
+        safeDecrypt(row.microsoftClientSecretEncrypted) || process.env.MICROSOFT_CLIENT_SECRET,
+      ),
+      zoomClientId: row.zoomClientId || process.env.ZOOM_CLIENT_ID || null,
+      zoomClientSecretSet: Boolean(
+        safeDecrypt(row.zoomClientSecretEncrypted) || process.env.ZOOM_CLIENT_SECRET,
+      ),
+      zoomClientSecretHint: maskSecret(
+        safeDecrypt(row.zoomClientSecretEncrypted) || process.env.ZOOM_CLIENT_SECRET,
+      ),
+      zapierSigningSecretSet: Boolean(
+        safeDecrypt(row.zapierSigningSecretEncrypted) || process.env.ZAPIER_SIGNING_SECRET,
+      ),
+      zapierSigningSecretHint: maskSecret(
+        safeDecrypt(row.zapierSigningSecretEncrypted) || process.env.ZAPIER_SIGNING_SECRET,
+      ),
       aiProvider: row.aiProvider || "openai",
       openaiApiKeySet: Boolean(
         safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY,
@@ -139,6 +177,17 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       twilioWhatsappFrom: null,
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecretSet: Boolean(process.env.WEBFLOW_CLIENT_SECRET),
+      googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+      googleClientSecretSet: Boolean(process.env.GOOGLE_CLIENT_SECRET),
+      googleClientSecretHint: maskSecret(process.env.GOOGLE_CLIENT_SECRET),
+      microsoftClientId: process.env.MICROSOFT_CLIENT_ID || null,
+      microsoftClientSecretSet: Boolean(process.env.MICROSOFT_CLIENT_SECRET),
+      microsoftClientSecretHint: maskSecret(process.env.MICROSOFT_CLIENT_SECRET),
+      zoomClientId: process.env.ZOOM_CLIENT_ID || null,
+      zoomClientSecretSet: Boolean(process.env.ZOOM_CLIENT_SECRET),
+      zoomClientSecretHint: maskSecret(process.env.ZOOM_CLIENT_SECRET),
+      zapierSigningSecretSet: Boolean(process.env.ZAPIER_SIGNING_SECRET),
+      zapierSigningSecretHint: maskSecret(process.env.ZAPIER_SIGNING_SECRET),
       aiProvider: "openai",
       openaiApiKeySet: Boolean(process.env.OPENAI_API_KEY),
       openaiApiKeyHint: maskSecret(process.env.OPENAI_API_KEY),
@@ -174,6 +223,19 @@ export async function getPlatformSecrets() {
       webflowClientId: row.webflowClientId || process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret:
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET || null,
+      googleClientId: row.googleClientId || process.env.GOOGLE_CLIENT_ID || null,
+      googleClientSecret:
+        safeDecrypt(row.googleClientSecretEncrypted) || process.env.GOOGLE_CLIENT_SECRET || null,
+      microsoftClientId: row.microsoftClientId || process.env.MICROSOFT_CLIENT_ID || null,
+      microsoftClientSecret:
+        safeDecrypt(row.microsoftClientSecretEncrypted) ||
+        process.env.MICROSOFT_CLIENT_SECRET ||
+        null,
+      zoomClientId: row.zoomClientId || process.env.ZOOM_CLIENT_ID || null,
+      zoomClientSecret:
+        safeDecrypt(row.zoomClientSecretEncrypted) || process.env.ZOOM_CLIENT_SECRET || null,
+      zapierSigningSecret:
+        safeDecrypt(row.zapierSigningSecretEncrypted) || process.env.ZAPIER_SIGNING_SECRET || null,
       aiProvider: (row.aiProvider || "openai") as "openai" | "groq" | "template",
       openaiApiKey: safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY || null,
       openaiModel: row.openaiModel || process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -197,6 +259,13 @@ export async function getPlatformSecrets() {
       twilioWhatsappFrom: null as string | null,
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret: process.env.WEBFLOW_CLIENT_SECRET || null,
+      googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
+      microsoftClientId: process.env.MICROSOFT_CLIENT_ID || null,
+      microsoftClientSecret: process.env.MICROSOFT_CLIENT_SECRET || null,
+      zoomClientId: process.env.ZOOM_CLIENT_ID || null,
+      zoomClientSecret: process.env.ZOOM_CLIENT_SECRET || null,
+      zapierSigningSecret: process.env.ZAPIER_SIGNING_SECRET || null,
       aiProvider: "openai" as const,
       openaiApiKey: process.env.OPENAI_API_KEY || null,
       openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -229,6 +298,13 @@ export type PlatformSettingsUpdate = {
   twilioWhatsappFrom?: string | null;
   webflowClientId?: string | null;
   webflowClientSecret?: string;
+  googleClientId?: string | null;
+  googleClientSecret?: string;
+  microsoftClientId?: string | null;
+  microsoftClientSecret?: string;
+  zoomClientId?: string | null;
+  zoomClientSecret?: string;
+  zapierSigningSecret?: string;
   aiProvider?: "openai" | "groq" | "template";
   openaiApiKey?: string;
   openaiModel?: string | null;
@@ -267,6 +343,23 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
   if (input.webflowClientId !== undefined) data.webflowClientId = input.webflowClientId || null;
   if (input.webflowClientSecret?.trim()) {
     data.webflowClientSecretEncrypted = encryptSecret(input.webflowClientSecret.trim());
+  }
+  if (input.googleClientId !== undefined) data.googleClientId = input.googleClientId || null;
+  if (input.googleClientSecret?.trim()) {
+    data.googleClientSecretEncrypted = encryptSecret(input.googleClientSecret.trim());
+  }
+  if (input.microsoftClientId !== undefined) {
+    data.microsoftClientId = input.microsoftClientId || null;
+  }
+  if (input.microsoftClientSecret?.trim()) {
+    data.microsoftClientSecretEncrypted = encryptSecret(input.microsoftClientSecret.trim());
+  }
+  if (input.zoomClientId !== undefined) data.zoomClientId = input.zoomClientId || null;
+  if (input.zoomClientSecret?.trim()) {
+    data.zoomClientSecretEncrypted = encryptSecret(input.zoomClientSecret.trim());
+  }
+  if (input.zapierSigningSecret?.trim()) {
+    data.zapierSigningSecretEncrypted = encryptSecret(input.zapierSigningSecret.trim());
   }
   if (input.aiProvider) data.aiProvider = input.aiProvider;
   if (input.openaiApiKey?.trim()) data.openaiApiKeyEncrypted = encryptSecret(input.openaiApiKey.trim());

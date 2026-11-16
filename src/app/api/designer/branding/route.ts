@@ -1,0 +1,108 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { findSiteForDesigner } from "@/lib/designer/site";
+import { getTheme } from "@/lib/themes";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, PATCH, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: cors });
+}
+
+const patchSchema = z.object({
+  webflowSiteId: z.string().optional().nullable(),
+  publicKey: z.string().optional().nullable(),
+  themeKey: z.string().min(1).optional(),
+  accent: z.string().min(4).max(9).optional(),
+  radius: z.number().int().min(0).max(28).optional(),
+  font: z.string().min(1).optional(),
+});
+
+function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteForDesigner>>>) {
+  const branding = site.branding;
+  const theme = getTheme(branding?.themeKey ?? "amber-light");
+  return {
+    themeKey: branding?.themeKey ?? theme.key,
+    accent: branding?.accent ?? theme.accent,
+    radius: branding?.radius ?? theme.radius,
+    font: branding?.font ?? theme.font,
+    businessName: branding?.businessName ?? site.name,
+    theme,
+  };
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const site = await findSiteForDesigner({
+    webflowSiteId: url.searchParams.get("webflowSiteId"),
+    publicKey: url.searchParams.get("publicKey"),
+  });
+  if (!site) {
+    return NextResponse.json({ error: "Site not found" }, { status: 404, headers: cors });
+  }
+  return NextResponse.json({ branding: brandingPayload(site) }, { headers: cors });
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = patchSchema.parse(await request.json());
+    const site = await findSiteForDesigner({
+      webflowSiteId: body.webflowSiteId,
+      publicKey: body.publicKey,
+    });
+    if (!site) {
+      return NextResponse.json({ error: "Site not found" }, { status: 404, headers: cors });
+    }
+
+    const theme = body.themeKey ? getTheme(body.themeKey) : null;
+    const data = {
+      themeKey: body.themeKey ?? undefined,
+      accent: body.accent ?? theme?.accent,
+      radius: body.radius ?? theme?.radius,
+      font: body.font ?? theme?.font,
+      buttonStyle: theme?.button,
+    };
+
+    const branding = await prisma.branding.upsert({
+      where: { siteId: site.id },
+      update: {
+        ...(data.themeKey !== undefined ? { themeKey: data.themeKey } : {}),
+        ...(data.accent !== undefined ? { accent: data.accent } : {}),
+        ...(data.radius !== undefined ? { radius: data.radius } : {}),
+        ...(data.font !== undefined ? { font: data.font } : {}),
+        ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
+      },
+      create: {
+        siteId: site.id,
+        themeKey: data.themeKey ?? theme?.key ?? "amber-light",
+        accent: data.accent ?? theme?.accent ?? "#f5a000",
+        radius: data.radius ?? theme?.radius ?? 14,
+        font: data.font ?? theme?.font ?? "Manrope",
+        buttonStyle: data.buttonStyle ?? theme?.button ?? "solid",
+        businessName: site.name,
+      },
+    });
+
+    const refreshed = await findSiteForDesigner({
+      webflowSiteId: site.webflowSiteId,
+      publicKey: site.publicKey,
+    });
+
+    return NextResponse.json(
+      {
+        branding: refreshed ? brandingPayload(refreshed) : branding,
+      },
+      { headers: cors },
+    );
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Invalid payload" },
+      { status: 400, headers: cors },
+    );
+  }
+}

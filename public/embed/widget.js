@@ -9,9 +9,9 @@
     var css = document.createElement("style");
     css.id = STYLE_ID;
     css.textContent =
-      ".slotwise-host{position:relative;width:100%;isolation:isolate}" +
+      ".slotwise-host{position:relative;width:100%;isolation:isolate;overflow:visible}" +
       ".slotwise-frame{display:block;width:100%;border:0;border-radius:18px;background:transparent;" +
-      "min-height:640px;box-shadow:0 18px 50px rgba(15,27,45,.12);transition:min-height .25s ease}" +
+      "min-height:720px;overflow:visible;box-shadow:0 18px 50px rgba(15,27,45,.12);transition:min-height .25s ease,height .25s ease}" +
       ".slotwise-skel{position:absolute;inset:0;border-radius:18px;overflow:hidden;" +
       "background:linear-gradient(135deg,#f7f8fb,#eef2f7);pointer-events:none}" +
       ".slotwise-skel::after{content:'';position:absolute;inset:0;" +
@@ -30,6 +30,7 @@
 
     ensureStyles();
     el.classList.add("slotwise-host");
+    el.style.overflow = "visible";
 
     var skel = document.createElement("div");
     skel.className = "slotwise-skel";
@@ -43,8 +44,9 @@
     iframe.setAttribute("allow", "payment *");
     iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
 
-    var minH = parseInt(el.getAttribute("data-min-height") || "640", 10);
+    var minH = parseInt(el.getAttribute("data-min-height") || "720", 10);
     iframe.style.minHeight = minH + "px";
+    iframe.style.overflow = "visible";
 
     function onMessage(ev) {
       var data = ev && ev.data;

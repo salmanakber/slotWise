@@ -1,84 +1,315 @@
+"use client";
+
 import Link from "next/link";
-import { getPlatformPublicSettings } from "@/lib/platform-config";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+type ProviderRow = {
+  provider: string;
+  status: string;
+  connected: boolean;
+  externalAccountEmail: string | null;
+  webhookUrl: string | null;
+  lastSyncAt: string | null;
+  platformConfigured: boolean;
+  hint: string | null;
+};
 
-export default async function IntegrationsPage() {
-  const settings = await getPlatformPublicSettings();
-  const wf = settings.webflowClientSecretSet && Boolean(settings.webflowClientId);
-  const stripe = settings.stripeSecretKeySet;
+type IntegrationsPayload = {
+  webflow: {
+    provider: string;
+    platformConfigured: boolean;
+    installUrl: string | null;
+    hint: string | null;
+  };
+  stripe: {
+    provider: string;
+    platformConfigured: boolean;
+    paymentsUrl: string;
+    mode: string;
+    hint: string | null;
+  };
+  providers: ProviderRow[];
+};
+
+const PROVIDER_META: Record<string, { label: string; blurb: string }> = {
+  google_calendar: {
+    label: "Google Calendar",
+    blurb: "Two-way sync for bookings",
+  },
+  outlook: {
+    label: "Outlook",
+    blurb: "Microsoft 365 / Outlook calendar",
+  },
+  zapier: {
+    label: "Zapier / Make",
+    blurb: "Outbound webhooks for automations",
+  },
+  zoom: {
+    label: "Zoom",
+    blurb: "Auto meeting links on bookings",
+  },
+  meet: {
+    label: "Google Meet",
+    blurb: "Attach Meet links to calendar events",
+  },
+};
+
+export default function IntegrationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="sw-card">
+          <p className="text-sm" style={{ color: "var(--mut)" }}>
+            Loading integrations…
+          </p>
+        </section>
+      }
+    >
+      <IntegrationsClient />
+    </Suspense>
+  );
+}
+
+function IntegrationsClient() {
+  const search = useSearchParams();
+  const [data, setData] = useState<IntegrationsPayload | null>(null);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/site/integrations");
+    const json = await res.json();
+    if (res.ok) setData(json);
+    else setMsg(json.error || "Could not load integrations");
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const connected = search.get("connected");
+    const error = search.get("error");
+    if (connected) setMsg(`Connected ${connected.replace(/_/g, " ")}`);
+    if (error) setMsg(`Connect failed: ${error}`);
+  }, [search]);
+
+  async function connect(provider: string) {
+    setBusy(provider);
+    setMsg("");
+    try {
+      const res = await fetch("/api/site/integrations/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || json.hint || "Connect failed");
+      }
+      if (json.authorizeUrl) {
+        window.location.href = json.authorizeUrl;
+        return;
+      }
+      await load();
+      if (json.webhookUrl) setMsg("Zapier webhook ready — copy the URL below.");
+      else setMsg("Connected");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Connect failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function disconnect(provider: string) {
+    setBusy(provider);
+    setMsg("");
+    try {
+      const res = await fetch(
+        `/api/site/integrations?provider=${encodeURIComponent(provider)}`,
+        { method: "DELETE" },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Disconnect failed");
+      await load();
+      setMsg("Disconnected");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Disconnect failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function copyWebhook(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setMsg("Webhook URL copied");
+    } catch {
+      setMsg("Could not copy — select the URL manually");
+    }
+  }
+
+  if (!data) {
+    return (
+      <section className="sw-card">
+        <p className="text-sm" style={{ color: "var(--mut)" }}>
+          {msg || "Loading integrations…"}
+        </p>
+      </section>
+    );
+  }
+
+  const byProvider = Object.fromEntries(data.providers.map((p) => [p.provider, p]));
 
   return (
     <div className="grid gap-3.5">
+      {msg ? (
+        <div className="rounded-xl border border-[var(--ln)] bg-[var(--bg)] px-3.5 py-3 text-[13px] font-semibold text-[var(--at)]">
+          {msg}
+        </div>
+      ) : null}
+
       <section className="sw-card">
         <h2 className="mb-1 text-[15px] font-extrabold">Webflow</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Site owners install from Webflow (no Slotwise login). After authorize, they open Designer →
-          Slotwise → Insert booking embed. Platform credentials live under Platform → Settings.
+          Site owners install from Webflow. After authorize, open Designer → Slotwise → Insert
+          booking embed.
         </p>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
-          <div>
-            <b>Connection</b>
-            <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-              {wf
-                ? "Credentials configured — install URL /api/webflow/install"
-                : "Ask platform owner to add Webflow credentials"}
-            </small>
-          </div>
-          {wf ? (
-            <a href="/api/webflow/install" className="sw-btn sw-btn-primary">
+        <Row
+          label="Connection"
+          hint={
+            data.webflow.platformConfigured
+              ? "Credentials configured — re-auth if scopes changed"
+              : data.webflow.hint ||
+                "Ask platform admin to add Client ID in Platform → Settings"
+          }
+        >
+          {data.webflow.platformConfigured && data.webflow.installUrl ? (
+            <a href={data.webflow.installUrl} className="sw-btn sw-btn-primary">
               Re-authorize Webflow
             </a>
           ) : (
             <em className="sw-tag sw-tag-muted">Not configured</em>
           )}
-        </div>
+        </Row>
       </section>
 
       <section className="sw-card">
         <h2 className="mb-1 text-[15px] font-extrabold">Stripe Connect</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Money goes to the business. Platform fee is controlled in Platform → Stripe (default 0%).
+          Connect payouts and payment policies from the Payments page.
         </p>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
-          <div>
-            <b>Platform keys</b>
-            <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-              {stripe ? `Ready · ${settings.stripeMode} mode` : "Configure in Platform → Stripe"}
-            </small>
-          </div>
-          <em className={`sw-tag ${stripe ? "sw-tag-ok" : "sw-tag-muted"}`}>
-            {stripe ? "Ready" : "Optional for local booking tests"}
-          </em>
-        </div>
-        <div className="border-t border-[var(--ln)] py-3 text-sm" style={{ color: "var(--mut)" }}>
-          Webhook endpoint: <code className="font-semibold">/api/stripe/webhook</code>
-        </div>
+        <Row
+          label="Platform keys"
+          hint={
+            data.stripe.platformConfigured
+              ? `Ready · ${data.stripe.mode} mode`
+              : data.stripe.hint ||
+                "Ask platform admin to add Client ID in Platform → Settings"
+          }
+        >
+          <Link href={data.stripe.paymentsUrl} className="sw-btn sw-btn-primary">
+            Open payments
+          </Link>
+        </Row>
       </section>
 
       <section className="sw-card">
-        <h2 className="mb-3 text-[15px] font-extrabold">Calendars and tools</h2>
-        {[
-          ["Google Calendar", "P1 · two-way sync"],
-          ["Outlook", "P1"],
-          ["Zapier / Make", "P1 webhooks"],
-          ["Zoom / Meet", "P1 auto links"],
-        ].map(([label, meta]) => (
-          <div key={label} className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
-            <div>
-              <b>{label}</b>
-              <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-                {meta}
-              </small>
-            </div>
-            <em className="sw-tag sw-tag-muted">Soon</em>
-          </div>
-        ))}
-        <p className="mt-2 text-[13px]" style={{ color: "var(--mut)" }}>
-          Prefer <Link href="/dashboard/branding" className="underline">Branding → Install</Link> for the
-          embed snippet while Webflow OAuth is offline.
+        <h2 className="mb-1 text-[15px] font-extrabold">Calendars and tools</h2>
+        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+          Connect calendars and meeting tools. OAuth apps are configured by the platform admin.
         </p>
+
+        {(["google_calendar", "outlook", "zapier", "zoom", "meet"] as const).map((key) => {
+          const row = byProvider[key];
+          const meta = PROVIDER_META[key];
+          if (!row || !meta) return null;
+          const pending = busy === key;
+
+          return (
+            <div key={key} className="border-t border-[var(--ln)] py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <b>{meta.label}</b>
+                  <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
+                    {row.connected && row.externalAccountEmail
+                      ? row.externalAccountEmail
+                      : meta.blurb}
+                    {!row.platformConfigured && row.hint
+                      ? ` · ${row.hint}`
+                      : null}
+                  </small>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <em className={`sw-tag ${row.connected ? "sw-tag-ok" : "sw-tag-muted"}`}>
+                    {row.connected ? "Connected" : "Disconnected"}
+                  </em>
+                  {row.connected ? (
+                    <button
+                      type="button"
+                      className="sw-btn"
+                      disabled={pending}
+                      onClick={() => void disconnect(key)}
+                    >
+                      {pending ? "…" : "Disconnect"}
+                    </button>
+                  ) : row.platformConfigured ? (
+                    <button
+                      type="button"
+                      className="sw-btn sw-btn-primary"
+                      disabled={pending}
+                      onClick={() => void connect(key)}
+                    >
+                      {pending ? "…" : "Connect"}
+                    </button>
+                  ) : (
+                    <em className="sw-tag sw-tag-muted">Needs platform keys</em>
+                  )}
+                </div>
+              </div>
+              {key === "zapier" && row.webhookUrl ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px]">
+                  <code className="max-w-full break-all rounded-lg border border-[var(--ln)] bg-[var(--bg)] px-2 py-1.5 font-semibold">
+                    {row.webhookUrl}
+                  </code>
+                  <button
+                    type="button"
+                    className="sw-btn"
+                    onClick={() => void copyWebhook(row.webhookUrl!)}
+                  >
+                    Copy
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </section>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
+      <div>
+        <b>{label}</b>
+        {hint ? (
+          <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
+            {hint}
+          </small>
+        ) : null}
+      </div>
+      <div>{children}</div>
     </div>
   );
 }

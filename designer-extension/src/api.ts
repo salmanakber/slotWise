@@ -126,3 +126,50 @@ export function publishSite(body: Record<string, unknown>) {
     body: JSON.stringify(body),
   });
 }
+
+export type DesignerTheme = {
+  key: string;
+  name: string;
+  bg: string;
+  panel: string;
+  ink: string;
+  line: string;
+  accent: string;
+  radius: number;
+  font: string;
+  button: "solid" | "outline" | "soft";
+};
+
+export type DesignerBranding = {
+  themeKey: string;
+  accent: string;
+  radius: number;
+  font: string;
+  businessName?: string | null;
+  theme?: DesignerTheme;
+};
+
+export function listThemes() {
+  return req<{ themes: DesignerTheme[] }>("/api/designer/themes");
+}
+
+export function getBranding(params: { webflowSiteId?: string | null; publicKey?: string | null }) {
+  const qs = new URLSearchParams();
+  if (params.webflowSiteId) qs.set("webflowSiteId", params.webflowSiteId);
+  if (params.publicKey) qs.set("publicKey", params.publicKey);
+  return req<{ branding: DesignerBranding }>(`/api/designer/branding?${qs}`);
+}
+
+export function patchBranding(body: {
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+  themeKey?: string;
+  accent?: string;
+  radius?: number;
+  font?: string;
+}) {
+  return req<{ branding: DesignerBranding }>("/api/designer/branding", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}

@@ -47,12 +47,12 @@ export async function createConnectOnboardingLink(accountId: string, returnUrl: 
   });
 }
 
-export async function createConnectedAccount(email: string) {
+export async function createConnectedAccount(email?: string | null) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
   return client.accounts.create({
     type: "express",
-    email,
+    ...(email ? { email } : {}),
     capabilities: {
       card_payments: { requested: true },
       transfers: { requested: true },

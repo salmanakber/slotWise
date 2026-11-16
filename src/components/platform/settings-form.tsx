@@ -16,6 +16,10 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [postmarkToken, setPostmarkToken] = useState("");
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
   const [webflowClientSecret, setWebflowClientSecret] = useState("");
+  const [googleClientSecret, setGoogleClientSecret] = useState("");
+  const [microsoftClientSecret, setMicrosoftClientSecret] = useState("");
+  const [zoomClientSecret, setZoomClientSecret] = useState("");
+  const [zapierSigningSecret, setZapierSigningSecret] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [groqApiKey, setGroqApiKey] = useState("");
   const [pending, setPending] = useState(false);
@@ -51,12 +55,19 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.twilioFromNumber = form.twilioFromNumber;
         payload.twilioWhatsappFrom = form.twilioWhatsappFrom;
         payload.webflowClientId = form.webflowClientId;
+        payload.googleClientId = form.googleClientId;
+        payload.microsoftClientId = form.microsoftClientId;
+        payload.zoomClientId = form.zoomClientId;
         payload.aiProvider = form.aiProvider;
         payload.openaiModel = form.openaiModel;
         payload.groqModel = form.groqModel;
         if (postmarkToken.trim()) payload.postmarkToken = postmarkToken.trim();
         if (twilioAuthToken.trim()) payload.twilioAuthToken = twilioAuthToken.trim();
         if (webflowClientSecret.trim()) payload.webflowClientSecret = webflowClientSecret.trim();
+        if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
+        if (microsoftClientSecret.trim()) payload.microsoftClientSecret = microsoftClientSecret.trim();
+        if (zoomClientSecret.trim()) payload.zoomClientSecret = zoomClientSecret.trim();
+        if (zapierSigningSecret.trim()) payload.zapierSigningSecret = zapierSigningSecret.trim();
         if (openaiApiKey.trim()) payload.openaiApiKey = openaiApiKey.trim();
         if (groqApiKey.trim()) payload.groqApiKey = groqApiKey.trim();
       }
@@ -79,6 +90,10 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       setPostmarkToken("");
       setTwilioAuthToken("");
       setWebflowClientSecret("");
+      setGoogleClientSecret("");
+      setMicrosoftClientSecret("");
+      setZoomClientSecret("");
+      setZapierSigningSecret("");
       setOpenaiApiKey("");
       setGroqApiKey("");
       setMsg("Saved. Secrets are encrypted at rest.");
@@ -267,6 +282,83 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={webflowClientSecret}
                 onChange={(e) => setWebflowClientSecret(e.target.value)}
+                placeholder="Paste new secret to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+          </section>
+
+          <section className="sw-card">
+            <h2 className="mb-1 text-[15px] font-extrabold">Calendars &amp; tools</h2>
+            <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+              Platform OAuth apps for Google Calendar / Meet, Microsoft Outlook, Zoom, and Zapier
+              webhook signing. Redirect URIs use{" "}
+              <code className="font-semibold">/api/site/integrations/oauth/…/callback</code>.
+            </p>
+            <Field label="Google client ID">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.googleClientId ?? ""}
+                onChange={(e) => set("googleClientId", e.target.value || null)}
+                placeholder="….apps.googleusercontent.com"
+              />
+            </Field>
+            <Field label="Google client secret" hint={form.googleClientSecretHint ?? "Not set"}>
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={googleClientSecret}
+                onChange={(e) => setGoogleClientSecret(e.target.value)}
+                placeholder="Paste new secret to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="Microsoft client ID">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.microsoftClientId ?? ""}
+                onChange={(e) => set("microsoftClientId", e.target.value || null)}
+              />
+            </Field>
+            <Field
+              label="Microsoft client secret"
+              hint={form.microsoftClientSecretHint ?? "Not set"}
+            >
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={microsoftClientSecret}
+                onChange={(e) => setMicrosoftClientSecret(e.target.value)}
+                placeholder="Paste new secret to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="Zoom client ID">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.zoomClientId ?? ""}
+                onChange={(e) => set("zoomClientId", e.target.value || null)}
+              />
+            </Field>
+            <Field label="Zoom client secret" hint={form.zoomClientSecretHint ?? "Not set"}>
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={zoomClientSecret}
+                onChange={(e) => setZoomClientSecret(e.target.value)}
+                placeholder="Paste new secret to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field
+              label="Zapier signing secret"
+              hint={form.zapierSigningSecretHint ?? "Not set"}
+            >
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={zapierSigningSecret}
+                onChange={(e) => setZapierSigningSecret(e.target.value)}
                 placeholder="Paste new secret to rotate"
                 autoComplete="new-password"
               />

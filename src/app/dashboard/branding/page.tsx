@@ -166,7 +166,7 @@ export default function BrandingPage() {
         </section>
       </div>
 
-      <div className="grid gap-3.5 content-start">
+      <div className="grid gap-3.5 content-start xl:sticky xl:top-4 xl:self-start">
         <section className="sw-card">
           <h2 className="mb-3 text-[15px] font-extrabold">Live preview</h2>
           <div

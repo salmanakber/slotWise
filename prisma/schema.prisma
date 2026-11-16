@@ -146,6 +146,7 @@ model Site {
   branding        Branding?
   webflowToken    WebflowToken?
   stripeAccount   StripeAccount?
+  integrations    SiteIntegration[]
   services        Service[]
   staff           Staff[]
   locations       Location[]
@@ -434,10 +435,38 @@ model PlatformConfig {
   groqApiKeyEncrypted              String?
   groqModel                        String? @default("llama-3.3-70b-versatile")
 
+  // Calendar / tools OAuth (platform-level apps)
+  googleClientId                   String?
+  googleClientSecretEncrypted      String?
+  microsoftClientId                String?
+  microsoftClientSecretEncrypted   String?
+  zoomClientId                     String?
+  zoomClientSecretEncrypted        String?
+  zapierSigningSecretEncrypted     String?
+
   // Ops
   maintenanceMode                  Boolean @default(false)
   supportEmail                     String?
   updatedAt                        DateTime @updatedAt
+}
+
+model SiteIntegration {
+  id                     String   @id @default(cuid())
+  siteId                 String
+  site                   Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  provider               String // google_calendar | outlook | zapier | zoom | meet
+  status                 String   @default("disconnected") // disconnected | connected | error
+  accessTokenEncrypted   String?
+  refreshTokenEncrypted  String?
+  externalAccountEmail   String?
+  webhookUrl             String?
+  meta                   Json?
+  lastSyncAt             DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([siteId, provider])
+  @@index([siteId])
 }
 
 model AuditLog {

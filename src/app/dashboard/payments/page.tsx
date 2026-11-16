@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Payments = {
   paymentMode: "FULL" | "DEPOSIT" | "PAY_ON_SITE";
@@ -15,18 +16,57 @@ type Payments = {
 };
 
 export default function PaymentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="sw-card">
+          <p className="text-sm" style={{ color: "var(--mut)" }}>
+            Loading payment settings…
+          </p>
+        </section>
+      }
+    >
+      <PaymentsClient />
+    </Suspense>
+  );
+}
+
+function PaymentsClient() {
+  const search = useSearchParams();
   const [form, setForm] = useState<Payments | null>(null);
   const [msg, setMsg] = useState("");
   const [pending, setPending] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  async function load() {
+    const r = await fetch("/api/site/payments");
+    const d = await r.json();
+    if (d.paymentMode) setForm(d);
+  }
 
   useEffect(() => {
-    fetch("/api/site/payments")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.paymentMode) setForm(d);
-      })
-      .catch(() => undefined);
+    void load();
   }, []);
+
+  useEffect(() => {
+    const s = search.get("stripe");
+    if (s === "return") setMsg("Stripe onboarding returned — refresh status below.");
+    if (s === "refresh") setMsg("Stripe link expired — click Connect again.");
+  }, [search]);
+
+  async function connectStripe() {
+    setConnecting(true);
+    setMsg("");
+    try {
+      const res = await fetch("/api/site/stripe/connect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not start Connect");
+      window.location.href = data.url;
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Connect failed");
+      setConnecting(false);
+    }
+  }
 
   async function save() {
     if (!form) return;
@@ -61,18 +101,33 @@ export default function PaymentsPage() {
   return (
     <div className="grid gap-3.5">
       <section className="sw-card">
-        <h2 className="mb-1 text-[15px] font-extrabold">Stripe</h2>
+        <h2 className="mb-1 text-[15px] font-extrabold">Stripe Connect</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Money goes to your connected account. Slotwise default platform fee is 0%.
+          Connect your Stripe account so booking deposits land in your bank. Slotwise platform fee
+          defaults to 0%.
         </p>
-        <Row label="Stripe account">
+        <Row label="Account status">
           <em className={`sw-tag ${form.chargesEnabled ? "sw-tag-ok" : "sw-tag-muted"}`}>
             {form.stripeAccountId
               ? form.chargesEnabled
                 ? "Charges enabled"
                 : "Connected · finish onboarding"
-              : "Not connected yet"}
+              : "Not connected"}
           </em>
+        </Row>
+        <Row label="Connect">
+          <button
+            type="button"
+            className="sw-btn sw-btn-primary"
+            disabled={connecting}
+            onClick={() => void connectStripe()}
+          >
+            {connecting
+              ? "Opening Stripe…"
+              : form.stripeAccountId
+                ? "Continue / update Stripe"
+                : "Connect Stripe account"}
+          </button>
         </Row>
         <Row label="Currency">
           <em className="sw-tag sw-tag-muted">{form.currency || "USD"}</em>
@@ -81,7 +136,9 @@ export default function PaymentsPage() {
           <select
             className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
             value={form.paymentMode}
-            onChange={(e) => setForm({ ...form, paymentMode: e.target.value as Payments["paymentMode"] })}
+            onChange={(e) =>
+              setForm({ ...form, paymentMode: e.target.value as Payments["paymentMode"] })
+            }
           >
             <option value="FULL">Full amount</option>
             <option value="DEPOSIT">Deposit</option>

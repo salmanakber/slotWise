@@ -248,12 +248,13 @@ export function BookingWidget({
   return (
     <div
       ref={rootRef}
-      className="sw-widget mx-auto w-full max-w-[440px] overflow-hidden"
+      className="sw-widget mx-auto w-full max-w-[400px] overflow-visible"
       style={{
         background: panel,
         color: ink,
         border: `1px solid ${line}`,
         borderRadius: radius,
+        maxHeight: "none",
         boxShadow: embed
           ? "none"
           : `0 1px 2px color-mix(in srgb, ${ink} 6%, transparent), 0 22px 48px color-mix(in srgb, ${ink} 10%, transparent)`,
@@ -277,14 +278,15 @@ export function BookingWidget({
         }
         .sw-w-rise { animation: sw-w-in .45s cubic-bezier(.2,.8,.2,1) both; }
         .sw-w-check { animation: sw-w-check .55s cubic-bezier(.2,.8,.2,1) both; }
-        .sw-w-scroll::-webkit-scrollbar { height: 0; width: 0; }
+        .sw-w-scroll::-webkit-scrollbar { height: 4px; width: 4px; }
+        .sw-w-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 22%, transparent); border-radius: 99px; }
         @media (prefers-reduced-motion: reduce) {
           .sw-w-rise, .sw-w-check { animation: none !important; }
         }
       `}</style>
 
       <header
-        className="relative overflow-hidden px-5 pb-4 pt-5"
+        className="relative px-4 pb-3.5 pt-4 sm:px-5"
         style={{
           borderBottom: `1px solid ${line}`,
           background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, ${panel}), ${panel} 62%)`,
@@ -346,7 +348,7 @@ export function BookingWidget({
         </div>
       </header>
 
-      <div className="relative grid gap-5 p-5">
+      <div className="relative grid gap-4 p-4 sm:gap-5 sm:p-5" style={{ maxHeight: "none", overflow: "visible" }}>
         {(loadingSlots || submitting) && branding?.showLoader !== false ? (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[3px]"
@@ -405,7 +407,7 @@ export function BookingWidget({
                   {site.services.length} available
                 </span>
               </div>
-              <div className="grid gap-2">
+              <div className="sw-w-scroll grid max-h-[220px] gap-2 overflow-y-auto px-0.5 pb-1">
                 {site.services.map((s) => {
                   const on = s.id === serviceId;
                   return (
@@ -413,7 +415,7 @@ export function BookingWidget({
                       key={s.id}
                       type="button"
                       onClick={() => setServiceId(s.id)}
-                      className="group flex w-full items-center justify-between gap-3 border p-3.5 text-left transition"
+                      className="group flex min-h-[52px] w-full items-center justify-between gap-3 border p-3.5 text-left transition"
                       style={{
                         borderRadius: Math.max(radius - 6, 10),
                         borderColor: on ? accent : line,
@@ -473,7 +475,7 @@ export function BookingWidget({
                   {site.timezone}
                 </span>
               </div>
-              <div className="sw-w-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              <div className="sw-w-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-0.5">
                 {days.map((d) => {
                   const dt = new Date(`${d}T12:00:00Z`);
                   const weekday = dt.toLocaleDateString("en-US", { weekday: "short" });
@@ -484,7 +486,7 @@ export function BookingWidget({
                       key={d}
                       type="button"
                       onClick={() => setDate(d)}
-                      className="grid min-w-[68px] shrink-0 gap-0.5 border px-2 py-2.5 text-center transition"
+                      className="grid min-h-[52px] min-w-[64px] shrink-0 gap-0.5 border px-2 py-2.5 text-center transition"
                       style={{
                         borderRadius: Math.max(radius - 6, 10),
                         borderColor: on ? accent : line,
@@ -504,7 +506,10 @@ export function BookingWidget({
 
             <section>
               <h3 className="mb-2.5 text-[15px] font-extrabold tracking-tight">Time</h3>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              <div
+                className="sw-w-scroll grid max-h-[240px] grid-cols-2 gap-2 overflow-y-auto px-0.5 pb-2 sm:grid-cols-3"
+                style={{ scrollbarGutter: "stable" }}
+              >
                 {slots.length === 0 && !loadingSlots ? (
                   <div
                     className="col-span-full rounded-2xl border border-dashed px-4 py-8 text-center text-sm"
@@ -521,7 +526,7 @@ export function BookingWidget({
                         type="button"
                         disabled={!s.available}
                         onClick={() => setSlotStart(s.start)}
-                        className="border py-2.5 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
+                        className="min-h-[44px] border px-2 py-2.5 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
                         style={{
                           borderRadius: Math.max(radius - 6, 10),
                           borderColor: on ? accent : line,
@@ -605,7 +610,7 @@ export function BookingWidget({
 
       {step !== "done" ? (
         <footer
-          className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 backdrop-blur-md"
+          className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3.5 sm:px-5 sm:py-4 backdrop-blur-md"
           style={{
             borderColor: line,
             background: `color-mix(in srgb, ${panel} 92%, transparent)`,

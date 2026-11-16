@@ -10,7 +10,9 @@ function installRedirect(status: string, extra?: Record<string, string>) {
   const url = new URL(`${appOrigin()}/install`);
   url.searchParams.set("status", status);
   if (extra) {
-    for (const [k, v] of Object.entries(extra)) url.searchParams.set(k, v);
+    for (const [k, v] of Object.entries(extra)) {
+      if (v) url.searchParams.set(k, v);
+    }
   }
   return NextResponse.redirect(url.toString());
 }
@@ -23,7 +25,7 @@ async function maybeSetSession(userId: string | null) {
   const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
   if (!secret) return null;
 
-  const token = await encode({
+  return encode({
     token: {
       id: user.id,
       sub: user.id,
@@ -34,8 +36,6 @@ async function maybeSetSession(userId: string | null) {
     secret,
     maxAge: 60 * 60 * 24 * 7,
   });
-
-  return token;
 }
 
 export async function GET(request: Request) {
@@ -51,14 +51,13 @@ export async function GET(request: Request) {
   const expected = jar.get("wf_oauth_state")?.value;
 
   if (error) {
-    return installRedirect("denied");
+    return installRedirect("denied", { reason: error });
   }
 
-  // Marketplace installs may arrive without our start cookie if Install URL
-  // points straight at Webflow OAuth. Accept a code when state is absent or matches.
-  const stateOk = !expected || (Boolean(state) && state === expected);
+  // Marketplace installs may arrive without our start cookie.
+  const stateOk = !expected || !state || state === expected;
   if (!code || !stateOk) {
-    return installRedirect("denied");
+    return installRedirect("denied", { reason: "state_mismatch" });
   }
 
   try {
@@ -69,12 +68,12 @@ export async function GET(request: Request) {
     const res = installRedirect("connected", {
       site: primary?.publicKey || "",
       name: primary?.name || "your site",
+      wf: primary?.webflowSiteId || "",
     });
 
     res.cookies.set("wf_oauth_state", "", { path: "/", maxAge: 0 });
     res.cookies.set("wf_oauth_flow", "", { path: "/", maxAge: 0 });
 
-    // Soft-login so opening dashboard later works — not required for Designer embed.
     const sessionToken = await maybeSetSession(provisioned.userId);
     if (sessionToken) {
       const secure = appOrigin().startsWith("https://");
@@ -92,7 +91,14 @@ export async function GET(request: Request) {
 
     return res;
   } catch (e) {
-    console.error(e);
-    return installRedirect("error");
+    console.error("[webflow/callback]", e);
+    const msg = e instanceof Error ? e.message : "Token exchange failed";
+    // Keep query short for URL; full detail is in server logs
+    const short = msg.includes("Client ID/Secret")
+      ? "missing_credentials"
+      : msg.includes("Redirect URI")
+        ? "redirect_uri"
+        : "token_exchange";
+    return installRedirect("error", { reason: short, detail: msg.slice(0, 240) });
   }
 }

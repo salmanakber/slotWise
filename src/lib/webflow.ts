@@ -41,7 +41,7 @@ export function appOrigin() {
 
 export function webflowRedirectUri() {
   return (
-    process.env.WEBFLOW_REDIRECT_URI?.replace(/\/$/, "") ||
+    process.env.WEBFLOW_REDIRECT_URI?.trim().replace(/\/$/, "") ||
     `${appOrigin()}/api/webflow/callback`
   );
 }
@@ -60,6 +60,12 @@ export function webflowScopes() {
   ].join(" ");
 }
 
+/** Deep-link into Designer for a site (preferred after install). */
+export function webflowDesignerUrl(webflowSiteId: string | null | undefined) {
+  if (!webflowSiteId) return "https://webflow.com/dashboard?workspace=";
+  return `https://webflow.com/design/${encodeURIComponent(webflowSiteId)}`;
+}
+
 /** Marketplace Install URL — send site owners here (no Slotwise login). */
 export function webflowMarketplaceInstallUrl() {
   return `${appOrigin()}/api/webflow/install`;
@@ -67,12 +73,16 @@ export function webflowMarketplaceInstallUrl() {
 
 export async function webflowConfigured() {
   const secrets = await getPlatformSecrets();
-  return Boolean(secrets.webflowClientId && secrets.webflowClientSecret && webflowRedirectUri());
+  return Boolean(
+    secrets.webflowClientId?.trim() &&
+      secrets.webflowClientSecret?.trim() &&
+      webflowRedirectUri(),
+  );
 }
 
 export async function getWebflowAuthorizeUrl(state: string) {
   const secrets = await getPlatformSecrets();
-  const clientId = secrets.webflowClientId;
+  const clientId = secrets.webflowClientId?.trim();
   const redirectUri = webflowRedirectUri();
   if (!clientId || !redirectUri) {
     throw new Error("Webflow client ID / WEBFLOW_REDIRECT_URI missing");
@@ -87,24 +97,85 @@ export async function getWebflowAuthorizeUrl(state: string) {
   return url.toString();
 }
 
-export async function exchangeWebflowCode(code: string) {
-  const secrets = await getPlatformSecrets();
+async function postToken(body: Record<string, string>, asForm: boolean) {
   const res = await fetch(WEBFLOW_TOKEN, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: secrets.webflowClientId,
-      client_secret: secrets.webflowClientSecret,
-      code,
-      grant_type: "authorization_code",
-      redirect_uri: webflowRedirectUri(),
-    }),
+    headers: {
+      "Content-Type": asForm ? "application/x-www-form-urlencoded" : "application/json",
+      accept: "application/json",
+    },
+    body: asForm ? new URLSearchParams(body).toString() : JSON.stringify(body),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Webflow token exchange failed: ${text}`);
+  const text = await res.text();
+  return { ok: res.ok, status: res.status, text };
+}
+
+/**
+ * Exchange auth code for access token.
+ * Tries JSON (with + without redirect_uri) then form-urlencoded — Webflow clients vary.
+ */
+export async function exchangeWebflowCode(code: string) {
+  const secrets = await getPlatformSecrets();
+  const client_id = secrets.webflowClientId?.trim() || "";
+  const client_secret = secrets.webflowClientSecret?.trim() || "";
+  const redirect_uri = webflowRedirectUri();
+
+  if (!client_id || !client_secret) {
+    throw new Error("Webflow Client ID/Secret not configured in Platform → Settings");
   }
-  return res.json() as Promise<WebflowAccessToken>;
+
+  const attempts: Array<{ label: string; body: Record<string, string>; asForm: boolean }> = [
+    {
+      label: "json+redirect",
+      asForm: false,
+      body: {
+        client_id,
+        client_secret,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri,
+      },
+    },
+    {
+      label: "json",
+      asForm: false,
+      body: { client_id, client_secret, code, grant_type: "authorization_code" },
+    },
+    {
+      label: "form+redirect",
+      asForm: true,
+      body: {
+        client_id,
+        client_secret,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri,
+      },
+    },
+    {
+      label: "form",
+      asForm: true,
+      body: { client_id, client_secret, code, grant_type: "authorization_code" },
+    },
+  ];
+
+  const errors: string[] = [];
+  for (const attempt of attempts) {
+    const result = await postToken(attempt.body, attempt.asForm);
+    if (result.ok) {
+      try {
+        return JSON.parse(result.text) as WebflowAccessToken;
+      } catch {
+        errors.push(`${attempt.label}: invalid JSON`);
+        continue;
+      }
+    }
+    errors.push(`${attempt.label}:${result.status}:${result.text.slice(0, 180)}`);
+  }
+
+  throw new Error(
+    `Webflow token exchange failed. Check Client ID/Secret and that Redirect URI is exactly ${redirect_uri}. Details: ${errors.join(" | ")}`,
+  );
 }
 
 async function wfGet<T>(path: string, accessToken: string): Promise<T> {

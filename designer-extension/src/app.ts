@@ -11,7 +11,7 @@ import {
 import { iconLabel, icons } from "./icons";
 import { brandLoader } from "./loader";
 
-type Tab = "home" | "events" | "create" | "tools" | "settings";
+type Tab = "home" | "events" | "create" | "theme" | "tools" | "settings";
 
 const THEME_KEY = "slotwise-designer-theme";
 
@@ -19,6 +19,7 @@ const TAB_META: Record<Tab, { label: string; icon: string }> = {
   home: { label: "Home", icon: icons.home },
   events: { label: "Events", icon: icons.calendar },
   create: { label: "New", icon: icons.plus },
+  theme: { label: "Theme", icon: icons.palette },
   tools: { label: "Tools", icon: icons.wrench },
   settings: { label: "Settings", icon: icons.settings },
 };
@@ -32,6 +33,8 @@ export async function boot(root: HTMLElement) {
     webflowSiteId: null as string | null,
     bootstrap: null as api.Bootstrap | null,
     services: [] as api.Service[],
+    themes: [] as api.DesignerTheme[],
+    branding: null as api.DesignerBranding | null,
     status: "",
     statusOk: true,
     busy: false,
@@ -83,10 +86,10 @@ export async function boot(root: HTMLElement) {
   function upgradeLock(feature: string, label: string) {
     const g = gate(feature);
     if (!g || g.allowed) return "";
+    const url = state.bootstrap?.entitlements.upgradeUrl || `${api.APP_URL}/dashboard/plans`;
     return `<div class="lock">
-      <strong>${icons.crown} ${label} · ${g.upgradeLabel}+</strong>
-      <span>Not on ${state.bootstrap?.entitlements.label || "Free"}. Upgrade to unlock.</span>
-      <a class="btn btn-upgrade" href="${state.bootstrap?.entitlements.upgradeUrl}" target="_blank" rel="noreferrer">${iconLabel(icons.zap, `Upgrade to ${g.upgradeLabel}`)}</a>
+      <strong>${label} · ${g.upgradeLabel}+</strong>
+      <a class="lock-link" href="${url}" target="_blank" rel="noreferrer">Pro · Upgrade</a>
     </div>`;
   }
 
@@ -120,7 +123,7 @@ export async function boot(root: HTMLElement) {
               ${state.theme === "light" ? icons.moon : icons.sun}
             </button>
             <a class="btn btn-upgrade" href="${state.bootstrap?.entitlements.upgradeUrl || `${api.APP_URL}/dashboard/plans`}" target="_blank" rel="noreferrer">
-              ${iconLabel(icons.zap, "Upgrade")}
+              Upgrade
             </a>
             <button type="button" class="btn btn-primary" id="publishBtn">
               ${iconLabel(icons.rocket, "Publish")}
@@ -167,11 +170,27 @@ export async function boot(root: HTMLElement) {
         publicKey: null,
       });
       document.documentElement.style.setProperty("--ac", state.bootstrap.site.accent || "#f5a000");
-      const list = await api.listServices({
-        webflowSiteId: state.webflowSiteId,
-        publicKey: state.bootstrap.site.publicKey,
-      });
+      const [list, themesRes, brandingRes] = await Promise.all([
+        api.listServices({
+          webflowSiteId: state.webflowSiteId,
+          publicKey: state.bootstrap.site.publicKey,
+        }),
+        api.listThemes().catch(() => ({ themes: [] as api.DesignerTheme[] })),
+        api
+          .getBranding({
+            webflowSiteId: state.webflowSiteId,
+            publicKey: state.bootstrap.site.publicKey,
+          })
+          .catch(() => null),
+      ]);
       state.services = list.services;
+      state.themes = themesRes.themes;
+      state.branding = brandingRes?.branding ?? {
+        themeKey: state.bootstrap.site.themeKey,
+        accent: state.bootstrap.site.accent,
+        radius: 14,
+        font: "Manrope",
+      };
       setStatus("Connected · " + state.bootstrap.site.name);
     } catch (e) {
       state.bootstrap = null;
@@ -361,6 +380,62 @@ export async function boot(root: HTMLElement) {
     </section>`;
   }
 
+  function viewTheme() {
+    if (!state.bootstrap) {
+      return `<section class="card">
+        ${cardTitle(icons.palette, "Widget theme")}
+        <p class="lead">Connect a site to pick a booking theme.</p>
+      </section>`;
+    }
+    const current = state.branding?.themeKey || state.bootstrap.site.themeKey;
+    const accent = state.branding?.accent || state.bootstrap.site.accent;
+    const radius = state.branding?.radius ?? 14;
+    const themes =
+      state.themes.length > 0
+        ? state.themes
+        : [
+            {
+              key: current,
+              name: current,
+              bg: "#ffffff",
+              panel: "#ffffff",
+              ink: "#0f1b2d",
+              line: "#e1e6ee",
+              accent,
+              radius,
+              font: "Manrope",
+              button: "solid" as const,
+            },
+          ];
+    return `<section class="card">
+      ${cardTitle(icons.palette, "Widget theme")}
+      <p class="lead">Applies to the live booking widget on your site.</p>
+      <div class="theme-grid">
+        ${themes
+          .map((t) => {
+            const selected = t.key === current;
+            return `<button type="button" class="theme-card" data-theme-key="${escapeHtml(t.key)}" aria-pressed="${selected}">
+              <i class="preview" style="background:linear-gradient(${t.accent},${t.accent}) 10px 22px / 28px 7px no-repeat,linear-gradient(${t.ink},${t.ink}) 10px 10px / 48% 5px no-repeat,${t.bg};border-color:${t.line}"></i>
+              <b>${escapeHtml(t.name)}</b>
+              <small>${escapeHtml(t.font)} · ${t.radius}px</small>
+            </button>`;
+          })
+          .join("")}
+      </div>
+      <div class="field-row" style="margin-top:8px">
+        <label class="field"><span>Accent</span>
+          <input type="color" id="brandAccent" value="${escapeHtml(accent)}" />
+        </label>
+        <label class="field"><span>Radius</span>
+          <input type="range" id="brandRadius" min="0" max="28" value="${radius}" />
+        </label>
+      </div>
+      <button type="button" class="btn btn-primary" id="saveBranding" style="width:100%">
+        ${iconLabel(icons.check, "Save branding")}
+      </button>
+    </section>`;
+  }
+
   function viewTools() {
     return `<section class="card">
       ${cardTitle(icons.upload, "Import & export")}
@@ -425,9 +500,11 @@ export async function boot(root: HTMLElement) {
           ? viewEvents()
           : state.tab === "create"
             ? viewCreate()
-            : state.tab === "tools"
-              ? viewTools()
-              : viewSettings();
+            : state.tab === "theme"
+              ? viewTheme()
+              : state.tab === "tools"
+                ? viewTools()
+                : viewSettings();
     shell(body);
 
     root.querySelector("#embedBtn")?.addEventListener("click", () => void onEmbed());
@@ -443,6 +520,56 @@ export async function boot(root: HTMLElement) {
     root.querySelector("#darkBtn")?.addEventListener("click", () => {
       setTheme("dark");
       void render();
+    });
+
+    root.querySelectorAll("[data-theme-key]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!state.bootstrap) return;
+        const themeKey = (btn as HTMLElement).dataset.themeKey!;
+        const picked = state.themes.find((t) => t.key === themeKey);
+        try {
+          setStatus("Saving theme…");
+          const res = await api.patchBranding({
+            webflowSiteId: state.webflowSiteId,
+            publicKey: state.bootstrap.site.publicKey,
+            themeKey,
+            accent: picked?.accent,
+            radius: picked?.radius,
+            font: picked?.font,
+          });
+          state.branding = res.branding;
+          state.bootstrap.site.themeKey = res.branding.themeKey;
+          state.bootstrap.site.accent = res.branding.accent;
+          document.documentElement.style.setProperty("--ac", res.branding.accent);
+          setStatus("Theme saved · " + (picked?.name || themeKey));
+          void render();
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Theme save failed", false);
+        }
+      });
+    });
+
+    root.querySelector("#saveBranding")?.addEventListener("click", async () => {
+      if (!state.bootstrap) return;
+      const accentEl = root.querySelector("#brandAccent") as HTMLInputElement | null;
+      const radiusEl = root.querySelector("#brandRadius") as HTMLInputElement | null;
+      try {
+        setStatus("Saving branding…");
+        const res = await api.patchBranding({
+          webflowSiteId: state.webflowSiteId,
+          publicKey: state.bootstrap.site.publicKey,
+          themeKey: state.branding?.themeKey || state.bootstrap.site.themeKey,
+          accent: accentEl?.value,
+          radius: radiusEl ? Number(radiusEl.value) : undefined,
+        });
+        state.branding = res.branding;
+        state.bootstrap.site.accent = res.branding.accent;
+        document.documentElement.style.setProperty("--ac", res.branding.accent);
+        setStatus("Branding saved");
+        void render();
+      } catch (e) {
+        setStatus(e instanceof Error ? e.message : "Branding save failed", false);
+      }
     });
 
     root.querySelectorAll("[data-del]").forEach((btn) => {

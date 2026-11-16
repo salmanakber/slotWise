@@ -1,20 +1,35 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CONTACT_EMAIL } from "@/lib/brand";
-import { appOrigin } from "@/lib/webflow";
+import { appOrigin, webflowDesignerUrl, webflowRedirectUri } from "@/lib/webflow";
 
 export const dynamic = "force-dynamic";
 
 export default async function InstallPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; site?: string; name?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    site?: string;
+    name?: string;
+    wf?: string;
+    reason?: string;
+    detail?: string;
+  }>;
 }) {
-  const { status = "start", site = "", name = "" } = await searchParams;
+  const {
+    status = "start",
+    site = "",
+    name = "",
+    wf = "",
+    reason = "",
+    detail = "",
+  } = await searchParams;
   const connected = status === "connected";
   const denied = status === "denied";
   const missing = status === "missing";
   const errored = status === "error";
+  const designerHref = webflowDesignerUrl(wf || null);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0a1018] px-5 py-12 text-[#f4f1ea]">
@@ -42,7 +57,7 @@ export default async function InstallPage({
               <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">You’re connected</h1>
               <p className="mt-3 text-sm leading-relaxed text-[#9aa7b8]">
                 {name ? <strong className="text-white">{name}</strong> : "Your Webflow site"} is linked to
-                Slotwise. No separate Slotwise password is required for embedding.
+                Slotwise.
               </p>
               {site ? (
                 <p className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
@@ -52,7 +67,7 @@ export default async function InstallPage({
               <ol className="mt-6 space-y-3 text-sm text-[#c9d0da]">
                 <li className="flex gap-3">
                   <span className="font-extrabold text-[#f5a000]">1</span>
-                  Open your site in the <strong>Webflow Designer</strong>
+                  Open the site in <strong>Designer</strong>
                 </li>
                 <li className="flex gap-3">
                   <span className="font-extrabold text-[#f5a000]">2</span>
@@ -60,19 +75,19 @@ export default async function InstallPage({
                 </li>
                 <li className="flex gap-3">
                   <span className="font-extrabold text-[#f5a000]">3</span>
-                  Click <strong>Insert booking embed</strong> on the page
+                  Switch to <strong>Design</strong> mode, then place the booking widget
                 </li>
               </ol>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
-                  href="https://webflow.com/dashboard"
+                  href={designerHref}
                   className="rounded-full bg-[#f5a000] px-6 py-3 text-sm font-extrabold text-[#1a1203]"
                 >
-                  Open Webflow
+                  Open in Designer
                 </a>
                 {site ? (
                   <Link
-                    href={`/book/${site}`}
+                    href={`/book/${site}?embed=1`}
                     className="rounded-full border border-white/20 px-6 py-3 text-sm font-bold"
                   >
                     Preview booking
@@ -86,7 +101,8 @@ export default async function InstallPage({
             <>
               <h1 className="text-2xl font-extrabold tracking-tight">Authorization cancelled</h1>
               <p className="mt-3 text-sm text-[#9aa7b8]">
-                Webflow didn’t grant access. You can try again — you won’t need a Slotwise login.
+                Webflow didn’t grant access{reason ? ` (${reason})` : ""}. You can try again — no Slotwise
+                login required.
               </p>
               <a
                 href="/api/webflow/install"
@@ -101,17 +117,35 @@ export default async function InstallPage({
             <>
               <h1 className="text-2xl font-extrabold tracking-tight">App not configured</h1>
               <p className="mt-3 text-sm text-[#9aa7b8]">
-                Platform Webflow Client ID/secret are missing. Contact {CONTACT_EMAIL}.
+                Platform Webflow Client ID/secret are missing. Add them under Platform → Settings, or
+                contact {CONTACT_EMAIL}.
               </p>
             </>
           ) : null}
 
           {errored ? (
             <>
-              <h1 className="text-2xl font-extrabold tracking-tight">Something went wrong</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight">Token exchange failed</h1>
               <p className="mt-3 text-sm text-[#9aa7b8]">
-                Token exchange failed. Retry install or email {CONTACT_EMAIL}.
+                Usually this means the Redirect URI or Client Secret doesn’t match Webflow app settings.
               </p>
+              <ul className="mt-4 space-y-2 text-sm text-[#c9d0da]">
+                <li>
+                  Redirect URI must be exactly:{" "}
+                  <code className="text-[#f5a000]">{webflowRedirectUri()}</code>
+                </li>
+                <li>Client ID + Secret in Platform → Settings must match the Webflow app</li>
+                {reason ? (
+                  <li>
+                    Code: <code>{reason}</code>
+                  </li>
+                ) : null}
+              </ul>
+              {detail ? (
+                <p className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] leading-relaxed text-[#9aa7b8]">
+                  {detail}
+                </p>
+              ) : null}
               <a
                 href="/api/webflow/install"
                 className="mt-8 inline-flex rounded-full bg-[#f5a000] px-6 py-3 text-sm font-extrabold text-[#1a1203]"
@@ -125,8 +159,7 @@ export default async function InstallPage({
             <>
               <h1 className="text-2xl font-extrabold tracking-tight">Install Slotwise</h1>
               <p className="mt-3 text-sm text-[#9aa7b8]">
-                Authorize Webflow once. We’ll create your booking site and you place the embed from the
-                Designer — no separate Slotwise account step.
+                Authorize Webflow once, then open Designer to place the booking embed.
               </p>
               <a
                 href="/api/webflow/install"
