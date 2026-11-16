@@ -16,6 +16,8 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [postmarkToken, setPostmarkToken] = useState("");
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
   const [webflowClientSecret, setWebflowClientSecret] = useState("");
+  const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [groqApiKey, setGroqApiKey] = useState("");
   const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -49,9 +51,14 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.twilioFromNumber = form.twilioFromNumber;
         payload.twilioWhatsappFrom = form.twilioWhatsappFrom;
         payload.webflowClientId = form.webflowClientId;
+        payload.aiProvider = form.aiProvider;
+        payload.openaiModel = form.openaiModel;
+        payload.groqModel = form.groqModel;
         if (postmarkToken.trim()) payload.postmarkToken = postmarkToken.trim();
         if (twilioAuthToken.trim()) payload.twilioAuthToken = twilioAuthToken.trim();
         if (webflowClientSecret.trim()) payload.webflowClientSecret = webflowClientSecret.trim();
+        if (openaiApiKey.trim()) payload.openaiApiKey = openaiApiKey.trim();
+        if (groqApiKey.trim()) payload.groqApiKey = groqApiKey.trim();
       }
 
       if (section === "ops") {
@@ -72,6 +79,8 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       setPostmarkToken("");
       setTwilioAuthToken("");
       setWebflowClientSecret("");
+      setOpenaiApiKey("");
+      setGroqApiKey("");
       setMsg("Saved. Secrets are encrypted at rest.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Save failed");
@@ -260,6 +269,61 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 onChange={(e) => setWebflowClientSecret(e.target.value)}
                 placeholder="Paste new secret to rotate"
                 autoComplete="new-password"
+              />
+            </Field>
+          </section>
+
+          <section className="sw-card">
+            <h2 className="mb-1 text-[15px] font-extrabold">AI (OpenAI / Groq)</h2>
+            <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+              Platform admin only. Powers Designer “Write with AI” for event descriptions. Keys are
+              encrypted at rest. Env vars are used as fallback when fields are empty.
+            </p>
+            <Field label="Provider">
+              <Seg
+                value={form.aiProvider || "openai"}
+                options={[
+                  ["openai", "OpenAI"],
+                  ["groq", "Groq"],
+                  ["template", "Template only"],
+                ]}
+                onChange={(v) => set("aiProvider", v)}
+              />
+            </Field>
+            <Field label="OpenAI API key" hint={form.openaiApiKeyHint ?? "Not set"}>
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={openaiApiKey}
+                onChange={(e) => setOpenaiApiKey(e.target.value)}
+                placeholder="sk-… paste to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="OpenAI model">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.openaiModel ?? ""}
+                onChange={(e) => set("openaiModel", e.target.value || null)}
+                placeholder="gpt-4o-mini"
+              />
+            </Field>
+            <Field label="Groq API key" hint={form.groqApiKeyHint ?? "Not set"}>
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={groqApiKey}
+                onChange={(e) => setGroqApiKey(e.target.value)}
+                placeholder="gsk_… paste to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="Groq model">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.groqModel ?? ""}
+                onChange={(e) => set("groqModel", e.target.value || null)}
+                placeholder="llama-3.3-70b-versatile"
               />
             </Field>
           </section>

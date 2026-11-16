@@ -28,6 +28,13 @@ export type PlatformPublicSettings = {
   twilioWhatsappFrom: string | null;
   webflowClientId: string | null;
   webflowClientSecretSet: boolean;
+  aiProvider: string;
+  openaiApiKeySet: boolean;
+  openaiApiKeyHint: string | null;
+  openaiModel: string | null;
+  groqApiKeySet: boolean;
+  groqApiKeyHint: string | null;
+  groqModel: string | null;
   maintenanceMode: boolean;
   supportEmail: string | null;
   source: "database" | "fallback";
@@ -92,6 +99,17 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       webflowClientSecretSet: Boolean(
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET,
       ),
+      aiProvider: row.aiProvider || "openai",
+      openaiApiKeySet: Boolean(
+        safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY,
+      ),
+      openaiApiKeyHint: maskSecret(
+        safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY,
+      ),
+      openaiModel: row.openaiModel || process.env.OPENAI_MODEL || "gpt-4o-mini",
+      groqApiKeySet: Boolean(safeDecrypt(row.groqApiKeyEncrypted) || process.env.GROQ_API_KEY),
+      groqApiKeyHint: maskSecret(safeDecrypt(row.groqApiKeyEncrypted) || process.env.GROQ_API_KEY),
+      groqModel: row.groqModel || process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
       maintenanceMode: row.maintenanceMode,
       supportEmail: row.supportEmail || CONTACT_EMAIL,
       source: "database",
@@ -121,6 +139,13 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       twilioWhatsappFrom: null,
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecretSet: Boolean(process.env.WEBFLOW_CLIENT_SECRET),
+      aiProvider: "openai",
+      openaiApiKeySet: Boolean(process.env.OPENAI_API_KEY),
+      openaiApiKeyHint: maskSecret(process.env.OPENAI_API_KEY),
+      openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      groqApiKeySet: Boolean(process.env.GROQ_API_KEY),
+      groqApiKeyHint: maskSecret(process.env.GROQ_API_KEY),
+      groqModel: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
       maintenanceMode: false,
       supportEmail: CONTACT_EMAIL,
       source: "fallback",
@@ -149,6 +174,11 @@ export async function getPlatformSecrets() {
       webflowClientId: row.webflowClientId || process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret:
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET || null,
+      aiProvider: (row.aiProvider || "openai") as "openai" | "groq" | "template",
+      openaiApiKey: safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY || null,
+      openaiModel: row.openaiModel || process.env.OPENAI_MODEL || "gpt-4o-mini",
+      groqApiKey: safeDecrypt(row.groqApiKeyEncrypted) || process.env.GROQ_API_KEY || null,
+      groqModel: row.groqModel || process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
       maintenanceMode: row.maintenanceMode,
       supportEmail: row.supportEmail,
     };
@@ -167,6 +197,11 @@ export async function getPlatformSecrets() {
       twilioWhatsappFrom: null as string | null,
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret: process.env.WEBFLOW_CLIENT_SECRET || null,
+      aiProvider: "openai" as const,
+      openaiApiKey: process.env.OPENAI_API_KEY || null,
+      openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      groqApiKey: process.env.GROQ_API_KEY || null,
+      groqModel: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
       maintenanceMode: false,
       supportEmail: null as string | null,
     };
@@ -194,6 +229,11 @@ export type PlatformSettingsUpdate = {
   twilioWhatsappFrom?: string | null;
   webflowClientId?: string | null;
   webflowClientSecret?: string;
+  aiProvider?: "openai" | "groq" | "template";
+  openaiApiKey?: string;
+  openaiModel?: string | null;
+  groqApiKey?: string;
+  groqModel?: string | null;
   maintenanceMode?: boolean;
   supportEmail?: string | null;
 };
@@ -228,6 +268,11 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
   if (input.webflowClientSecret?.trim()) {
     data.webflowClientSecretEncrypted = encryptSecret(input.webflowClientSecret.trim());
   }
+  if (input.aiProvider) data.aiProvider = input.aiProvider;
+  if (input.openaiApiKey?.trim()) data.openaiApiKeyEncrypted = encryptSecret(input.openaiApiKey.trim());
+  if (input.openaiModel !== undefined) data.openaiModel = input.openaiModel || null;
+  if (input.groqApiKey?.trim()) data.groqApiKeyEncrypted = encryptSecret(input.groqApiKey.trim());
+  if (input.groqModel !== undefined) data.groqModel = input.groqModel || null;
   if (input.maintenanceMode !== undefined) data.maintenanceMode = input.maintenanceMode;
   if (input.supportEmail !== undefined) data.supportEmail = input.supportEmail || null;
 

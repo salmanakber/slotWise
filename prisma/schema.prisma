@@ -427,6 +427,13 @@ model PlatformConfig {
   webflowClientId                  String?
   webflowClientSecretEncrypted     String?
 
+  // AI (Designer event descriptions) — platform admin only
+  aiProvider                       String  @default("openai") // openai | groq | template
+  openaiApiKeyEncrypted            String?
+  openaiModel                      String? @default("gpt-4o-mini")
+  groqApiKeyEncrypted              String?
+  groqModel                        String? @default("llama-3.3-70b-versatile")
+
   // Ops
   maintenanceMode                  Boolean @default(false)
   supportEmail                     String?

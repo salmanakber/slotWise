@@ -10,12 +10,12 @@ import {
   ListChecks,
   Palette,
   Plug,
-  Settings2,
   Sparkles,
 } from "lucide-react";
 import { AccessBanner } from "@/components/admin/access-banner";
 import { AdminShell } from "@/components/admin/shell";
 
+/** Site-owner workspace — no Settings (platform secrets / AI live under /platform only). */
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: <LayoutGrid size={15} strokeWidth={2} /> },
   { href: "/dashboard/bookings", label: "Bookings", icon: <CalendarClock size={15} strokeWidth={2} /> },
@@ -26,7 +26,6 @@ const NAV = [
   { href: "/dashboard/branding", label: "Branding", icon: <Palette size={15} strokeWidth={2} /> },
   { href: "/dashboard/integrations", label: "Integrations", icon: <Plug size={15} strokeWidth={2} /> },
   { href: "/dashboard/plans", label: "Plans", icon: <Sparkles size={15} strokeWidth={2} /> },
-  { href: "/dashboard/settings", label: "Settings", icon: <Settings2 size={15} strokeWidth={2} /> },
 ];
 
 const TITLES: Record<string, [string, string]> = {
@@ -39,7 +38,6 @@ const TITLES: Record<string, [string, string]> = {
   "/dashboard/branding": ["Branding and install", "Pick a theme, style the widget, then install it on your site"],
   "/dashboard/integrations": ["Integrations", "Connect calendars, video and tools"],
   "/dashboard/plans": ["Plans and billing", "Your plan, usage and upgrades"],
-  "/dashboard/settings": ["Settings", "Business, team, privacy and API"],
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

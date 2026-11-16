@@ -32,6 +32,11 @@ const bodySchema = z.object({
   twilioWhatsappFrom: z.string().nullable().optional(),
   webflowClientId: z.string().nullable().optional(),
   webflowClientSecret: z.string().optional(),
+  aiProvider: z.enum(["openai", "groq", "template"]).optional(),
+  openaiApiKey: z.string().optional(),
+  openaiModel: z.string().nullable().optional(),
+  groqApiKey: z.string().optional(),
+  groqModel: z.string().nullable().optional(),
   maintenanceMode: z.boolean().optional(),
   supportEmail: z.string().nullable().optional(),
 });
