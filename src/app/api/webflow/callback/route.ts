@@ -3,21 +3,30 @@ import { cookies } from "next/headers";
 import { encryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 import { DEMO_PUBLIC_KEY } from "@/lib/constants";
-import { exchangeWebflowCode, webflowConfigured } from "@/lib/webflow";
+import { appOrigin, exchangeWebflowCode, webflowConfigured } from "@/lib/webflow";
+
+function redirectIntegrations(status: string) {
+  return NextResponse.redirect(`${appOrigin()}/dashboard/integrations?webflow=${status}`);
+}
 
 export async function GET(request: Request) {
-  if (!webflowConfigured()) {
-    return NextResponse.redirect(new URL("/dashboard/integrations?webflow=missing", request.url));
+  if (!(await webflowConfigured())) {
+    return redirectIntegrations("missing");
   }
 
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
+  const error = url.searchParams.get("error");
   const jar = await cookies();
   const expected = jar.get("wf_oauth_state")?.value;
 
+  if (error) {
+    return redirectIntegrations("denied");
+  }
+
   if (!code || !state || !expected || state !== expected) {
-    return NextResponse.redirect(new URL("/dashboard/integrations?webflow=denied", request.url));
+    return redirectIntegrations("denied");
   }
 
   try {
@@ -46,9 +55,9 @@ export async function GET(request: Request) {
         },
       });
     }
-    return NextResponse.redirect(new URL("/dashboard/integrations?webflow=connected", request.url));
+    return redirectIntegrations("connected");
   } catch (e) {
     console.error(e);
-    return NextResponse.redirect(new URL("/dashboard/integrations?webflow=error", request.url));
+    return redirectIntegrations("error");
   }
 }

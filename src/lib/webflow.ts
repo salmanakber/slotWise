@@ -9,15 +9,31 @@ const WEBFLOW_AUTH = "https://webflow.com/oauth/authorize";
 const WEBFLOW_TOKEN = "https://api.webflow.com/oauth/access_token";
 const WEBFLOW_API = "https://api.webflow.com/v2";
 
+/** Canonical public app origin — never trust request Host for OAuth redirects. */
+export function appOrigin() {
+  const raw =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    "https://slotwise.hindaralabs.com";
+  return raw.replace(/\/$/, "");
+}
+
+export function webflowRedirectUri() {
+  return (
+    process.env.WEBFLOW_REDIRECT_URI?.replace(/\/$/, "") ||
+    `${appOrigin()}/api/webflow/callback`
+  );
+}
+
 export async function webflowConfigured() {
   const secrets = await getPlatformSecrets();
-  return Boolean(secrets.webflowClientId && secrets.webflowClientSecret && process.env.WEBFLOW_REDIRECT_URI);
+  return Boolean(secrets.webflowClientId && secrets.webflowClientSecret && webflowRedirectUri());
 }
 
 export async function getWebflowAuthorizeUrl(state: string) {
   const secrets = await getPlatformSecrets();
   const clientId = secrets.webflowClientId;
-  const redirectUri = process.env.WEBFLOW_REDIRECT_URI;
+  const redirectUri = webflowRedirectUri();
   if (!clientId || !redirectUri) {
     throw new Error("Webflow client ID / WEBFLOW_REDIRECT_URI missing");
   }
@@ -53,7 +69,7 @@ export async function exchangeWebflowCode(code: string) {
       client_secret: secrets.webflowClientSecret,
       code,
       grant_type: "authorization_code",
-      redirect_uri: process.env.WEBFLOW_REDIRECT_URI,
+      redirect_uri: webflowRedirectUri(),
     }),
   });
   if (!res.ok) {
@@ -69,7 +85,7 @@ export async function exchangeWebflowCode(code: string) {
 }
 
 export async function registerHostedWidgetScript(accessToken: string, siteId: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = appOrigin();
   const sourceCode = `(()=>{var s=document.createElement('script');s.src='${appUrl}/embed/widget.js';s.async=true;s.dataset.slotwise='1';document.body.appendChild(s);})();`;
 
   const res = await fetch(`${WEBFLOW_API}/sites/${siteId}/registered_scripts/inline`, {
@@ -95,6 +111,6 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
 }
 
 export function widgetInstallSnippet(publicKey: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = appOrigin();
   return `<div data-slotwise-widget data-site="${publicKey}"></div>\n<script src="${appUrl}/embed/widget.js" async></script>`;
 }
