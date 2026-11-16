@@ -95,7 +95,10 @@ export default function RootLayout({
       lang="en"
       className={`${manrope.variable} ${figtree.variable} ${sora.variable} ${youngSerif.variable}`}
     >
-      <body style={{ fontFamily: "var(--font-manrope), system-ui, sans-serif" }}>
+      <body
+        className={`${manrope.variable} ${figtree.variable} ${sora.variable} ${youngSerif.variable}`}
+        style={{ fontFamily: "var(--font-figtree), Figtree, system-ui, sans-serif" }}
+      >
         <AuthSessionProvider>{children}</AuthSessionProvider>
       </body>
     </html>

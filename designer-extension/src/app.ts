@@ -1,9 +1,27 @@
 import * as api from "./api";
-import { detectWebflowSiteId, insertBookingIframe, notify, setExtensionLarge } from "./canvas";
+import {
+  canDesignOnCanvas,
+  detectWebflowSiteId,
+  getDesignerMode,
+  insertBookingIframe,
+  notify,
+  setExtensionLarge,
+  subscribeMode,
+} from "./canvas";
+import { iconLabel, icons } from "./icons";
+import { brandLoader } from "./loader";
 
 type Tab = "home" | "events" | "create" | "tools" | "settings";
 
 const THEME_KEY = "slotwise-designer-theme";
+
+const TAB_META: Record<Tab, { label: string; icon: string }> = {
+  home: { label: "Home", icon: icons.home },
+  events: { label: "Events", icon: icons.calendar },
+  create: { label: "New", icon: icons.plus },
+  tools: { label: "Tools", icon: icons.wrench },
+  settings: { label: "Settings", icon: icons.settings },
+};
 
 export async function boot(root: HTMLElement) {
   await setExtensionLarge();
@@ -17,6 +35,9 @@ export async function boot(root: HTMLElement) {
     status: "",
     statusOk: true,
     busy: false,
+    mode: null as string | null,
+    canDesign: true,
+    loading: true,
   };
 
   function setTheme(theme: "light" | "dark") {
@@ -36,11 +57,20 @@ export async function boot(root: HTMLElement) {
     }
   }
 
+  async function refreshMode() {
+    state.mode = await getDesignerMode();
+    const check = await canDesignOnCanvas();
+    state.canDesign = check.ok;
+    state.mode = check.mode ?? state.mode;
+  }
+
   function money(cents: number, currency = "USD") {
     try {
-      return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(
-        cents / 100,
-      );
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+      }).format(cents / 100);
     } catch {
       return `$${(cents / 100).toFixed(0)}`;
     }
@@ -54,9 +84,21 @@ export async function boot(root: HTMLElement) {
     const g = gate(feature);
     if (!g || g.allowed) return "";
     return `<div class="lock">
-      <strong>${label} · ${g.upgradeLabel}+</strong>
-      <span>Your ${state.bootstrap?.entitlements.label || "Free"} plan doesn’t include this. Upgrade to unlock.</span>
-      <a class="btn btn-upgrade" href="${state.bootstrap?.entitlements.upgradeUrl}" target="_blank" rel="noreferrer">Upgrade to ${g.upgradeLabel}</a>
+      <strong>${icons.crown} ${label} · ${g.upgradeLabel}+</strong>
+      <span>Not on ${state.bootstrap?.entitlements.label || "Free"}. Upgrade to unlock.</span>
+      <a class="btn btn-upgrade" href="${state.bootstrap?.entitlements.upgradeUrl}" target="_blank" rel="noreferrer">${iconLabel(icons.zap, `Upgrade to ${g.upgradeLabel}`)}</a>
+    </div>`;
+  }
+
+  function modeBanner() {
+    if (state.canDesign) return "";
+    const mode = state.mode || "build";
+    return `<div class="mode-banner" role="status">
+      ${icons.alert}
+      <div>
+        <b>Design mode required</b><br/>
+        Canvas embed needs Design mode. Current: <b>${escapeHtml(mode)}</b>. Press <b>D</b> or click Design in the Webflow toolbar, select a section, then place the widget.
+      </div>
     </div>`;
   }
 
@@ -70,22 +112,27 @@ export async function boot(root: HTMLElement) {
             <div class="mark">S</div>
             <div>
               <strong>Slotwise</strong>
-              <small>${name} · ${plan}</small>
+              <small>${escapeHtml(name)} · ${escapeHtml(plan)}</small>
             </div>
           </div>
           <div class="nav-actions">
-            <button type="button" class="btn btn-ghost" id="themeBtn" title="Toggle theme">${state.theme === "light" ? "Dark" : "Light"}</button>
-            <a class="btn btn-upgrade" id="upgradeBtn" href="${state.bootstrap?.entitlements.upgradeUrl || `${api.APP_URL}/dashboard/plans`}" target="_blank" rel="noreferrer">Upgrade</a>
-            <button type="button" class="btn btn-primary" id="publishBtn">Publish</button>
+            <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle theme">
+              ${state.theme === "light" ? icons.moon : icons.sun}
+            </button>
+            <a class="btn btn-upgrade" href="${state.bootstrap?.entitlements.upgradeUrl || `${api.APP_URL}/dashboard/plans`}" target="_blank" rel="noreferrer">
+              ${iconLabel(icons.zap, "Upgrade")}
+            </a>
+            <button type="button" class="btn btn-primary" id="publishBtn">
+              ${iconLabel(icons.rocket, "Publish")}
+            </button>
           </div>
         </header>
+        ${modeBanner()}
         <nav class="tabs" role="tablist">
-          ${(["home", "events", "create", "tools", "settings"] as Tab[])
+          ${(Object.keys(TAB_META) as Tab[])
             .map(
               (t) =>
-                `<button type="button" class="tab" data-tab="${t}" aria-selected="${state.tab === t}">${
-                  t === "create" ? "New event" : t[0].toUpperCase() + t.slice(1)
-                }</button>`,
+                `<button type="button" class="tab" data-tab="${t}" aria-selected="${state.tab === t}">${iconLabel(TAB_META[t].icon, TAB_META[t].label)}</button>`,
             )
             .join("")}
         </nav>
@@ -113,6 +160,7 @@ export async function boot(root: HTMLElement) {
 
   async function refresh() {
     state.webflowSiteId = await detectWebflowSiteId();
+    await refreshMode();
     try {
       state.bootstrap = await api.bootstrap({
         webflowSiteId: state.webflowSiteId,
@@ -124,30 +172,32 @@ export async function boot(root: HTMLElement) {
         publicKey: state.bootstrap.site.publicKey,
       });
       state.services = list.services;
-      setStatus("Connected to " + state.bootstrap.site.name);
+      setStatus("Connected · " + state.bootstrap.site.name);
     } catch (e) {
       state.bootstrap = null;
       setStatus(e instanceof Error ? e.message : "Not connected", false);
+    } finally {
+      state.loading = false;
     }
   }
 
   async function onPublish() {
     if (!state.bootstrap) return setStatus("Connect a site first", false);
     try {
-      state.busy = true;
-      setStatus("Publishing to Webflow…");
+      setStatus("Publishing…");
       await api.publishSite({
         webflowSiteId: state.webflowSiteId,
         publicKey: state.bootstrap.site.publicKey,
       });
-      setStatus("Published to Webflow subdomain");
+      setStatus("Publish started on Webflow subdomain");
       await notify("Success", "Site publish started");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Publish failed";
-      setStatus(msg + " — you can still publish from Webflow’s Publish button", false);
+      setStatus(
+        (e instanceof Error ? e.message : "Publish failed") +
+          " — use Webflow’s Publish if needed",
+        false,
+      );
       await notify("Info", "Use Webflow Publish if API publish isn’t available");
-    } finally {
-      state.busy = false;
     }
   }
 
@@ -155,40 +205,59 @@ export async function boot(root: HTMLElement) {
     if (!state.bootstrap) return setStatus("Connect first", false);
     const g = gate("canvas_embed");
     if (g && !g.allowed) return setStatus("Canvas embed locked on this plan", false);
+    await refreshMode();
+    void render();
     try {
       await insertBookingIframe(state.bootstrap.site.publicKey);
-      setStatus("Widget embedded on canvas (iframe → live booking)");
+      setStatus("Widget placed on canvas");
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Embed failed", false);
+      await refreshMode();
+      void render();
     }
+  }
+
+  function cardTitle(icon: string, title: string) {
+    return `<div class="card-h">${icon}<h2>${title}</h2></div>`;
   }
 
   function viewHome() {
     if (!state.bootstrap) {
       return `<section class="card">
-        <h2>Connect Slotwise</h2>
+        ${cardTitle(icons.layout, "Connect Slotwise")}
         <p class="lead">Authorize Webflow once — no separate Slotwise login for embedding.</p>
-        <a class="btn btn-primary" href="${api.APP_URL}/api/webflow/install" target="_blank" rel="noreferrer">Install / reconnect</a>
+        <a class="btn btn-primary" href="${api.APP_URL}/api/webflow/install" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Install / reconnect")}</a>
       </section>`;
     }
     const lim = state.bootstrap.entitlements.eventsLimit;
     return `<section class="card">
-      <h2>Dashboard</h2>
-      <p class="lead">Manage bookable events, drop the widget on canvas, and publish — without leaving Designer.</p>
+      ${cardTitle(icons.home, "Dashboard")}
+      <p class="lead">Events, canvas embed, and publish — without leaving Designer.</p>
       <div class="stats">
-        <div class="stat"><b>${state.bootstrap.counts.services}</b><span>Events${lim != null ? ` / ${lim}` : ""}</span></div>
-        <div class="stat"><b>${state.bootstrap.counts.bookings}</b><span>Bookings</span></div>
-        <div class="stat"><b>${state.bootstrap.entitlements.label}</b><span>Plan</span></div>
+        <div class="stat">
+          <div class="top">${icons.calendar}<span>Events</span></div>
+          <b>${state.bootstrap.counts.services}${lim != null ? `<span style="font-size:11px;font-weight:600;color:var(--mut)"> / ${lim}</span>` : ""}</b>
+        </div>
+        <div class="stat">
+          <div class="top">${icons.check}<span>Bookings</span></div>
+          <b>${state.bootstrap.counts.bookings}</b>
+        </div>
+        <div class="stat">
+          <div class="top">${icons.crown}<span>Plan</span></div>
+          <b>${escapeHtml(state.bootstrap.entitlements.label)}</b>
+        </div>
       </div>
-      <div style="display:grid;gap:8px;margin-top:12px">
-        <button type="button" class="btn btn-primary" id="embedBtn">Place booking on canvas</button>
-        <button type="button" class="btn" id="gotoCreate">Create event</button>
-        <a class="btn" href="${api.APP_URL}/book/${state.bootstrap.site.publicKey}?embed=1" target="_blank" rel="noreferrer">Preview widget</a>
+      <div class="actions-grid">
+        <button type="button" class="btn btn-primary" id="embedBtn" ${!state.canDesign ? "disabled" : ""}>
+          ${iconLabel(icons.layout, state.canDesign ? "Place on canvas" : "Switch to Design mode")}
+        </button>
+        <button type="button" class="btn" id="gotoCreate">${iconLabel(icons.plus, "Create event")}</button>
+        <a class="btn" href="${api.APP_URL}/book/${state.bootstrap.site.publicKey}?embed=1" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Preview widget")}</a>
       </div>
     </section>
     <section class="card">
-      <h2>Quick tips</h2>
-      <p class="lead">Select a section on the canvas, then Place booking. Publish pushes via Webflow API when connected.</p>
+      ${cardTitle(icons.spark, "Pro unlocks")}
+      <p class="lead">AI copy, import/export, and advanced event fields.</p>
       ${upgradeLock("ai_descriptions", "AI descriptions")}
       ${upgradeLock("import_export", "Import / export")}
       ${upgradeLock("analytics", "Funnel analytics")}
@@ -197,11 +266,14 @@ export async function boot(root: HTMLElement) {
 
   function viewEvents() {
     if (!state.services.length) {
-      return `<section class="card"><div class="empty">No events yet. Create your first bookable service.</div>
-        <button type="button" class="btn btn-primary" id="gotoCreate">New event</button></section>`;
+      return `<section class="card">
+        ${cardTitle(icons.calendar, "Events")}
+        <div class="empty">No events yet.</div>
+        <button type="button" class="btn btn-primary" id="gotoCreate">${iconLabel(icons.plus, "New event")}</button>
+      </section>`;
     }
     return `<section class="card">
-      <h2>Events</h2>
+      ${cardTitle(icons.calendar, "Events")}
       <p class="lead">These power the live booking widget.</p>
       <div class="list">
         ${state.services
@@ -210,10 +282,10 @@ export async function boot(root: HTMLElement) {
             <div class="swatch" style="background:${s.color || "var(--ac)"}"></div>
             <div class="meta">
               <b>${escapeHtml(s.name)} ${s.featured ? '<span class="pill">Featured</span>' : ""} ${!s.active ? '<span class="pill">Off</span>' : ""}</b>
-              <small>${s.durationMin} min · ${escapeHtml(s.category || s.locationType)}${s.description ? " · " + escapeHtml(s.description.slice(0, 60)) : ""}</small>
+              <small>${s.durationMin} min · ${escapeHtml(s.category || s.locationType)}</small>
             </div>
             <div class="price">${money(s.priceCents, state.bootstrap?.site.currency)}</div>
-            <button type="button" class="btn btn-ghost" data-del="${s.id}">Del</button>
+            <button type="button" class="btn btn-icon btn-ghost" data-del="${s.id}" title="Delete">${icons.trash}</button>
           </div>`,
           )
           .join("")}
@@ -225,15 +297,15 @@ export async function boot(root: HTMLElement) {
     const lim = state.bootstrap?.entitlements.eventsLimit;
     const atLimit = lim != null && state.services.length >= lim;
     return `<section class="card">
-      <h2>Create event</h2>
-      <p class="lead">Title, description, category, pricing, and advanced booking rules.</p>
+      ${cardTitle(icons.plus, "Create event")}
+      <p class="lead">Title, AI description, category, and booking rules.</p>
       ${atLimit ? upgradeLock("events", "More than " + lim + " events") : ""}
       <form id="eventForm">
         <label class="field"><span>Title</span><input name="name" required maxlength="120" placeholder="Deep home clean" ${atLimit ? "disabled" : ""} /></label>
         <label class="field"><span>Description</span>
           <textarea name="description" placeholder="What clients get…" ${atLimit ? "disabled" : ""}></textarea>
           <div class="desc-tools">
-            <button type="button" class="btn btn-primary" id="aiBtn" ${atLimit ? "disabled" : ""}>✦ Write with AI</button>
+            <button type="button" class="btn btn-primary" id="aiBtn" ${atLimit ? "disabled" : ""}>${iconLabel(icons.spark, "Write with AI")}</button>
             <select id="aiTone" ${atLimit ? "disabled" : ""}>
               <option value="friendly">Friendly</option>
               <option value="professional">Professional</option>
@@ -247,7 +319,7 @@ export async function boot(root: HTMLElement) {
           <label class="field"><span>Category</span>
             <input name="category" placeholder="Cleaning" ${!gate("categories")?.allowed || atLimit ? "disabled" : ""} />
           </label>
-          <label class="field"><span>Duration (min)</span>
+          <label class="field"><span>Duration</span>
             <input name="durationMin" type="number" min="5" step="5" value="30" required ${atLimit ? "disabled" : ""} />
           </label>
         </div>
@@ -265,9 +337,9 @@ export async function boot(root: HTMLElement) {
             </select>
           </label>
         </div>
-        ${upgradeLock("online_location", "Online / phone locations")}
+        ${upgradeLock("online_location", "Online / phone")}
         <details>
-          <summary style="font-weight:800;font-size:12px;margin:8px 0;cursor:pointer">Advanced</summary>
+          <summary>Advanced</summary>
           <div class="field-row">
             <label class="field"><span>Buffer before</span><input name="bufferBeforeMin" type="number" min="0" value="0" ${!gate("buffers")?.allowed || atLimit ? "disabled" : ""} /></label>
             <label class="field"><span>Buffer after</span><input name="bufferAfterMin" type="number" min="0" value="15" ${!gate("buffers")?.allowed || atLimit ? "disabled" : ""} /></label>
@@ -280,49 +352,53 @@ export async function boot(root: HTMLElement) {
           ${upgradeLock("capacity", "Group capacity")}
           <label class="field" style="display:flex;align-items:center;gap:8px">
             <input name="featured" type="checkbox" ${!gate("featured_events")?.allowed || atLimit ? "disabled" : ""} />
-            <span style="text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--ink)">Featured on widget</span>
+            <span style="text-transform:none;letter-spacing:0;font-size:11.5px;color:var(--ink)">Featured on widget</span>
           </label>
           ${upgradeLock("featured_events", "Featured events")}
         </details>
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px" ${atLimit ? "disabled" : ""}>Save event</button>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:6px" ${atLimit ? "disabled" : ""}>${iconLabel(icons.check, "Save event")}</button>
       </form>
     </section>`;
   }
 
   function viewTools() {
     return `<section class="card">
-      <h2>Import & export</h2>
-      <p class="lead">Move events as JSON or CSV — great for agencies cloning setups.</p>
+      ${cardTitle(icons.upload, "Import & export")}
+      <p class="lead">JSON / CSV for agency clones.</p>
       ${upgradeLock("import_export", "Import / export")}
-      <div style="display:grid;gap:8px">
-        <button type="button" class="btn" id="exportJson" ${!gate("import_export")?.allowed ? "disabled" : ""}>Export JSON</button>
-        <button type="button" class="btn" id="exportCsv" ${!gate("import_export")?.allowed ? "disabled" : ""}>Export CSV</button>
-        <label class="field"><span>Import JSON file</span>
+      <div class="actions-grid">
+        <button type="button" class="btn" id="exportJson" ${!gate("import_export")?.allowed ? "disabled" : ""}>${iconLabel(icons.download, "Export JSON")}</button>
+        <button type="button" class="btn" id="exportCsv" ${!gate("import_export")?.allowed ? "disabled" : ""}>${iconLabel(icons.download, "Export CSV")}</button>
+        <label class="field"><span>Import JSON</span>
           <input type="file" id="importFile" accept="application/json,.json" ${!gate("import_export")?.allowed ? "disabled" : ""} />
         </label>
       </div>
     </section>
     <section class="card">
-      <h2>Canvas</h2>
-      <p class="lead">Insert a live booking iframe without copy-paste.</p>
-      <button type="button" class="btn btn-primary" id="embedBtn2">Place booking on canvas</button>
+      ${cardTitle(icons.layout, "Canvas")}
+      <p class="lead">Insert a live booking iframe — no copy-paste.</p>
+      <button type="button" class="btn btn-primary" id="embedBtn2" ${!state.canDesign ? "disabled" : ""}>
+        ${iconLabel(icons.layout, state.canDesign ? "Place on canvas" : "Switch to Design mode")}
+      </button>
     </section>`;
   }
 
   function viewSettings() {
     return `<section class="card">
-      <h2>Appearance</h2>
-      <p class="lead">Designer panel theme (independent of your site).</p>
-      <div style="display:flex;gap:8px">
-        <button type="button" class="btn ${state.theme === "light" ? "btn-primary" : ""}" id="lightBtn">Light</button>
-        <button type="button" class="btn ${state.theme === "dark" ? "btn-primary" : ""}" id="darkBtn">Dark</button>
+      ${cardTitle(icons.settings, "Appearance")}
+      <p class="lead">Panel theme (independent of your site).</p>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="btn ${state.theme === "light" ? "btn-primary" : ""}" id="lightBtn">${iconLabel(icons.sun, "Light")}</button>
+        <button type="button" class="btn ${state.theme === "dark" ? "btn-primary" : ""}" id="darkBtn">${iconLabel(icons.moon, "Dark")}</button>
       </div>
     </section>
     <section class="card">
-      <h2>Site</h2>
-      <p class="lead">Public key <code>${escapeHtml(state.bootstrap?.site.publicKey || "—")}</code></p>
-      <a class="btn" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">Open full dashboard</a>
-      <a class="btn" href="${api.APP_URL}/dashboard/plans" target="_blank" rel="noreferrer" style="margin-top:8px;display:inline-flex">Manage plan</a>
+      ${cardTitle(icons.users, "Site")}
+      <p class="lead">Key <code style="font-size:10.5px">${escapeHtml(state.bootstrap?.site.publicKey || "—")}</code></p>
+      <div class="actions-grid">
+        <a class="btn" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Full dashboard")}</a>
+        <a class="btn" href="${api.APP_URL}/dashboard/plans" target="_blank" rel="noreferrer">${iconLabel(icons.zap, "Manage plan")}</a>
+      </div>
     </section>`;
   }
 
@@ -335,6 +411,13 @@ export async function boot(root: HTMLElement) {
   }
 
   async function render() {
+    if (state.loading) {
+      shell(
+        `<section class="card">${brandLoader("Loading Slotwise…", state.bootstrap?.site.accent || "var(--ac)")}</section>`,
+      );
+      return;
+    }
+
     const body =
       state.tab === "home"
         ? viewHome()
@@ -378,7 +461,7 @@ export async function boot(root: HTMLElement) {
     root.querySelector("#aiBtn")?.addEventListener("click", async () => {
       if (!state.bootstrap) return;
       if (!gate("ai_descriptions")?.allowed) {
-        setStatus("AI writing is a Pro feature — upgrade to unlock", false);
+        setStatus("AI writing is a Pro feature", false);
         return;
       }
       const form = root.querySelector("#eventForm") as HTMLFormElement;
@@ -388,7 +471,7 @@ export async function boot(root: HTMLElement) {
       const locationType = (form.elements.namedItem("locationType") as HTMLSelectElement).value;
       const tone = (root.querySelector("#aiTone") as HTMLSelectElement).value;
       try {
-        setStatus("Writing description…");
+        setStatus("Writing…");
         const res = await api.aiDescription({
           webflowSiteId: state.webflowSiteId,
           publicKey: state.bootstrap.site.publicKey,
@@ -401,8 +484,7 @@ export async function boot(root: HTMLElement) {
         (form.elements.namedItem("description") as HTMLTextAreaElement).value = res.description;
         setStatus(`Description ready (${res.source})`);
       } catch (e) {
-        const err = e as Error & { upgrade?: boolean };
-        setStatus(err.message + (err.upgrade ? " — Upgrade" : ""), false);
+        setStatus(e instanceof Error ? e.message : "AI failed", false);
       }
     });
 
@@ -413,7 +495,7 @@ export async function boot(root: HTMLElement) {
       const fd = new FormData(form);
       const price = Number(fd.get("price") || 0);
       try {
-        setStatus("Saving event…");
+        setStatus("Saving…");
         await api.createService({
           webflowSiteId: state.webflowSiteId,
           publicKey: state.bootstrap.site.publicKey,
@@ -435,8 +517,7 @@ export async function boot(root: HTMLElement) {
         void render();
         await notify("Success", "Event created");
       } catch (e) {
-        const err = e as Error & { upgrade?: boolean };
-        setStatus(err.message, false);
+        setStatus(e instanceof Error ? e.message : "Save failed", false);
       }
     });
 
@@ -481,7 +562,14 @@ export async function boot(root: HTMLElement) {
     });
   }
 
-  shell(`<section class="card"><p class="lead">Loading Slotwise…</p></section>`);
+  shell(`<section class="card">${brandLoader("Loading Slotwise…")}</section>`);
+  subscribeMode((mode) => {
+    state.mode = mode;
+    void canDesignOnCanvas().then((c) => {
+      state.canDesign = c.ok;
+      void render();
+    });
+  });
   await refresh();
   await render();
 }

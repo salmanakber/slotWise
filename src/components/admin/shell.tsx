@@ -43,13 +43,18 @@ export function AdminShell({
   }, [theme]);
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[236px_minmax(0,1fr)]">
-      <aside className="sticky top-0 flex h-auto flex-row gap-1 overflow-x-auto border-b border-[var(--ln)] bg-[var(--pn)] p-3 lg:h-screen lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-4">
-        <Link href="/" className="mb-2 flex min-w-[140px] items-center gap-2 px-2 py-1 lg:mb-4">
-          <Image src="/logo.png" alt="" width={28} height={28} className="rounded-lg" />
+    <div className="grid min-h-screen lg:grid-cols-[220px_minmax(0,1fr)]">
+      <aside className="sticky top-0 flex h-auto flex-row gap-1 overflow-x-auto border-b border-[var(--ln)] bg-[var(--pn)] p-2.5 lg:h-screen lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-3">
+        <Link href="/" className="mb-1.5 flex min-w-[140px] items-center gap-2 px-2 py-1 lg:mb-3">
+          <Image src="/logo.png" alt="" width={24} height={24} className="rounded-md" />
           <div>
-            <div className="text-[19px] font-extrabold leading-none">Slotwise</div>
-            <div className="text-[11px] font-semibold" style={{ color: "var(--mut)" }}>
+            <div
+              className="text-[14px] font-bold leading-none tracking-tight"
+              style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
+            >
+              Slotwise
+            </div>
+            <div className="mt-0.5 text-[10px] font-semibold" style={{ color: "var(--mut)" }}>
               {brandLabel}
             </div>
           </div>
@@ -62,7 +67,7 @@ export function AdminShell({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-sm font-semibold",
+                "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold",
                 active
                   ? "bg-[var(--sf)] text-[var(--at)]"
                   : "text-[var(--mut)] hover:bg-[var(--bg)] hover:text-[var(--ink)]",
@@ -92,11 +97,16 @@ export function AdminShell({
         </div>
       </aside>
 
-      <main className="min-w-0 px-4 py-5 sm:px-7 sm:py-6">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <main className="min-w-0 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="m-0 text-[26px] font-extrabold leading-tight">{title}</h1>
-            <p className="m-0 mt-1 text-sm" style={{ color: "var(--mut)" }}>
+            <h1
+              className="m-0 text-[20px] font-bold leading-tight tracking-tight sm:text-[22px]"
+              style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
+            >
+              {title}
+            </h1>
+            <p className="m-0 mt-1 text-[12.5px]" style={{ color: "var(--mut)" }}>
               {subtitle}
             </p>
           </div>
@@ -138,17 +148,18 @@ export function AdminShell({
   );
 }
 
-export function Icon({ d }: { d: string }) {
+export function Icon({ d, size = 15 }: { d: string; size?: number }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="18"
-      height="18"
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden
     >
       <path d={d} />
     </svg>
