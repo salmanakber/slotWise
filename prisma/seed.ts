@@ -1,7 +1,11 @@
 import { PlanTier, PrismaClient, Role } from "@prisma/client";
+import { hash } from "bcryptjs";
 import { FEATURE_FLAGS } from "../src/lib/features";
 
 const prisma = new PrismaClient();
+
+const OWNER_PASSWORD = process.env.SEED_PLATFORM_PASSWORD || "SlotwiseOwner!2026";
+const STUDIO_PASSWORD = process.env.SEED_SITE_PASSWORD || "StudioOwner!2026";
 
 async function main() {
   const plans = [
@@ -89,13 +93,36 @@ async function main() {
     },
   });
 
+  const ownerHash = await hash(OWNER_PASSWORD, 12);
+  const studioHash = await hash(STUDIO_PASSWORD, 12);
+
   const owner = await prisma.user.upsert({
     where: { email: "owner@slotwise.app" },
-    update: { role: Role.PLATFORM_OWNER, name: "Slotwise Owner" },
+    update: {
+      role: Role.PLATFORM_OWNER,
+      name: "Slotwise Owner",
+      passwordHash: ownerHash,
+    },
     create: {
       email: "owner@slotwise.app",
       name: "Slotwise Owner",
       role: Role.PLATFORM_OWNER,
+      passwordHash: ownerHash,
+    },
+  });
+
+  const studioOwner = await prisma.user.upsert({
+    where: { email: "studio@slotwise.app" },
+    update: {
+      role: Role.WORKSPACE_OWNER,
+      name: "Amira Khan",
+      passwordHash: studioHash,
+    },
+    create: {
+      email: "studio@slotwise.app",
+      name: "Amira Khan",
+      role: Role.WORKSPACE_OWNER,
+      passwordHash: studioHash,
     },
   });
 
@@ -108,20 +135,25 @@ async function main() {
     },
   });
 
-  await prisma.membership.upsert({
-    where: {
-      userId_workspaceId: {
-        userId: owner.id,
-        workspaceId: workspace.id,
+  for (const [userId, role] of [
+    [owner.id, Role.PLATFORM_OWNER],
+    [studioOwner.id, Role.WORKSPACE_OWNER],
+  ] as const) {
+    await prisma.membership.upsert({
+      where: {
+        userId_workspaceId: {
+          userId,
+          workspaceId: workspace.id,
+        },
       },
-    },
-    update: { role: Role.WORKSPACE_OWNER },
-    create: {
-      userId: owner.id,
-      workspaceId: workspace.id,
-      role: Role.WORKSPACE_OWNER,
-    },
-  });
+      update: { role },
+      create: {
+        userId,
+        workspaceId: workspace.id,
+        role,
+      },
+    });
+  }
 
   const pro = await prisma.plan.findUniqueOrThrow({ where: { tier: PlanTier.PRO } });
 
@@ -288,7 +320,8 @@ async function main() {
 
   console.log("Seeded Slotwise demo data");
   console.log({
-    owner: owner.email,
+    platformLogin: { email: owner.email, password: OWNER_PASSWORD },
+    siteOwnerLogin: { email: studioOwner.email, password: STUDIO_PASSWORD },
     site: site.publicKey,
     workspace: workspace.name,
     bookUrl: `/book/${site.publicKey}`,

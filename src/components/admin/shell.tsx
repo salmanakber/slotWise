@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -42,9 +44,7 @@ export function AdminShell({
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[236px_minmax(0,1fr)]">
-      <aside
-        className="sticky top-0 flex h-auto flex-row gap-1 overflow-x-auto border-b border-[var(--ln)] bg-[var(--pn)] p-3 lg:h-screen lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-4"
-      >
+      <aside className="sticky top-0 flex h-auto flex-row gap-1 overflow-x-auto border-b border-[var(--ln)] bg-[var(--pn)] p-3 lg:h-screen lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-4">
         <Link href="/" className="mb-2 flex min-w-[140px] items-center gap-2 px-2 py-1 lg:mb-4">
           <Image src="/logo.png" alt="" width={28} height={28} className="rounded-lg" />
           <div>
@@ -63,7 +63,9 @@ export function AdminShell({
               href={item.href}
               className={cn(
                 "flex items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-sm font-semibold",
-                active ? "bg-[var(--sf)] text-[var(--at)]" : "text-[var(--mut)] hover:bg-[var(--bg)] hover:text-[var(--ink)]",
+                active
+                  ? "bg-[var(--sf)] text-[var(--at)]"
+                  : "text-[var(--mut)] hover:bg-[var(--bg)] hover:text-[var(--ink)]",
               )}
             >
               <span className="opacity-80">{item.icon}</span>
@@ -72,9 +74,21 @@ export function AdminShell({
           );
         })}
 
-        <div className="mt-auto hidden rounded-xl border border-[var(--ln)] p-3 text-[13px] lg:block">
-          <div className="font-bold">{brandMeta.split("·")[0]?.trim()}</div>
-          <div style={{ color: "var(--mut)" }}>{brandMeta}</div>
+        <div className="mt-auto hidden space-y-2 lg:block">
+          <div className="rounded-xl border border-[var(--ln)] p-3 text-[13px]">
+            <div className="font-bold">{session?.user?.name || brandMeta.split("·")[0]?.trim()}</div>
+            <div style={{ color: "var(--mut)" }}>{session?.user?.email || brandMeta}</div>
+            <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--at)]">
+              {session?.user?.role?.replaceAll("_", " ") || "Signed in"}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="sw-btn w-full"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -86,27 +100,36 @@ export function AdminShell({
               {subtitle}
             </p>
           </div>
-          <div className="inline-flex rounded-full border border-[var(--ln)] bg-[var(--bg)] p-[3px]">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
-                theme === "light" ? "bg-[var(--ac)] text-[var(--on)]" : "text-[var(--mut)]",
-              )}
-              onClick={() => setTheme("light")}
+              className="sw-btn lg:hidden"
+              onClick={() => signOut({ callbackUrl: "/login" })}
             >
-              Light
+              Sign out
             </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
-                theme === "dark" ? "bg-[var(--ac)] text-[var(--on)]" : "text-[var(--mut)]",
-              )}
-              onClick={() => setTheme("dark")}
-            >
-              Amber night
-            </button>
+            <div className="inline-flex rounded-full border border-[var(--ln)] bg-[var(--bg)] p-[3px]">
+              <button
+                type="button"
+                className={cn(
+                  "rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
+                  theme === "light" ? "bg-[var(--ac)] text-[var(--on)]" : "text-[var(--mut)]",
+                )}
+                onClick={() => setTheme("light")}
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
+                  theme === "dark" ? "bg-[var(--ac)] text-[var(--on)]" : "text-[var(--mut)]",
+                )}
+                onClick={() => setTheme("dark")}
+              >
+                Amber night
+              </button>
+            </div>
           </div>
         </div>
         <div className="sw-fade-in">{children}</div>
@@ -117,7 +140,16 @@ export function AdminShell({
 
 export function Icon({ d }: { d: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d={d} />
     </svg>
   );

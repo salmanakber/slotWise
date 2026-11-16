@@ -181,7 +181,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={form.emailFrom ?? ""}
                 onChange={(e) => set("emailFrom", e.target.value || null)}
-                placeholder="bookings@slotwise.hindaralabs.com"
+                placeholder="tidyflaw@gmail.com"
               />
             </Field>
             <Field label="Server token" hint={form.postmarkTokenHint ?? "Not set"}>
@@ -280,7 +280,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
               className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
               value={form.supportEmail ?? ""}
               onChange={(e) => set("supportEmail", e.target.value || null)}
-              placeholder="support@slotwise.hindaralabs.com"
+              placeholder="tidyflaw@gmail.com"
             />
           </Field>
         </section>

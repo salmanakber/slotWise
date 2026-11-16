@@ -1,3 +1,4 @@
+import { DEFAULT_EMAIL_FROM } from "@/lib/brand";
 import { getPlatformSecrets } from "@/lib/platform-config";
 
 /**
@@ -13,7 +14,7 @@ export async function sendBookingConfirmation(input: {
   businessName: string;
 }) {
   const secrets = await getPlatformSecrets();
-  const from = secrets.emailFrom || "bookings@slotwise.hindaralabs.com";
+  const from = secrets.emailFrom || DEFAULT_EMAIL_FROM;
   const subject = `${input.businessName}: booking ${input.reference} confirmed`;
   const body = [
     `Hi, your ${input.serviceName} is booked for ${input.whenLabel}.`,

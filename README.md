@@ -26,13 +26,22 @@ npm run dev
 
 | URL | Purpose |
 |---|---|
-| `/` | Product home |
-| `/book/sw_demo_studio_nine` | Live booking widget |
-| `/manage/{token}` | Customer cancel / rebook (no login) |
-| `/dashboard` | Site-owner admin |
-| `/dashboard/branding` | 8 themes + brand loader + install |
-| `/platform` | Slotwise platform console |
+| `/` | Marketing home |
+| `/login` | Auth (required for admin) |
+| `/book/sw_demo_studio_nine` | Live booking widget (public) |
+| `/manage/{token}` | Customer cancel / rebook (public) |
+| `/dashboard` | Site-owner admin (auth) |
+| `/platform` | Platform console (platform roles only) |
 | `/embed/widget.js` | iframe embed loader |
+
+### Demo logins (after `npm run db:seed`)
+
+| Role | Email | Password |
+|---|---|---|
+| Platform owner | `owner@slotwise.app` | `SlotwiseOwner!2026` |
+| Site owner | `studio@slotwise.app` | `StudioOwner!2026` |
+
+Set `NEXTAUTH_URL` + `NEXTAUTH_SECRET` (or `AUTH_SECRET`) in `.env`.
 
 ## APIs (P0)
 

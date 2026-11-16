@@ -1,6 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
+import { AccessBanner } from "@/components/admin/access-banner";
 import { AdminShell, Icon } from "@/components/admin/shell";
 
 const NAV = [
@@ -41,6 +43,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       brandLabel="Site admin"
       brandMeta="Studio Nine · Pro plan"
     >
+      <Suspense fallback={null}>
+        <AccessBanner />
+      </Suspense>
       {children}
     </AdminShell>
   );

@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { CONTACT_EMAIL } from "@/lib/brand";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
+import { prisma } from "@/lib/prisma";
 
 const PLATFORM_ID = "platform";
 
@@ -92,7 +93,7 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET,
       ),
       maintenanceMode: row.maintenanceMode,
-      supportEmail: row.supportEmail,
+      supportEmail: row.supportEmail || CONTACT_EMAIL,
       source: "database",
     };
   } catch {
@@ -121,7 +122,7 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecretSet: Boolean(process.env.WEBFLOW_CLIENT_SECRET),
       maintenanceMode: false,
-      supportEmail: null,
+      supportEmail: CONTACT_EMAIL,
       source: "fallback",
     };
   }
