@@ -66,6 +66,32 @@ h1 {
   line-height: 1.4;
 }
 
+.site-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12px;
+}
+
+.site-card .muted {
+  color: var(--mut);
+  font-weight: 600;
+}
+
+.site-card strong {
+  font-size: 13px;
+  font-weight: 800;
+  word-break: break-all;
+}
+
+.site-card a {
+  color: var(--ac);
+  font-weight: 800;
+}
+
 .field {
   display: grid;
   gap: 6px;

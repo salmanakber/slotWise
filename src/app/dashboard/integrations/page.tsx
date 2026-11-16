@@ -13,19 +13,21 @@ export default async function IntegrationsPage() {
       <section className="sw-card">
         <h2 className="mb-1 text-[15px] font-extrabold">Webflow</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Hybrid app: OAuth once, then Slotwise can place the widget via Custom Code API and sync CMS.
-          Platform owners can set Client ID/secret under Platform → Settings.
+          Site owners install from Webflow (no Slotwise login). After authorize, they open Designer →
+          Slotwise → Insert booking embed. Platform credentials live under Platform → Settings.
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
           <div>
             <b>Connection</b>
             <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-              {wf ? "Credentials configured — start OAuth" : "Ask platform owner to add Webflow credentials"}
+              {wf
+                ? "Credentials configured — install URL /api/webflow/install"
+                : "Ask platform owner to add Webflow credentials"}
             </small>
           </div>
           {wf ? (
-            <a href="/api/webflow/start" className="sw-btn sw-btn-primary">
-              Connect Webflow
+            <a href="/api/webflow/install" className="sw-btn sw-btn-primary">
+              Re-authorize Webflow
             </a>
           ) : (
             <em className="sw-tag sw-tag-muted">Not configured</em>

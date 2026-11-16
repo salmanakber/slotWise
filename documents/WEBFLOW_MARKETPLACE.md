@@ -8,6 +8,11 @@ Enable **both**:
 Redirect URI (production):
 `https://slotwise.hindaralabs.com/api/webflow/callback`
 
+**Install URL** (Marketplace / “Install app” — site owners must NOT hit `/login`):
+`https://slotwise.hindaralabs.com/api/webflow/install`
+
+After OAuth, users land on `/install?status=connected` then open **Designer → Apps → Slotwise → Launch App** to embed.
+
 ## Scopes
 - `authorized_user:read`
 - `sites:read` `sites:write`

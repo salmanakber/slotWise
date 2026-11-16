@@ -63,4 +63,12 @@ Then in Designer: **Launch development app**.
 
 For Marketplace review of a Hybrid App, upload a separate **Source map artifact** ZIP on the submission form — never put `.map` files inside `bundle.zip`.
 
+## Install URL (Webflow app settings)
+
+Set the Hybrid App **Install URL** to:
+
+`https://slotwise.hindaralabs.com/api/webflow/install`
+
+Do **not** point Install URL at `/login` or `/dashboard/*`. Site owners authorize Webflow once, then use **Launch App** in the Designer to embed — no separate Slotwise password.
+
 Support: tidyflaw@gmail.com
