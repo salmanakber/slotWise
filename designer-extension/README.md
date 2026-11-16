@@ -63,6 +63,19 @@ Then in Designer: **Launch development app**.
 
 For Marketplace review of a Hybrid App, upload a separate **Source map artifact** ZIP on the submission form — never put `.map` files inside `bundle.zip`.
 
+## Designer dashboard (v2)
+
+The extension opens as a full Slotwise panel in Designer:
+
+- Light / dark theme toggle (top nav)
+- **Upgrade** + **Publish** in the top bar
+- Events CRUD with AI description, categories, buffers, capacity
+- Import / export (Pro+)
+- **Place booking on canvas** via iframe (no copy-paste)
+- Plan gates with clear upgrade CTAs on locked features
+
+Rebuild + re-upload `bundle.zip` after changes.
+
 ## Install URL (Webflow app settings)
 
 Set the Hybrid App **Install URL** to:

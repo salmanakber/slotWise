@@ -216,6 +216,10 @@ model Service {
   site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   name            String
   description     String?
+  category        String?
+  color           String?  @default("#f5a000")
+  locationType    String   @default("onsite") // onsite | online | phone | hybrid
+  capacity        Int      @default(1)
   durationMin     Int
   priceCents      Int      @default(0)
   bufferBeforeMin Int      @default(0)
@@ -223,6 +227,7 @@ model Service {
   minNoticeMin    Int      @default(240)
   maxPerDay       Int?
   active          Boolean  @default(true)
+  featured        Boolean  @default(false)
   cmsItemId       String?
   sortOrder       Int      @default(0)
   createdAt       DateTime @default(now())
@@ -232,6 +237,7 @@ model Service {
   staff    StaffService[]
 
   @@index([siteId, active])
+  @@index([siteId, category])
 }
 
 model Staff {
