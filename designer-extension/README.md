@@ -16,16 +16,12 @@ Webflow asks for a zip created by the CLI. Do this from **`designer-extension/`*
 
 ```bash
 cd designer-extension
+git pull origin main   # if you're on the live server, pull first
 npm install
-npm run build
-npx webflow extension bundle
-```
-
-Or in one step:
-
-```bash
 npm run bundle
 ```
+
+(`npm run bundle` runs Vite build, then `npx @webflow/webflow-cli extension bundle`.)
 
 That writes **`bundle.zip`** (must be under **5 MB**, no source maps).
 

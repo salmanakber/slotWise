@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "bundle": "npm run build && webflow extension bundle",
-    "serve": "webflow extension serve"
+    "bundle": "npm run build && npx --yes @webflow/webflow-cli extension bundle",
+    "serve": "npx --yes @webflow/webflow-cli extension serve"
   },
   "dependencies": {
     "@webflow/designer-extension-typings": "^2.2.2"
