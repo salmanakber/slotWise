@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
 import { formatMoney } from "@/lib/utils";
 
@@ -58,13 +58,34 @@ function addDaysIso(iso: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
+function contrastOn(accent: string) {
+  const hex = accent.replace("#", "");
+  if (hex.length < 6) return "#1a1203";
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.62 ? "#1a1203" : "#ffffff";
+}
+
+function initials(label: string) {
+  return label
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 export function BookingWidget({
   publicKey,
   initial,
+  embed = false,
 }: {
   publicKey: string;
   initial?: SitePayload;
+  embed?: boolean;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [site, setSite] = useState<SitePayload | null>(initial ?? null);
   const [serviceId, setServiceId] = useState(initial?.services[0]?.id ?? "");
   const [staffId, setStaffId] = useState<string>("");
@@ -125,6 +146,26 @@ export function BookingWidget({
     };
   }, [site, serviceId, date, staffId, publicKey]);
 
+  useEffect(() => {
+    if (!embed || typeof window === "undefined") return;
+    const el = rootRef.current;
+    if (!el) return;
+
+    const post = () => {
+      const height = Math.ceil(el.getBoundingClientRect().height);
+      window.parent.postMessage(
+        { source: "slotwise", type: "resize", publicKey, height },
+        "*",
+      );
+    };
+
+    window.parent.postMessage({ source: "slotwise", type: "ready", publicKey }, "*");
+    post();
+    const ro = new ResizeObserver(post);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [embed, publicKey, step, site, slots, loadingSlots, submitting]);
+
   const service = useMemo(
     () => site?.services.find((s) => s.id === serviceId) ?? null,
     [site, serviceId],
@@ -132,10 +173,14 @@ export function BookingWidget({
 
   const branding = site?.branding;
   const accent = branding?.accent ?? "#f5a000";
-  const radius = branding?.radius ?? 14;
-  const bg = branding?.theme?.bg ?? "#fff";
+  const onAccent = contrastOn(accent);
+  const radius = branding?.radius ?? 18;
+  const bg = branding?.theme?.bg ?? "#ffffff";
   const ink = branding?.theme?.ink ?? "#0f1b2d";
   const line = branding?.theme?.line ?? "#e1e6ee";
+  const panel = branding?.theme?.panel ?? bg;
+  const mut = `color-mix(in srgb, ${ink} 58%, transparent)`;
+  const business = branding?.businessName || site?.name || "Book";
 
   async function confirm() {
     if (!service || !slotStart) return;
@@ -171,41 +216,141 @@ export function BookingWidget({
 
   if (!site) {
     return (
-      <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-[var(--ln)] bg-[var(--pn)] p-8">
-        {error ? <p className="text-sm text-[var(--bad)]">{error}</p> : <BrandLoader accent="#f5a000" label="Loading Slotwise…" />}
+      <div
+        ref={rootRef}
+        className="flex min-h-[360px] items-center justify-center p-8"
+        style={{
+          background: bg,
+          color: ink,
+          borderRadius: radius,
+          border: embed ? `1px solid ${line}` : undefined,
+        }}
+      >
+        {error ? (
+          <p className="text-sm" style={{ color: "#c0392b" }}>
+            {error}
+          </p>
+        ) : (
+          <BrandLoader accent={accent} label="Loading booking…" />
+        )}
       </div>
     );
   }
 
   const days = Array.from({ length: 14 }, (_, i) => addDaysIso(todayIso(), i));
+  const steps = [
+    { key: "pick", label: "Time" },
+    { key: "details", label: "Details" },
+    { key: "done", label: "Done" },
+  ] as const;
+  const stepIndex = steps.findIndex((s) => s.key === step);
 
   return (
     <div
-      className="sw-widget mx-auto w-full max-w-[420px] overflow-hidden border shadow-[0_14px_34px_rgba(0,0,0,.12)]"
+      ref={rootRef}
+      className="sw-widget mx-auto w-full max-w-[440px] overflow-hidden"
       style={{
-        background: bg,
+        background: panel,
         color: ink,
-        borderColor: line,
+        border: `1px solid ${line}`,
         borderRadius: radius,
-        fontFamily: branding?.font === "Match my site" ? "inherit" : `${branding?.font ?? "Manrope"}, system-ui, sans-serif`,
+        boxShadow: embed
+          ? "none"
+          : `0 1px 2px color-mix(in srgb, ${ink} 6%, transparent), 0 22px 48px color-mix(in srgb, ${ink} 10%, transparent)`,
+        fontFamily:
+          branding?.font === "Match my site"
+            ? "inherit"
+            : `${branding?.font ?? "Manrope"}, system-ui, sans-serif`,
       }}
       data-slotwise-root
+      data-embed={embed ? "1" : undefined}
     >
-      <header className="flex items-center justify-between gap-3 border-b px-5 py-4" style={{ borderColor: line }}>
-        <div className="flex items-center gap-2 font-extrabold">
-          <i className="inline-block h-3.5 w-3.5 rounded-full" style={{ background: accent }} />
-          {branding?.businessName || site.name}
+      <style>{`
+        @keyframes sw-w-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: none; }
+        }
+        @keyframes sw-w-check {
+          0% { transform: scale(.6); opacity: 0; }
+          60% { transform: scale(1.08); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .sw-w-rise { animation: sw-w-in .45s cubic-bezier(.2,.8,.2,1) both; }
+        .sw-w-check { animation: sw-w-check .55s cubic-bezier(.2,.8,.2,1) both; }
+        .sw-w-scroll::-webkit-scrollbar { height: 0; width: 0; }
+        @media (prefers-reduced-motion: reduce) {
+          .sw-w-rise, .sw-w-check { animation: none !important; }
+        }
+      `}</style>
+
+      <header
+        className="relative overflow-hidden px-5 pb-4 pt-5"
+        style={{
+          borderBottom: `1px solid ${line}`,
+          background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, ${panel}), ${panel} 62%)`,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className="grid h-11 w-11 shrink-0 place-items-center text-sm font-extrabold tracking-tight"
+              style={{
+                borderRadius: Math.max(radius - 8, 10),
+                background: accent,
+                color: onAccent,
+                boxShadow: `0 10px 24px color-mix(in srgb, ${accent} 35%, transparent)`,
+              }}
+            >
+              {initials(business)}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[17px] font-extrabold tracking-tight">{business}</div>
+              <div className="mt-0.5 text-[12.5px]" style={{ color: mut }}>
+                {step === "done" ? "Booking confirmed" : "Pick a service & time"}
+              </div>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {steps.map((s, i) => {
+              const active = i === stepIndex;
+              const done = i < stepIndex;
+              return (
+                <span
+                  key={s.key}
+                  className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  style={{
+                    background: active || done ? accent : "transparent",
+                    color: active || done ? onAccent : mut,
+                    border: `1px solid ${active || done ? accent : line}`,
+                    opacity: done && !active ? 0.75 : 1,
+                  }}
+                >
+                  {i + 1}
+                  <span className="hidden sm:inline"> · {s.label}</span>
+                </span>
+              );
+            })}
+          </div>
         </div>
-        <div className="text-[12px] opacity-70">
-          {step === "pick" ? "1 · Time" : step === "details" ? "2 · Details" : "Done"}
+        <div
+          className="mt-4 h-1 overflow-hidden rounded-full"
+          style={{ background: `color-mix(in srgb, ${line} 80%, transparent)` }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${((stepIndex + 1) / steps.length) * 100}%`,
+              background: accent,
+            }}
+          />
         </div>
       </header>
 
       <div className="relative grid gap-5 p-5">
         {(loadingSlots || submitting) && branding?.showLoader !== false ? (
           <div
-            className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[2px]"
-            style={{ background: `color-mix(in srgb, ${bg} 88%, transparent)` }}
+            className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[3px]"
+            style={{ background: `color-mix(in srgb, ${panel} 82%, transparent)` }}
           >
             <BrandLoader
               style={branding?.loaderStyle ?? "PULSE"}
@@ -216,21 +361,50 @@ export function BookingWidget({
         ) : null}
 
         {step === "done" && confirmation ? (
-          <div className="grid gap-3 py-6 text-center">
-            <div className="text-2xl font-extrabold">You’re booked</div>
-            <p className="text-sm opacity-75">
-              {confirmation.reference} · {new Date(confirmation.startsAt).toLocaleString()}
-            </p>
-            <a className="sw-btn sw-btn-primary mx-auto" href={`/manage/${confirmation.manageToken}`}>
+          <div className="sw-w-rise grid gap-4 py-8 text-center">
+            <div
+              className="sw-w-check mx-auto grid h-16 w-16 place-items-center rounded-full text-2xl font-black"
+              style={{ background: accent, color: onAccent }}
+            >
+              ✓
+            </div>
+            <div>
+              <div className="text-2xl font-extrabold tracking-tight">You’re booked</div>
+              <p className="mx-auto mt-2 max-w-[28ch] text-sm leading-relaxed" style={{ color: mut }}>
+                {confirmation.reference}
+                <br />
+                {new Date(confirmation.startsAt).toLocaleString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+            <a
+              className="mx-auto inline-flex items-center justify-center px-6 py-3 text-sm font-extrabold transition hover:brightness-105"
+              href={`/manage/${confirmation.manageToken}`}
+              style={{
+                background: accent,
+                color: onAccent,
+                borderRadius: Math.max(radius - 4, 10),
+              }}
+            >
               Manage booking
             </a>
           </div>
         ) : null}
 
         {step === "pick" ? (
-          <>
+          <div className="sw-w-rise grid gap-5">
             <section>
-              <h3 className="mb-2 text-[15px] font-extrabold">Choose a service</h3>
+              <div className="mb-2.5 flex items-end justify-between gap-2">
+                <h3 className="text-[15px] font-extrabold tracking-tight">Service</h3>
+                <span className="text-[12px]" style={{ color: mut }}>
+                  {site.services.length} available
+                </span>
+              </div>
               <div className="grid gap-2">
                 {site.services.map((s) => {
                   const on = s.id === serviceId;
@@ -239,21 +413,30 @@ export function BookingWidget({
                       key={s.id}
                       type="button"
                       onClick={() => setServiceId(s.id)}
-                      className="flex w-full items-center justify-between gap-3 border p-3 text-left"
+                      className="group flex w-full items-center justify-between gap-3 border p-3.5 text-left transition"
                       style={{
-                        borderRadius: Math.max(radius - 6, 4),
+                        borderRadius: Math.max(radius - 6, 10),
                         borderColor: on ? accent : line,
-                        background: on ? `color-mix(in srgb, ${accent} 14%, ${bg})` : "transparent",
+                        background: on
+                          ? `color-mix(in srgb, ${accent} 12%, ${panel})`
+                          : "transparent",
+                        boxShadow: on
+                          ? `0 0 0 1px ${accent}, 0 10px 24px color-mix(in srgb, ${accent} 18%, transparent)`
+                          : "none",
                       }}
                     >
-                      <span>
-                        <b>{s.name}</b>
-                        {branding?.showDuration !== false ? (
-                          <small className="block text-[12.5px] opacity-70">{s.durationMin} min</small>
-                        ) : null}
-                        {s.description ? <small className="block text-[12.5px] opacity-70">{s.description}</small> : null}
+                      <span className="min-w-0">
+                        <b className="block text-[14.5px] font-extrabold tracking-tight">{s.name}</b>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px]" style={{ color: mut }}>
+                          {branding?.showDuration !== false ? <span>{s.durationMin} min</span> : null}
+                          {s.description ? <span>· {s.description}</span> : null}
+                        </span>
                       </span>
-                      {branding?.showPrice !== false ? <em className="not-italic font-extrabold">{formatMoney(s.priceCents, site.currency)}</em> : null}
+                      {branding?.showPrice !== false ? (
+                        <em className="shrink-0 not-italic text-[15px] font-extrabold">
+                          {formatMoney(s.priceCents, site.currency)}
+                        </em>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -262,13 +445,20 @@ export function BookingWidget({
 
             {branding?.showStaff !== false && site.staff.length > 0 ? (
               <section>
-                <h3 className="mb-2 text-[15px] font-extrabold">Staff</h3>
+                <h3 className="mb-2.5 text-[15px] font-extrabold tracking-tight">Who</h3>
                 <div className="flex flex-wrap gap-2">
-                  <Chip active={!staffId} accent={accent} line={line} onClick={() => setStaffId("")}>
+                  <Chip active={!staffId} accent={accent} onAccent={onAccent} line={line} onClick={() => setStaffId("")}>
                     Anyone
                   </Chip>
                   {site.staff.map((s) => (
-                    <Chip key={s.id} active={staffId === s.id} accent={accent} line={line} onClick={() => setStaffId(s.id)}>
+                    <Chip
+                      key={s.id}
+                      active={staffId === s.id}
+                      accent={accent}
+                      onAccent={onAccent}
+                      line={line}
+                      onClick={() => setStaffId(s.id)}
+                    >
                       {s.name}
                     </Chip>
                   ))}
@@ -277,117 +467,207 @@ export function BookingWidget({
             ) : null}
 
             <section>
-              <h3 className="mb-2 text-[15px] font-extrabold">Pick a day</h3>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="mb-2.5 flex items-end justify-between gap-2">
+                <h3 className="text-[15px] font-extrabold tracking-tight">Day</h3>
+                <span className="text-[12px]" style={{ color: mut }}>
+                  {site.timezone}
+                </span>
+              </div>
+              <div className="sw-w-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 {days.map((d) => {
-                  const label = new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", {
-                    weekday: "short",
-                    day: "numeric",
-                  });
+                  const dt = new Date(`${d}T12:00:00Z`);
+                  const weekday = dt.toLocaleDateString("en-US", { weekday: "short" });
+                  const dayNum = dt.toLocaleDateString("en-US", { day: "numeric" });
                   const on = d === date;
                   return (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setDate(d)}
-                      className="min-w-[64px] shrink-0 border px-2 py-2 text-[13px] font-semibold"
+                      className="grid min-w-[68px] shrink-0 gap-0.5 border px-2 py-2.5 text-center transition"
                       style={{
-                        borderRadius: Math.max(radius - 6, 4),
+                        borderRadius: Math.max(radius - 6, 10),
                         borderColor: on ? accent : line,
                         background: on ? accent : "transparent",
-                        color: on ? "#1a1203" : ink,
+                        color: on ? onAccent : ink,
                       }}
                     >
-                      {label}
+                      <span className="text-[11px] font-bold uppercase tracking-wide opacity-80">
+                        {weekday}
+                      </span>
+                      <span className="text-[17px] font-extrabold leading-none">{dayNum}</span>
                     </button>
                   );
                 })}
               </div>
-              <p className="mt-2 text-[12.5px] opacity-70">Times in {site.timezone}</p>
             </section>
 
             <section>
-              <h3 className="mb-2 text-[15px] font-extrabold">Pick a time</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <h3 className="mb-2.5 text-[15px] font-extrabold tracking-tight">Time</h3>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {slots.length === 0 && !loadingSlots ? (
-                  <p className="col-span-3 text-sm opacity-70">No openings this day. Try another date.</p>
+                  <div
+                    className="col-span-full rounded-2xl border border-dashed px-4 py-8 text-center text-sm"
+                    style={{ borderColor: line, color: mut }}
+                  >
+                    No openings this day. Try another date.
+                  </div>
                 ) : (
-                  slots.map((s) => (
-                    <button
-                      key={s.start}
-                      type="button"
-                      disabled={!s.available}
-                      onClick={() => setSlotStart(s.start)}
-                      className="border py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
-                      style={{
-                        borderRadius: Math.max(radius - 6, 4),
-                        borderColor: slotStart === s.start ? accent : line,
-                        background: slotStart === s.start ? accent : "transparent",
-                        color: slotStart === s.start ? "#1a1203" : ink,
-                      }}
-                    >
-                      {s.label}
-                    </button>
-                  ))
+                  slots.map((s) => {
+                    const on = slotStart === s.start;
+                    return (
+                      <button
+                        key={s.start}
+                        type="button"
+                        disabled={!s.available}
+                        onClick={() => setSlotStart(s.start)}
+                        className="border py-2.5 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
+                        style={{
+                          borderRadius: Math.max(radius - 6, 10),
+                          borderColor: on ? accent : line,
+                          background: on ? accent : "transparent",
+                          color: on ? onAccent : ink,
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </section>
-          </>
+          </div>
         ) : null}
 
         {step === "details" ? (
-          <section className="grid gap-3">
-            <h3 className="text-[15px] font-extrabold">Your details</h3>
-            <Field label="Name" value={name} onChange={setName} />
-            <Field label="Email" value={email} onChange={setEmail} type="email" />
-            <Field label="Phone (optional)" value={phone} onChange={setPhone} />
-            {service ? (
-              <p className="text-sm opacity-75">
-                {service.name} · {new Date(slotStart).toLocaleString()} ·{" "}
+          <section className="sw-w-rise grid gap-4">
+            <div
+              className="rounded-2xl border px-4 py-3 text-sm"
+              style={{
+                borderColor: line,
+                background: `color-mix(in srgb, ${accent} 8%, ${panel})`,
+              }}
+            >
+              <div className="font-extrabold">{service?.name}</div>
+              <div className="mt-1" style={{ color: mut }}>
+                {slotStart
+                  ? new Date(slotStart).toLocaleString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
+                  : ""}
+                {" · "}
                 {site.payment.mode === "DEPOSIT"
                   ? `${site.payment.depositPercent}% deposit`
                   : site.payment.mode === "FULL"
                     ? "Pay in full"
                     : "Pay on site"}
-              </p>
-            ) : null}
+              </div>
+            </div>
+            <h3 className="text-[15px] font-extrabold tracking-tight">Your details</h3>
+            <Field label="Name" value={name} onChange={setName} accent={accent} line={line} bg={bg} radius={radius} />
+            <Field
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              type="email"
+              accent={accent}
+              line={line}
+              bg={bg}
+              radius={radius}
+            />
+            <Field
+              label="Phone (optional)"
+              value={phone}
+              onChange={setPhone}
+              type="tel"
+              accent={accent}
+              line={line}
+              bg={bg}
+              radius={radius}
+              required={false}
+            />
           </section>
         ) : null}
 
-        {error ? <p className="text-sm" style={{ color: "#c0392b" }}>{error}</p> : null}
+        {error ? (
+          <p
+            className="rounded-xl px-3 py-2 text-sm font-semibold"
+            style={{ background: "rgba(192,57,43,.1)", color: "#c0392b" }}
+          >
+            {error}
+          </p>
+        ) : null}
       </div>
 
       {step !== "done" ? (
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4" style={{ borderColor: line }}>
-          <div>
-            <b className="block">{service?.name}</b>
-            <span className="text-[13.5px] opacity-70">
-              {slotStart ? new Date(slotStart).toLocaleString() : "Select a time"}
+        <footer
+          className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 backdrop-blur-md"
+          style={{
+            borderColor: line,
+            background: `color-mix(in srgb, ${panel} 92%, transparent)`,
+          }}
+        >
+          <div className="min-w-0">
+            <b className="block truncate text-[14.5px] font-extrabold">{service?.name}</b>
+            <span className="text-[13px]" style={{ color: mut }}>
+              {slotStart
+                ? new Date(slotStart).toLocaleString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })
+                : "Select a time"}
+              {branding?.showPrice !== false && service
+                ? ` · ${formatMoney(service.priceCents, site.currency)}`
+                : ""}
             </span>
           </div>
           {step === "pick" ? (
             <button
               type="button"
-              className="px-5 py-3 font-extrabold disabled:opacity-40"
-              style={{ background: accent, color: "#1a1203", borderRadius: Math.max(radius - 4, 6) }}
+              className="shrink-0 px-5 py-3 text-sm font-extrabold transition hover:brightness-105 disabled:opacity-40"
+              style={{
+                background: accent,
+                color: onAccent,
+                borderRadius: Math.max(radius - 4, 10),
+                boxShadow: slotStart
+                  ? `0 12px 28px color-mix(in srgb, ${accent} 35%, transparent)`
+                  : "none",
+              }}
               disabled={!slotStart}
               onClick={() => setStep("details")}
             >
               Continue
             </button>
           ) : (
-            <div className="flex gap-2">
-              <button type="button" className="sw-btn" onClick={() => setStep("pick")}>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                className="border px-4 py-3 text-sm font-bold"
+                style={{ borderColor: line, borderRadius: Math.max(radius - 4, 10) }}
+                onClick={() => setStep("pick")}
+              >
                 Back
               </button>
               <button
                 type="button"
-                className="px-5 py-3 font-extrabold disabled:opacity-40"
-                style={{ background: accent, color: "#1a1203", borderRadius: Math.max(radius - 4, 6) }}
+                className="px-5 py-3 text-sm font-extrabold transition hover:brightness-105 disabled:opacity-40"
+                style={{
+                  background: accent,
+                  color: onAccent,
+                  borderRadius: Math.max(radius - 4, 10),
+                  boxShadow: `0 12px 28px color-mix(in srgb, ${accent} 35%, transparent)`,
+                }}
                 disabled={!name || !email || submitting}
                 onClick={confirm}
               >
-                Confirm booking
+                Confirm
               </button>
             </div>
           )}
@@ -395,7 +675,9 @@ export function BookingWidget({
       ) : null}
 
       {branding?.showBadge !== false ? (
-        <div className="pb-3 text-center text-[11.5px] opacity-60">Powered by Slotwise</div>
+        <div className="pb-3.5 text-center text-[11px] font-semibold tracking-wide" style={{ color: mut }}>
+          Powered by Slotwise
+        </div>
       ) : null}
     </div>
   );
@@ -405,12 +687,14 @@ function Chip({
   children,
   active,
   accent,
+  onAccent,
   line,
   onClick,
 }: {
   children: React.ReactNode;
   active: boolean;
   accent: string;
+  onAccent: string;
   line: string;
   onClick: () => void;
 }) {
@@ -418,11 +702,11 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full border px-3 py-1.5 text-[13px] font-semibold"
+      className="rounded-full border px-3.5 py-1.5 text-[13px] font-bold transition"
       style={{
         borderColor: active ? accent : line,
         background: active ? accent : "transparent",
-        color: active ? "#1a1203" : "inherit",
+        color: active ? onAccent : "inherit",
       }}
     >
       {children}
@@ -435,21 +719,44 @@ function Field({
   value,
   onChange,
   type = "text",
+  accent,
+  line,
+  bg,
+  radius,
+  required = true,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  accent: string;
+  line: string;
+  bg: string;
+  radius: number;
+  required?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-semibold">
+    <label className="grid gap-1.5 text-[13px] font-bold">
       {label}
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-3 py-2 font-normal"
-        required={type !== "tel"}
+        required={required}
+        className="border px-3.5 py-2.5 font-medium outline-none transition"
+        style={{
+          borderRadius: Math.max(radius - 8, 10),
+          borderColor: line,
+          background: bg,
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = accent;
+          e.currentTarget.style.boxShadow = `0 0 0 3px color-mix(in srgb, ${accent} 28%, transparent)`;
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = line;
+          e.currentTarget.style.boxShadow = "none";
+        }}
       />
     </label>
   );

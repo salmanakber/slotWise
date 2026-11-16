@@ -116,16 +116,16 @@ export default function HomePage() {
 
           <div className="relative flex items-center justify-center lg:justify-end">
             <div
-              className="pointer-events-none absolute h-[340px] w-[340px] rounded-full blur-3xl sm:h-[420px] sm:w-[420px]"
-              style={{ background: "radial-gradient(circle, rgba(245,160,0,.35), transparent 70%)" }}
+              className="pointer-events-none absolute h-[380px] w-[380px] rounded-full blur-3xl sm:h-[520px] sm:w-[520px]"
+              style={{ background: "radial-gradient(circle, rgba(245,160,0,.32), transparent 68%)" }}
             />
             <Image
-              src="/logo.png"
-              alt="Slotwise — calendar, clock, and the S mark"
-              width={420}
-              height={420}
+              src="/hero-image.png"
+              alt="Slotwise — 3D calendar, clock, and booking modules"
+              width={920}
+              height={920}
               priority
-              className="m-float relative z-10 w-[min(78vw,380px)] drop-shadow-[0_40px_80px_rgba(0,0,0,.55)]"
+              className="m-float relative z-10 w-[min(92vw,520px)] drop-shadow-[0_40px_90px_rgba(0,0,0,.65)]"
             />
           </div>
         </div>

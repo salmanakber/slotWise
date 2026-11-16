@@ -1,0 +1,19 @@
+{
+  "name": "slotwise-designer-extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "bundle": "npm run build && webflow extension bundle",
+    "serve": "webflow extension serve"
+  },
+  "dependencies": {
+    "@webflow/designer-extension-typings": "^2.2.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^6.3.5"
+  }
+}
