@@ -3,6 +3,7 @@ import { addMinutes } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { getDaySlots, rankSlots } from "@/lib/booking/availability";
 import { sendBookingConfirmation } from "@/lib/email";
+import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
 
 function refCode() {
@@ -19,19 +20,25 @@ export class BookingError extends Error {
 }
 
 export async function loadSiteBundle(publicKey: string) {
-  const site = await prisma.site.findUnique({
-    where: { publicKey },
-    include: {
-      branding: true,
-      services: { where: { active: true }, orderBy: { sortOrder: "asc" } },
-      staff: { where: { active: true }, orderBy: { name: "asc" } },
-      availability: true,
-      timeOff: true,
-      stripeAccount: true,
-      plan: true,
-    },
-  });
+  const [site, platform] = await Promise.all([
+    prisma.site.findUnique({
+      where: { publicKey },
+      include: {
+        branding: true,
+        services: { where: { active: true }, orderBy: { sortOrder: "asc" } },
+        staff: { where: { active: true }, orderBy: { name: "asc" } },
+        availability: true,
+        timeOff: true,
+        stripeAccount: true,
+        plan: true,
+      },
+    }),
+    getPlatformSecrets(),
+  ]);
   if (!site) throw new BookingError("Site not found", "NOT_FOUND");
+  if (platform.maintenanceMode) {
+    throw new BookingError("Bookings are temporarily paused for maintenance", "INACTIVE");
+  }
   if (site.status !== "ACTIVE") throw new BookingError("Site is not accepting bookings", "INACTIVE");
   return site;
 }

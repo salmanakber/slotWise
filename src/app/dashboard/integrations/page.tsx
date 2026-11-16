@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { webflowConfigured } from "@/lib/webflow";
-import { stripeConfigured } from "@/lib/stripe";
+import { getPlatformPublicSettings } from "@/lib/platform-config";
 
-export default function IntegrationsPage() {
-  const wf = webflowConfigured();
-  const stripe = stripeConfigured();
+export const dynamic = "force-dynamic";
+
+export default async function IntegrationsPage() {
+  const settings = await getPlatformPublicSettings();
+  const wf = settings.webflowClientSecretSet && Boolean(settings.webflowClientId);
+  const stripe = settings.stripeSecretKeySet;
 
   return (
     <div className="grid gap-3.5">
@@ -12,12 +14,13 @@ export default function IntegrationsPage() {
         <h2 className="mb-1 text-[15px] font-extrabold">Webflow</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
           Hybrid app: OAuth once, then Slotwise can place the widget via Custom Code API and sync CMS.
+          Platform owners can set Client ID/secret under Platform → Settings.
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
           <div>
             <b>Connection</b>
             <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-              {wf ? "Env vars present — start OAuth" : "Add WEBFLOW_CLIENT_ID / SECRET to .env"}
+              {wf ? "Credentials configured — start OAuth" : "Ask platform owner to add Webflow credentials"}
             </small>
           </div>
           {wf ? (
@@ -33,13 +36,13 @@ export default function IntegrationsPage() {
       <section className="sw-card">
         <h2 className="mb-1 text-[15px] font-extrabold">Stripe Connect</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Money goes to the business. Slotwise application fee is 0%.
+          Money goes to the business. Platform fee is controlled in Platform → Stripe (default 0%).
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
           <div>
             <b>Platform keys</b>
             <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-              {stripe ? "STRIPE_SECRET_KEY detected" : "Add STRIPE_SECRET_KEY to enable payments"}
+              {stripe ? `Ready · ${settings.stripeMode} mode` : "Configure in Platform → Stripe"}
             </small>
           </div>
           <em className={`sw-tag ${stripe ? "sw-tag-ok" : "sw-tag-muted"}`}>

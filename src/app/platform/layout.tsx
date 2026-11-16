@@ -19,10 +19,10 @@ const TITLES: Record<string, [string, string]> = {
   "/platform/sites": ["Sites", "Activate, pause or inspect every installed site"],
   "/platform/customers": ["Customers", "Workspaces and agency accounts"],
   "/platform/plans": ["Plans and prices", "Edit what customers pay and get"],
-  "/platform/stripe": ["Stripe", "Platform Connect keys, webhooks and payout rules"],
-  "/platform/config": ["Configuration", "Feature flags, providers and global defaults"],
+  "/platform/stripe": ["Stripe", "Keys, webhook secret, fee, and Connect defaults"],
+  "/platform/config": ["Configuration", "Feature flags and rollout controls"],
   "/platform/audit": ["Audit log", "Who changed what, across the platform"],
-  "/platform/settings": ["Settings", "Owner team, security and danger zone"],
+  "/platform/settings": ["Settings", "Twilio, email, Webflow credentials, and maintenance"],
 };
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {

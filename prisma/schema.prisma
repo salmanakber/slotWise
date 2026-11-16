@@ -392,16 +392,39 @@ model FeatureFlag {
 }
 
 model PlatformConfig {
-  id        String   @id @default("platform")
-  stripeMode String  @default("test") // test | live
-  stripePublishableKey String?
-  stripeSecretKeyEncrypted String?
-  stripeWebhookSecretEncrypted String?
-  applicationFeePercent Int @default(0)
-  maintenanceMode Boolean @default(false)
-  emailProvider String @default("postmark")
-  smsProvider   String @default("twilio")
-  updatedAt DateTime @updatedAt
+  id String @id @default("platform")
+
+  // Stripe platform
+  stripeMode                       String  @default("test") // test | live
+  stripePublishableKey             String?
+  stripeSecretKeyEncrypted         String?
+  stripeWebhookSecretEncrypted     String?
+  applicationFeePercent            Int     @default(0)
+  stripeRequireOnboarding          Boolean @default(true)
+  stripeAllowDeposits              Boolean @default(true)
+  stripeAllowPayOnSite             Boolean @default(true)
+  stripeSaveCardForNoShow          Boolean @default(true)
+
+  // Email
+  emailProvider                    String  @default("postmark")
+  emailFrom                        String?
+  postmarkTokenEncrypted           String?
+
+  // SMS / WhatsApp (Twilio)
+  smsProvider                      String  @default("twilio")
+  twilioAccountSid                 String?
+  twilioAuthTokenEncrypted         String?
+  twilioFromNumber                 String?
+  twilioWhatsappFrom               String?
+
+  // Webflow app credentials (optional override of env)
+  webflowClientId                  String?
+  webflowClientSecretEncrypted     String?
+
+  // Ops
+  maintenanceMode                  Boolean @default(false)
+  supportEmail                     String?
+  updatedAt                        DateTime @updatedAt
 }
 
 model AuditLog {
