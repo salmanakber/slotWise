@@ -24,5 +24,5 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json(siteBootstrapPayload(site), { headers: cors });
+  return NextResponse.json(await siteBootstrapPayload(site), { headers: cors });
 }

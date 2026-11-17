@@ -92,7 +92,16 @@ function IntegrationsClient() {
     const connected = search.get("connected");
     const error = search.get("error");
     if (connected) setMsg(`Connected ${connected.replace(/_/g, " ")}`);
-    if (error) setMsg(`Connect failed: ${error}`);
+    if (error) {
+      const raw = decodeURIComponent(error);
+      if (/verification|tested|tester/i.test(raw)) {
+        setMsg(
+          "Google is still in testing mode. In Google Cloud → OAuth consent screen, add this Google account under Test users, then try Connect again.",
+        );
+      } else {
+        setMsg(`Connect failed: ${raw}`);
+      }
+    }
   }, [search]);
 
   async function connect(provider: string) {

@@ -15,16 +15,48 @@ export type Bootstrap = {
     accent: string;
     themeKey: string;
   };
-  counts: { services: number; staff: number; bookings: number };
+  counts: { services: number; staff: number; bookings: number; bookingsThisMonth?: number };
   plan: { tier: string; name: string; priceMonthly: number };
   entitlements: {
     tier: string;
     label: string;
     priceLabel: string;
     eventsLimit: number | null;
+    bookingsLimit?: number | null;
     upgradeUrl: string;
     gates: Record<string, { allowed: boolean; upgradeLabel: string }>;
   };
+  payments?: {
+    connected: boolean;
+    chargesEnabled: boolean;
+    payoutsEnabled: boolean;
+    paymentMode: string;
+    depositPercent: number;
+    setupUrl: string;
+  };
+  apps?: Array<{
+    provider: string;
+    label: string;
+    connected: boolean;
+    ready: boolean;
+    email: string | null;
+  }>;
+  activeEvents?: Array<{
+    id: string;
+    name: string;
+    durationMin: number;
+    priceCents: number;
+    color: string | null;
+    featured: boolean;
+  }>;
+  recentBookings?: Array<{
+    id: string;
+    reference: string;
+    customerName: string;
+    serviceName: string;
+    startsAt: string;
+    status: string;
+  }>;
 };
 
 export type Service = {

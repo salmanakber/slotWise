@@ -19,6 +19,7 @@ export function AdminShell({
   nav,
   brandLabel,
   brandMeta,
+  headerAside,
   children,
 }: {
   title: string;
@@ -26,6 +27,7 @@ export function AdminShell({
   nav: NavItem[];
   brandLabel: string;
   brandMeta: string;
+  headerAside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -111,6 +113,7 @@ export function AdminShell({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {headerAside}
             <button
               type="button"
               className="sw-btn lg:hidden"

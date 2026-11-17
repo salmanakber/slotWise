@@ -20,6 +20,8 @@ export type EntitlementKey =
 
 type TierLimits = {
   eventsLimit: number | null;
+  /** Monthly booking allowance; null = unlimited */
+  bookingsLimit: number | null;
   staffLimit: number | null;
   themesLimit: number;
   features: EntitlementKey[];
@@ -50,6 +52,7 @@ const ALL_FEATURES: EntitlementKey[] = [
 const TIER: Record<PlanTier, TierLimits> = {
   FREE: {
     eventsLimit: 3,
+    bookingsLimit: 25,
     staffLimit: 1,
     themesLimit: 2,
     features: ["events", "canvas_embed", "publish", "themes"],
@@ -59,6 +62,7 @@ const TIER: Record<PlanTier, TierLimits> = {
   },
   PRO: {
     eventsLimit: 25,
+    bookingsLimit: 500,
     staffLimit: 3,
     themesLimit: 4,
     features: [
@@ -81,6 +85,7 @@ const TIER: Record<PlanTier, TierLimits> = {
   },
   BUSINESS: {
     eventsLimit: null,
+    bookingsLimit: null,
     staffLimit: 15,
     themesLimit: 8,
     features: [
@@ -106,6 +111,7 @@ const TIER: Record<PlanTier, TierLimits> = {
   },
   AGENCY: {
     eventsLimit: null,
+    bookingsLimit: null,
     staffLimit: null,
     themesLimit: 8,
     features: [...ALL_FEATURES],
@@ -138,6 +144,7 @@ export function entitlementsForTier(tier: PlanTier | string | null | undefined) 
     label: cfg.label,
     priceLabel: cfg.priceLabel,
     eventsLimit: cfg.eventsLimit,
+    bookingsLimit: cfg.bookingsLimit,
     staffLimit: cfg.staffLimit,
     themesLimit: cfg.themesLimit,
     upgradeTo: cfg.upgradeTo,

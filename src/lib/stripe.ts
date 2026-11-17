@@ -35,29 +35,60 @@ export async function getApplicationFeePercent() {
   return secrets.applicationFeePercent ?? 0;
 }
 
-/** Create a Connect account link for a site (onboarding). */
-export async function createConnectOnboardingLink(accountId: string, returnUrl: string, refreshUrl: string) {
+/** Create a Connect Accounts v2 onboarding link for a site. */
+export async function createConnectOnboardingLink(
+  accountId: string,
+  returnUrl: string,
+  refreshUrl: string,
+) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
-  return client.accountLinks.create({
+  return client.v2.core.accountLinks.create({
     account: accountId,
-    refresh_url: refreshUrl,
-    return_url: returnUrl,
-    type: "account_onboarding",
+    use_case: {
+      type: "account_onboarding",
+      account_onboarding: {
+        return_url: returnUrl,
+        refresh_url: refreshUrl,
+        collection_options: {
+          fields: "eventually_due",
+        },
+      },
+    },
   });
 }
 
+/**
+ * Create a connected account via Accounts v2 (POST /v2/core/accounts).
+ * Destination charges without on_behalf_of → recipient + stripe_transfers.
+ * Express dashboard requires platform fees/losses liability (application).
+ */
 export async function createConnectedAccount(email?: string | null) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
-  return client.accounts.create({
-    type: "express",
-    ...(email ? { email } : {}),
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
+  return client.v2.core.accounts.create({
+    ...(email ? { contact_email: email } : {}),
+    display_name: "Slotwise bookings",
+    dashboard: "express",
+    defaults: {
+      responsibilities: {
+        fees_collector: "application",
+        losses_collector: "application",
+      },
+      profile: {
+        product_description: "Appointments booked via Slotwise",
+      },
     },
-    business_profile: { product_description: "Appointments booked via Slotwise" },
+    configuration: {
+      recipient: {
+        capabilities: {
+          stripe_balance: {
+            stripe_transfers: { requested: true },
+          },
+        },
+      },
+    },
+    include: ["configuration.recipient", "defaults", "requirements"],
   });
 }
 

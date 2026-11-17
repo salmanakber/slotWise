@@ -100,8 +100,8 @@ export async function boot(root: HTMLElement) {
     return `<div class="mode-banner" role="status">
       ${icons.alert}
       <div>
-        <b>Design mode required</b><br/>
-        Switch to Design (press <b>D</b>), select a section, then place the widget. Current: <b>${escapeHtml(mode)}</b>
+        <b>Design mode needed</b><br/>
+        Press <b>D</b>, select a section on the page, then add your booking block. Current: <b>${escapeHtml(mode)}</b>
       </div>
     </div>`;
   }
@@ -256,48 +256,175 @@ export async function boot(root: HTMLElement) {
     return `<div class="card-h"><span class="ico">${icon}</span><h2>${title}</h2></div>`;
   }
 
+  function formatWhen(iso: string) {
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    } catch {
+      return iso;
+    }
+  }
+
+  function paymentCard() {
+    const p = state.bootstrap?.payments;
+    if (!p) return "";
+    const ok = p.connected && p.chargesEnabled;
+    const partial = p.connected && !p.chargesEnabled;
+    const status = ok ? "Ready" : partial ? "Finish setup" : "Not set up";
+    const tone = ok ? "ok" : partial ? "warn" : "muted";
+    const modeLabel =
+      p.paymentMode === "DEPOSIT"
+        ? `${p.depositPercent}% deposit`
+        : p.paymentMode === "FULL"
+          ? "Full payment"
+          : "Pay on site";
+    return `<section class="card card-soft">
+      ${cardTitle(icons.zap, "Payments")}
+      <div class="status-row">
+        <em class="pill pill-${tone}">${status}</em>
+        <span class="muted">${escapeHtml(modeLabel)}</span>
+      </div>
+      <p class="lead">${ok ? "Customers can pay when they book." : "Set up Stripe so you can take deposits or full payment."}</p>
+      <a class="btn btn-quiet btn-block" href="${p.setupUrl}" target="_blank" rel="noreferrer">${iconLabel(icons.external, ok ? "Manage payments" : "Set up payments")}</a>
+    </section>`;
+  }
+
+  function appsCard() {
+    const apps = state.bootstrap?.apps || [];
+    if (!apps.length) return "";
+    return `<section class="card card-soft">
+      ${cardTitle(icons.grid, "Connected apps")}
+      <p class="lead">Calendars and meeting tools for this site.</p>
+      <div class="app-list">
+        ${apps
+          .map((a) => {
+            const stateLabel = a.connected ? "Connected" : a.ready ? "Available" : "Soon";
+            const tone = a.connected ? "ok" : a.ready ? "warn" : "muted";
+            return `<div class="app-row">
+              <div class="app-meta">
+                <b>${escapeHtml(a.label)}</b>
+                <small>${a.connected && a.email ? escapeHtml(a.email) : a.connected ? "Linked" : a.ready ? "Connect in dashboard" : "Coming soon"}</small>
+              </div>
+              <em class="pill pill-${tone}">${stateLabel}</em>
+            </div>`;
+          })
+          .join("")}
+      </div>
+      <a class="link-quiet" href="${api.APP_URL}/dashboard/integrations" target="_blank" rel="noreferrer">Manage connections →</a>
+    </section>`;
+  }
+
+  function eventsPreview() {
+    const events = state.bootstrap?.activeEvents || state.services.filter((s) => s.active).slice(0, 8);
+    return `<section class="card">
+      <div class="card-h-row">
+        ${cardTitle(icons.calendar, "Active events")}
+        <button type="button" class="link-quiet" id="gotoEvents">See all</button>
+      </div>
+      ${
+        events.length
+          ? `<div class="mini-list">
+        ${events
+          .slice(0, 5)
+          .map(
+            (s) => `<div class="mini-row">
+            <i class="dot" style="background:${s.color || "var(--ac)"}"></i>
+            <div class="mini-meta">
+              <b>${escapeHtml(s.name)}</b>
+              <small>${s.durationMin} min · ${money(s.priceCents, state.bootstrap?.site.currency)}</small>
+            </div>
+          </div>`,
+          )
+          .join("")}
+      </div>`
+          : `<div class="empty">No active events yet.</div>`
+      }
+      <button type="button" class="btn btn-quiet btn-block" id="gotoCreate">${iconLabel(icons.plus, "Add event")}</button>
+    </section>`;
+  }
+
+  function bookingsPreview() {
+    const bookings = state.bootstrap?.recentBookings || [];
+    return `<section class="card">
+      <div class="card-h-row">
+        ${cardTitle(icons.check, "Recent bookings")}
+        <a class="link-quiet" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">Open</a>
+      </div>
+      ${
+        bookings.length
+          ? `<div class="mini-list">
+        ${bookings
+          .map(
+            (b) => `<div class="mini-row">
+            <div class="mini-meta">
+              <b>${escapeHtml(b.customerName)}</b>
+              <small>${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}</small>
+            </div>
+            <em class="pill pill-muted">${escapeHtml(b.status)}</em>
+          </div>`,
+          )
+          .join("")}
+      </div>`
+          : `<div class="empty">No bookings yet — share your widget to get the first one.</div>`
+      }
+    </section>`;
+  }
+
   function viewHome() {
     if (!state.bootstrap) {
       return `<section class="card">
         ${cardTitle(icons.layout, "Connect Slotwise")}
-        <p class="lead">Authorize Webflow once — no separate Slotwise login.</p>
-        <button type="button" class="btn btn-primary btn-block" id="installBtn">${iconLabel(icons.external, "Install / reconnect")}</button>
-        <p class="lead" style="margin-top:8px">Opens a new browser window so Designer stays open. After auth, Slotwise launches here — you can close the auth window.</p>
+        <p class="lead">Connect once so Designer stays open while you authorize.</p>
+        <button type="button" class="btn btn-primary btn-block" id="installBtn">${iconLabel(icons.external, "Connect Webflow")}</button>
       </section>`;
     }
     const lim = state.bootstrap.entitlements.eventsLimit;
-    return `<a class="dash-banner" href="${api.APP_URL}/dashboard/payments" target="_blank" rel="noreferrer">
-        <span class="dash-banner-copy">
-          <strong>Explore full dashboard</strong>
-          <small>Stripe payments, calendars, and settings</small>
-        </span>
-        <span class="ico">${icons.external}</span>
-      </a>
-      <section class="card">
-      ${cardTitle(icons.home, "Overview")}
-      <p class="lead">Events, canvas, and publish — without leaving Designer.</p>
-      <div class="stats">
-        <div class="stat">
-          <div class="top"><span class="ico">${icons.calendar}</span><span class="label">Events</span></div>
-          <b>${state.bootstrap.counts.services}${lim != null ? `<span class="lim">/${lim}</span>` : ""}</b>
+    const embedLabel = state.canDesign ? "Add booking to page" : "Switch to Design mode first";
+    return `
+      <section class="card hero-card">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow">${escapeHtml(state.bootstrap.entitlements.label)} plan</div>
+            <h2 class="hero-title">${escapeHtml(state.bootstrap.site.name)}</h2>
+            <p class="lead">Manage events, payments, and your booking page from here.</p>
+          </div>
         </div>
-        <div class="stat">
-          <div class="top"><span class="ico">${icons.check}</span><span class="label">Booked</span></div>
-          <b>${state.bootstrap.counts.bookings}</b>
+        <div class="stats">
+          <div class="stat">
+            <div class="top"><span class="label">Events</span></div>
+            <b>${state.bootstrap.counts.services}${lim != null ? `<span class="lim">/${lim}</span>` : ""}</b>
+          </div>
+          <div class="stat">
+            <div class="top"><span class="label">Bookings / mo</span></div>
+            <b>${state.bootstrap.counts.bookingsThisMonth ?? state.bootstrap.counts.bookings}${
+              state.bootstrap.entitlements.bookingsLimit != null
+                ? `<span class="lim">/${state.bootstrap.entitlements.bookingsLimit}</span>`
+                : ""
+            }</b>
+          </div>
+          <div class="stat">
+            <div class="top"><span class="label">Staff</span></div>
+            <b>${state.bootstrap.counts.staff}</b>
+          </div>
         </div>
-        <div class="stat">
-          <div class="top"><span class="ico">${icons.crown}</span><span class="label">Plan</span></div>
-          <b style="font-size:12px">${escapeHtml(state.bootstrap.entitlements.label)}</b>
+        <div class="quiet-actions">
+          <button type="button" class="btn btn-quiet" id="embedBtn" ${!state.canDesign ? "disabled" : ""}>
+            ${iconLabel(icons.layout, embedLabel)}
+          </button>
+          <a class="btn btn-ghost-soft" href="${api.APP_URL}/book/${state.bootstrap.site.publicKey}?embed=1" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Preview booking")}</a>
+          <a class="btn btn-ghost-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">${iconLabel(icons.grid, "Full dashboard")}</a>
         </div>
-      </div>
-      <div class="actions-stack">
-        <button type="button" class="btn btn-primary" id="embedBtn" ${!state.canDesign ? "disabled" : ""}>
-          ${iconLabel(icons.layout, state.canDesign ? "Place on canvas" : "Switch to Design mode")}
-        </button>
-        <button type="button" class="btn btn-accent" id="gotoCreate">${iconLabel(icons.plus, "New event")}</button>
-        <a class="btn" href="${api.APP_URL}/book/${state.bootstrap.site.publicKey}?embed=1" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Preview")}</a>
-      </div>
-    </section>`;
+      </section>
+      ${paymentCard()}
+      ${eventsPreview()}
+      ${bookingsPreview()}
+      ${appsCard()}
+    `;
   }
 
   function viewEvents() {
@@ -481,8 +608,8 @@ export async function boot(root: HTMLElement) {
     <section class="card">
       ${cardTitle(icons.layout, "Canvas")}
       <p class="lead">Insert a live booking iframe.</p>
-      <button type="button" class="btn btn-primary btn-block" id="embedBtn2" ${!state.canDesign ? "disabled" : ""}>
-        ${iconLabel(icons.layout, state.canDesign ? "Place on canvas" : "Switch to Design mode")}
+      <button type="button" class="btn btn-quiet btn-block" id="embedBtn2" ${!state.canDesign ? "disabled" : ""}>
+        ${iconLabel(icons.layout, state.canDesign ? "Add booking to page" : "Switch to Design mode first")}
       </button>
     </section>`;
   }
@@ -598,6 +725,10 @@ export async function boot(root: HTMLElement) {
     });
     root.querySelector("#gotoCreate")?.addEventListener("click", () => {
       state.tab = "create";
+      void render();
+    });
+    root.querySelector("#gotoEvents")?.addEventListener("click", () => {
+      state.tab = "events";
       void render();
     });
     root.querySelector("#lightBtn")?.addEventListener("click", () => {

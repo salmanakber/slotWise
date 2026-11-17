@@ -54,7 +54,7 @@ export async function GET() {
   }
 }
 
-/** Start Stripe Connect Express onboarding for this site. */
+/** Start Stripe Connect onboarding (Accounts v2 + Express dashboard) for this site. */
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -68,7 +68,9 @@ https://slotwise.hindaralabs.com/api/stripe/webhook
    - Publishable key → `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` or Platform → Stripe
    - Secret key → `STRIPE_SECRET_KEY` or Platform → Stripe
 4. After creating the webhook, copy **Signing secret** (`whsec_…`) → Platform → Stripe → Webhook secret
-5. Enable **Stripe Connect** on the platform (Express)
+5. Enable **Stripe Connect** on the platform  
+   - Slotwise creates connected accounts with **Accounts v2** (`POST /v2/core/accounts`), Express dashboard, and the **recipient** configuration (`stripe_transfers`) for destination charges  
+   - In the Connect settings, acknowledge **platform loss liability** if Stripe asks (Express + Accounts v2 requires `fees_collector` / `losses_collector` = application)  
 6. Keep **Application fee %** at `0` if Slotwise takes no commission
 
 Paste keys in:
@@ -86,10 +88,14 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 ## Connect (not OAuth “scopes”)
 
-Stripe Connect does **not** use Google-style scopes. Slotwise uses **Express** accounts and requests:
+Stripe Connect does **not** use Google-style scopes. Slotwise uses **Accounts v2** with an Express dashboard:
 
-- Capability: `card_payments`
-- Capability: `transfers`
+- Configuration: **recipient**
+- Capability: `stripe_balance.stripe_transfers` (receive destination-charge transfers)
+- Responsibilities: platform collects Stripe fees and losses (`application`) — required for Express on Accounts v2
+- Onboarding: `POST /v2/core/account_links` (Stripe-hosted)
+
+Payments use destination charges (`transfer_data.destination`) on the platform PaymentIntent. Existing `account.updated` / `payment_intent.succeeded` webhooks still apply (v2 accounts emit v1 events).
 
 Site owners connect via:
 
@@ -97,11 +103,14 @@ Site owners connect via:
 
 They complete Stripe’s onboarding; no webhook setup for them.
 
+If you ever need legacy `POST /v1/accounts` for a supported compatibility case, enable [Accounts v1 support](https://dashboard.stripe.com/settings/developers/api-policies/feat_accounts_v1_support) in the Dashboard. New Slotwise connects use v2 only.
+
 ---
 
 ## Quick checklist
 
-- [ ] Connect enabled (Express) on platform Stripe account  
+- [ ] Connect enabled on platform Stripe account (Accounts v2 / Express)  
+- [ ] Platform loss/fee liability acknowledged if prompted by Stripe  
 - [ ] Publishable + secret keys saved in Platform / `.env`  
 - [ ] Webhook URL: `https://slotwise.hindaralabs.com/api/stripe/webhook`  
 - [ ] **Your account**: `payment_intent.succeeded`  

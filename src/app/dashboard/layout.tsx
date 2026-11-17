@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { AccessBanner } from "@/components/admin/access-banner";
 import { AdminShell } from "@/components/admin/shell";
+import { UsageQuota } from "@/components/admin/usage-quota";
 
 /** Site-owner workspace — no Settings (platform secrets / AI live under /platform only). */
 const NAV = [
@@ -50,7 +51,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       subtitle={subtitle}
       nav={NAV}
       brandLabel="Site admin"
-      brandMeta="Studio Nine · Pro plan"
+      brandMeta="Your workspace"
+      headerAside={<UsageQuota />}
     >
       <Suspense fallback={null}>
         <AccessBanner />
