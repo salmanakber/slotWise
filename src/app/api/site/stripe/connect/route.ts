@@ -88,6 +88,13 @@ export async function POST() {
       });
     }
 
+    if (!stripeAccountId) {
+      return NextResponse.json(
+        { error: "Stripe did not return a connected account id" },
+        { status: 502 },
+      );
+    }
+
     const origin = appOrigin();
     const link = await createConnectOnboardingLink(
       stripeAccountId,
