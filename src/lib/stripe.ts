@@ -35,6 +35,9 @@ export async function getApplicationFeePercent() {
   return secrets.applicationFeePercent ?? 0;
 }
 
+type V2Account = { id: string };
+type V2AccountLink = { url: string };
+
 /** Create a Connect Accounts v2 onboarding link for a site. */
 export async function createConnectOnboardingLink(
   accountId: string,
@@ -43,7 +46,8 @@ export async function createConnectOnboardingLink(
 ) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
-  return client.v2.core.accountLinks.create({
+  // rawRequest avoids SDK type gaps on older stripe installs for v2 accountLinks
+  return (await client.rawRequest("POST", "/v2/core/account_links", {
     account: accountId,
     use_case: {
       type: "account_onboarding",
@@ -55,7 +59,7 @@ export async function createConnectOnboardingLink(
         },
       },
     },
-  });
+  })) as V2AccountLink;
 }
 
 /**
@@ -66,7 +70,8 @@ export async function createConnectOnboardingLink(
 export async function createConnectedAccount(email?: string | null) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
-  return client.v2.core.accounts.create({
+  // rawRequest avoids SDK type gaps on older stripe installs for v2 accounts
+  return (await client.rawRequest("POST", "/v2/core/accounts", {
     ...(email ? { contact_email: email } : {}),
     display_name: "Slotwise bookings",
     dashboard: "express",
@@ -89,7 +94,7 @@ export async function createConnectedAccount(email?: string | null) {
       },
     },
     include: ["configuration.recipient", "defaults", "requirements"],
-  });
+  })) as V2Account;
 }
 
 /**
