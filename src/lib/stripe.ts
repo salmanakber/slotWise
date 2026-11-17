@@ -59,7 +59,7 @@ export async function createConnectOnboardingLink(
         },
       },
     },
-  })) as V2AccountLink;
+  })) as unknown as V2AccountLink;
 }
 
 /**
@@ -94,7 +94,7 @@ export async function createConnectedAccount(email?: string | null) {
       },
     },
     include: ["configuration.recipient", "defaults", "requirements"],
-  })) as V2Account;
+  })) as unknown as V2Account;
 }
 
 /**
