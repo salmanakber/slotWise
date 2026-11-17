@@ -42,8 +42,8 @@ const PROVIDER_META: Record<string, { label: string; blurb: string }> = {
     blurb: "Microsoft 365 / Outlook calendar",
   },
   zapier: {
-    label: "Zapier / Make",
-    blurb: "Paste a Catch Hook URL — Slotwise sends each new booking to Zapier",
+    label: "Automations (webhook)",
+    blurb: "Free via Make.com — or any HTTPS webhook. Zapier Catch Hook needs Zapier paid.",
   },
   zoom: {
     label: "Zoom",
@@ -273,14 +273,32 @@ function IntegrationsClient() {
               </div>
               {key === "zapier" ? (
                 <div className="mt-3 grid gap-2 rounded-xl border border-[var(--ln)] bg-[var(--bg)] p-3 text-[13px]">
+                  <p className="font-semibold text-[var(--ink)]">
+                    Free path (recommended): Make.com
+                  </p>
                   <ol className="list-decimal space-y-1 pl-4" style={{ color: "var(--mut)" }}>
                     <li>
-                      In Zapier: Create Zap → <b>Webhooks by Zapier</b> → <b>Catch Hook</b>
+                      Open{" "}
+                      <a
+                        href="https://www.make.com"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold underline underline-offset-2"
+                      >
+                        make.com
+                      </a>{" "}
+                      (free plan works) → Create a scenario
                     </li>
-                    <li>Copy the webhook URL Zapier shows (hooks.zapier.com/…)</li>
-                    <li>Paste it below and click Save</li>
-                    <li>Turn the Zap on — each new Slotwise booking is sent there</li>
+                    <li>
+                      Add module → <b>Webhooks</b> → <b>Custom webhook</b> → Add → copy the URL
+                    </li>
+                    <li>Paste below → Save & connect</li>
+                    <li>Add next steps (Sheets, email, Slack…) and turn the scenario on</li>
                   </ol>
+                  <p className="text-[12px]" style={{ color: "var(--mut)" }}>
+                    Also works with Discord/Slack incoming webhooks, n8n, or Pipedream. Zapier’s{" "}
+                    <b>Catch Hook</b> is a Zapier paid feature — we can’t unlock that from Slotwise.
+                  </p>
                   {row.connected && row.webhookUrl ? (
                     <p className="text-[12px]" style={{ color: "var(--mut)" }}>
                       Sending to:{" "}
@@ -291,8 +309,8 @@ function IntegrationsClient() {
                     <input
                       type="url"
                       className="min-w-[240px] flex-1 rounded-[10px] border border-[var(--ln)] bg-[var(--panel)] px-2.5 py-2"
-                      placeholder="https://hooks.zapier.com/hooks/catch/…"
-                      value={zapierUrl || (row.connected ? "" : "")}
+                      placeholder="https://hook.eu1.make.com/… or hooks.zapier.com/…"
+                      value={zapierUrl}
                       onChange={(e) => setZapierUrl(e.target.value)}
                     />
                     <button

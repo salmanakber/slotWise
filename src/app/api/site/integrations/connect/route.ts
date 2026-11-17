@@ -43,7 +43,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error:
-              "Paste your Zapier Catch Hook URL (starts with https://hooks.zapier.com/). Create a Zap → Webhooks by Zapier → Catch Hook, then copy that URL here.",
+              "Paste an HTTPS webhook URL. Free option: Make.com → Webhooks → Custom webhook. (Zapier Catch Hook requires a paid Zapier plan.)",
           },
           { status: 400 },
         );
