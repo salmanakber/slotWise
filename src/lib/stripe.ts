@@ -69,22 +69,60 @@ export async function createConnectOnboardingLink(
   )) as unknown as V2AccountLink;
 }
 
+/** Best-effort ISO country from a site currency (merchant confirms during onboarding). */
+export function countryFromCurrency(currency?: string | null): string {
+  const c = (currency || "USD").toUpperCase();
+  const map: Record<string, string> = {
+    USD: "us",
+    GBP: "gb",
+    EUR: "ie",
+    CAD: "ca",
+    AUD: "au",
+    NZD: "nz",
+    SGD: "sg",
+    HKD: "hk",
+    JPY: "jp",
+    INR: "in",
+    PKR: "pk",
+    AED: "ae",
+    SAR: "sa",
+    CHF: "ch",
+    SEK: "se",
+    NOK: "no",
+    DKK: "dk",
+    MXN: "mx",
+    BRL: "br",
+  };
+  return map[c] ?? "us";
+}
+
 /**
  * Create a connected account via Accounts v2 (POST /v2/core/accounts).
  * Managed Risk (SaaS): Stripe collects fees/losses; Express + merchant card_payments.
- * Compatible with direct charges on the connected account.
+ * identity.country is required before configuration.merchant.
  */
-export async function createConnectedAccount(email?: string | null) {
+export async function createConnectedAccount(input?: {
+  email?: string | null;
+  country?: string | null;
+  currency?: string | null;
+  displayName?: string | null;
+}) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
+  const country = (input?.country || countryFromCurrency(input?.currency)).toLowerCase();
+  const currency = (input?.currency || "USD").toLowerCase();
   return (await client.rawRequest(
     "POST",
     "/v2/core/accounts",
     {
-      ...(email ? { contact_email: email } : {}),
-      display_name: "Slotwise bookings",
+      ...(input?.email ? { contact_email: input.email } : {}),
+      display_name: input?.displayName?.trim() || "Slotwise bookings",
       dashboard: "express",
+      identity: {
+        country,
+      },
       defaults: {
+        currency,
         responsibilities: {
           fees_collector: "stripe",
           losses_collector: "stripe",
@@ -100,7 +138,7 @@ export async function createConnectedAccount(email?: string | null) {
           },
         },
       },
-      include: ["configuration.merchant", "defaults", "requirements"],
+      include: ["configuration.merchant", "identity", "defaults", "requirements"],
     },
     { apiVersion: STRIPE_ACCOUNTS_V2_VERSION },
   )) as unknown as V2Account;

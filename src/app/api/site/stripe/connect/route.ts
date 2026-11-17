@@ -80,7 +80,11 @@ export async function POST() {
         typeof session.user.email === "string" && session.user.email.includes("@")
           ? session.user.email
           : undefined;
-      const created = await createConnectedAccount(email);
+      const created = await createConnectedAccount({
+        email,
+        currency: site.currency,
+        displayName: site.name,
+      });
       stripeAccountId = created.id;
       await prisma.stripeAccount.update({
         where: { id: account.id },

@@ -100,8 +100,8 @@ export function AdminShell({
       </aside>
 
       <main className="min-w-0 px-4 py-4 sm:px-6 sm:py-5">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--ln)] pb-4">
+          <div className="min-w-0">
             <h1
               className="m-0 text-[20px] font-bold leading-tight tracking-tight sm:text-[22px]"
               style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}

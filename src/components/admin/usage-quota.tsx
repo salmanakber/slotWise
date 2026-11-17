@@ -42,71 +42,54 @@ export function UsageQuota() {
 
   if (!usage) {
     return (
-      <div className="hidden min-w-[200px] animate-pulse rounded-xl border border-[var(--ln)] bg-[var(--bg)] px-3 py-2 sm:block">
-        <div className="h-3 w-28 rounded bg-[var(--ln)]" />
-        <div className="mt-2 h-2 w-full rounded bg-[var(--ln)]" />
-      </div>
+      <div className="hidden h-9 w-[168px] animate-pulse rounded-full bg-[var(--ln)] sm:block" />
     );
   }
 
   const b = usage.bookings;
   const pct =
-    b.limit == null ? 12 : Math.min(100, Math.round((b.used / Math.max(b.limit, 1)) * 100));
-  const barColor = b.atLimit
-    ? "#c0392b"
-    : b.nearlyFull
-      ? "var(--ac)"
-      : "var(--ok, #178a58)";
+    b.limit == null ? 8 : Math.min(100, Math.round((b.used / Math.max(b.limit, 1)) * 100));
+  const barColor = b.atLimit ? "var(--bad, #c0392b)" : b.nearlyFull ? "var(--ac)" : "var(--ok)";
+  const countLabel =
+    b.limit == null ? `${b.used} bookings` : `${b.used} / ${b.limit}`;
 
   return (
     <div
-      className="min-w-[210px] max-w-[280px] rounded-xl border border-[var(--ln)] bg-[var(--bg)] px-3 py-2.5 shadow-[0_1px_0_rgba(0,0,0,.03)]"
-      title={`${usage.siteName} · ${usage.planLabel}`}
+      className="flex max-w-full items-center gap-2.5 rounded-full border border-[var(--ln)] bg-[var(--pn)] py-1.5 pl-3 pr-1.5"
+      title={`${usage.siteName} · ${b.label}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.08em]" style={{ color: "var(--mut)" }}>
-          This month
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[12px] font-extrabold tabular-nums tracking-tight">{countLabel}</span>
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.04em]"
+            style={{ background: "var(--sf)", color: "var(--at)" }}
+          >
+            {usage.planLabel}
+          </span>
+        </div>
+        <div className="mt-1 h-1 w-[88px] overflow-hidden rounded-full bg-[var(--ln)]">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: barColor }}
+          />
+        </div>
+      </div>
+      {b.atLimit || b.nearlyFull ? (
+        <Link
+          href="/dashboard/plans"
+          className="shrink-0 rounded-full bg-[var(--ac)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--on)]"
+        >
+          Upgrade
+        </Link>
+      ) : (
+        <span
+          className="shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-semibold"
+          style={{ color: "var(--mut)" }}
+        >
+          {b.remaining != null ? `${b.remaining} left` : "Unlimited"}
         </span>
-        <span className="rounded-full bg-[var(--sf)] px-2 py-0.5 text-[10px] font-bold text-[var(--at)]">
-          {usage.planLabel}
-        </span>
-      </div>
-      <div className="mt-1 text-[13px] font-extrabold tracking-tight" style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}>
-        {b.limit == null ? (
-          <>
-            <span className="text-[var(--ink)]">{b.used}</span>
-            <span className="ml-1 text-[12px] font-semibold" style={{ color: "var(--mut)" }}>
-              bookings
-            </span>
-          </>
-        ) : (
-          <>
-            <span className={b.atLimit ? "text-[#c0392b]" : "text-[var(--ink)]"}>{b.used}</span>
-            <span className="text-[12px] font-semibold" style={{ color: "var(--mut)" }}>
-              {" "}
-              / {b.limit} bookings
-            </span>
-          </>
-        )}
-      </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--ln)]">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${pct}%`, background: barColor }}
-        />
-      </div>
-      <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold" style={{ color: "var(--mut)" }}>
-        <span>{usage.events.label}</span>
-        {b.atLimit || b.nearlyFull ? (
-          <Link href="/dashboard/plans" className="font-bold text-[var(--at)] underline-offset-2 hover:underline">
-            Upgrade
-          </Link>
-        ) : b.remaining != null ? (
-          <span>{b.remaining} left</span>
-        ) : (
-          <span>Unlimited</span>
-        )}
-      </div>
+      )}
     </div>
   );
 }
