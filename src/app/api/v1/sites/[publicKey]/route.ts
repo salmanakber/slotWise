@@ -10,6 +10,7 @@ export async function GET(
   try {
     const site = await loadSiteBundle(publicKey);
     const theme = getTheme(site.branding?.themeKey ?? "amber-light");
+    const inkColor = site.branding?.inkColor || theme.ink;
     return NextResponse.json({
       publicKey: site.publicKey,
       name: site.name,
@@ -17,7 +18,8 @@ export async function GET(
       currency: site.currency,
       branding: {
         ...site.branding,
-        theme,
+        inkColor,
+        theme: { ...theme, ink: inkColor },
       },
       services: site.services.map((s) => ({
         id: s.id,

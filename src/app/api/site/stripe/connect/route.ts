@@ -19,6 +19,25 @@ export async function GET() {
       account = await prisma.stripeAccount.create({ data: { siteId: site.id } });
     }
 
+    // Refresh live status from Stripe when connected
+    if (account.stripeAccountId) {
+      const stripe = await getStripe();
+      if (stripe) {
+        try {
+          const remote = await stripe.accounts.retrieve(account.stripeAccountId);
+          account = await prisma.stripeAccount.update({
+            where: { id: account.id },
+            data: {
+              chargesEnabled: Boolean(remote.charges_enabled),
+              payoutsEnabled: Boolean(remote.payouts_enabled),
+            },
+          });
+        } catch {
+          /* keep local row */
+        }
+      }
+    }
+
     return NextResponse.json({
       connected: Boolean(account.stripeAccountId && account.chargesEnabled),
       stripeAccountId: account.stripeAccountId,
@@ -43,7 +62,7 @@ export async function POST() {
   const stripe = await getStripe();
   if (!stripe) {
     return NextResponse.json(
-      { error: "Stripe is not configured. Ask the platform admin to add keys." },
+      { error: "Stripe is not configured. Add secret key in Platform → Stripe." },
       { status: 503 },
     );
   }
@@ -57,7 +76,11 @@ export async function POST() {
 
     let stripeAccountId = account.stripeAccountId;
     if (!stripeAccountId) {
-      const created = await createConnectedAccount(session.user.email);
+      const email =
+        typeof session.user.email === "string" && session.user.email.includes("@")
+          ? session.user.email
+          : undefined;
+      const created = await createConnectedAccount(email);
       stripeAccountId = created.id;
       await prisma.stripeAccount.update({
         where: { id: account.id },
@@ -72,6 +95,13 @@ export async function POST() {
       `${origin}/dashboard/payments?stripe=refresh`,
     );
 
+    if (!link?.url) {
+      return NextResponse.json(
+        { error: "Stripe did not return an onboarding URL" },
+        { status: 502 },
+      );
+    }
+
     await prisma.auditLog.create({
       data: {
         scope: "SITE",
@@ -83,10 +113,11 @@ export async function POST() {
 
     return NextResponse.json({ url: link.url });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Could not start Stripe Connect" },
-      { status: 500 },
-    );
+    console.error("[stripe.connect]", e);
+    const message =
+      e instanceof Error
+        ? e.message
+        : "Could not start Stripe Connect. Confirm Connect is enabled on your Stripe account.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

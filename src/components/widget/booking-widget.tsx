@@ -22,6 +22,7 @@ type SitePayload = {
   branding: {
     themeKey: string;
     accent: string;
+    inkColor?: string | null;
     radius: number;
     font: string;
     layout: string;
@@ -176,7 +177,7 @@ export function BookingWidget({
   const onAccent = contrastOn(accent);
   const radius = branding?.radius ?? 18;
   const bg = branding?.theme?.bg ?? "#ffffff";
-  const ink = branding?.theme?.ink ?? "#0f1b2d";
+  const ink = branding?.inkColor || branding?.theme?.ink || "#0f1b2d";
   const line = branding?.theme?.line ?? "#e1e6ee";
   const panel = branding?.theme?.panel ?? bg;
   const mut = `color-mix(in srgb, ${ink} 58%, transparent)`;
@@ -248,13 +249,13 @@ export function BookingWidget({
   return (
     <div
       ref={rootRef}
-      className="sw-widget mx-auto w-full max-w-[400px] overflow-visible"
+      className="sw-widget mx-auto box-border w-full max-w-full overflow-hidden"
       style={{
         background: panel,
         color: ink,
         border: `1px solid ${line}`,
-        borderRadius: radius,
-        maxHeight: "none",
+        borderRadius: embed ? Math.min(radius, 16) : radius,
+        maxWidth: embed ? "100%" : 400,
         boxShadow: embed
           ? "none"
           : `0 1px 2px color-mix(in srgb, ${ink} 6%, transparent), 0 22px 48px color-mix(in srgb, ${ink} 10%, transparent)`,
@@ -278,48 +279,51 @@ export function BookingWidget({
         }
         .sw-w-rise { animation: sw-w-in .45s cubic-bezier(.2,.8,.2,1) both; }
         .sw-w-check { animation: sw-w-check .55s cubic-bezier(.2,.8,.2,1) both; }
-        .sw-w-scroll::-webkit-scrollbar { height: 4px; width: 4px; }
+        .sw-w-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+        .sw-w-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
         .sw-w-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 22%, transparent); border-radius: 99px; }
+        .sw-widget *, .sw-widget *::before, .sw-widget *::after { box-sizing: border-box; }
         @media (prefers-reduced-motion: reduce) {
           .sw-w-rise, .sw-w-check { animation: none !important; }
         }
       `}</style>
 
       <header
-        className="relative px-4 pb-3.5 pt-4 sm:px-5"
+        className="relative min-w-0 px-3.5 pb-3 pt-3.5"
         style={{
           borderBottom: `1px solid ${line}`,
           background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, ${panel}), ${panel} 62%)`,
         }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <div
-              className="grid h-11 w-11 shrink-0 place-items-center text-sm font-extrabold tracking-tight"
+              className="grid h-10 w-10 shrink-0 place-items-center text-sm font-extrabold tracking-tight"
               style={{
                 borderRadius: Math.max(radius - 8, 10),
                 background: accent,
                 color: onAccent,
-                boxShadow: `0 10px 24px color-mix(in srgb, ${accent} 35%, transparent)`,
+                boxShadow: `0 8px 18px color-mix(in srgb, ${accent} 30%, transparent)`,
               }}
             >
               {initials(business)}
             </div>
-            <div className="min-w-0">
-              <div className="truncate text-[17px] font-extrabold tracking-tight">{business}</div>
-              <div className="mt-0.5 text-[12.5px]" style={{ color: mut }}>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[15px] font-extrabold tracking-tight">{business}</div>
+              <div className="mt-0.5 truncate text-[12px]" style={{ color: mut }}>
                 {step === "done" ? "Booking confirmed" : "Pick a service & time"}
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1">
             {steps.map((s, i) => {
               const active = i === stepIndex;
               const done = i < stepIndex;
               return (
                 <span
                   key={s.key}
-                  className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  title={s.label}
+                  className="grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold"
                   style={{
                     background: active || done ? accent : "transparent",
                     color: active || done ? onAccent : mut,
@@ -328,7 +332,6 @@ export function BookingWidget({
                   }}
                 >
                   {i + 1}
-                  <span className="hidden sm:inline"> · {s.label}</span>
                 </span>
               );
             })}
@@ -348,7 +351,7 @@ export function BookingWidget({
         </div>
       </header>
 
-      <div className="relative grid gap-4 p-4 sm:gap-5 sm:p-5" style={{ maxHeight: "none", overflow: "visible" }}>
+      <div className="relative grid min-w-0 gap-4 overflow-x-hidden p-3.5">
         {(loadingSlots || submitting) && branding?.showLoader !== false ? (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[3px]"
@@ -363,7 +366,7 @@ export function BookingWidget({
         ) : null}
 
         {step === "done" && confirmation ? (
-          <div className="sw-w-rise grid gap-4 py-8 text-center">
+          <div className="sw-w-rise grid min-w-0 gap-4 py-8 text-center">
             <div
               className="sw-w-check mx-auto grid h-16 w-16 place-items-center rounded-full text-2xl font-black"
               style={{ background: accent, color: onAccent }}
@@ -399,15 +402,15 @@ export function BookingWidget({
         ) : null}
 
         {step === "pick" ? (
-          <div className="sw-w-rise grid gap-5">
-            <section>
-              <div className="mb-2.5 flex items-end justify-between gap-2">
-                <h3 className="text-[15px] font-extrabold tracking-tight">Service</h3>
-                <span className="text-[12px]" style={{ color: mut }}>
+          <div className="sw-w-rise grid min-w-0 gap-4">
+            <section className="min-w-0">
+              <div className="mb-2 flex min-w-0 items-end justify-between gap-2">
+                <h3 className="text-[14px] font-extrabold tracking-tight">Service</h3>
+                <span className="shrink-0 text-[11px]" style={{ color: mut }}>
                   {site.services.length} available
                 </span>
               </div>
-              <div className="sw-w-scroll grid max-h-[220px] gap-2 overflow-y-auto px-0.5 pb-1">
+              <div className="sw-w-scroll grid max-h-[200px] gap-2 overflow-y-auto pb-1">
                 {site.services.map((s) => {
                   const on = s.id === serviceId;
                   return (
@@ -415,7 +418,7 @@ export function BookingWidget({
                       key={s.id}
                       type="button"
                       onClick={() => setServiceId(s.id)}
-                      className="group flex min-h-[52px] w-full items-center justify-between gap-3 border p-3.5 text-left transition"
+                      className="group flex min-h-[48px] w-full min-w-0 items-center justify-between gap-2 border p-3 text-left transition"
                       style={{
                         borderRadius: Math.max(radius - 6, 10),
                         borderColor: on ? accent : line,
@@ -423,19 +426,19 @@ export function BookingWidget({
                           ? `color-mix(in srgb, ${accent} 12%, ${panel})`
                           : "transparent",
                         boxShadow: on
-                          ? `0 0 0 1px ${accent}, 0 10px 24px color-mix(in srgb, ${accent} 18%, transparent)`
+                          ? `0 0 0 1px ${accent}, 0 8px 18px color-mix(in srgb, ${accent} 16%, transparent)`
                           : "none",
                       }}
                     >
-                      <span className="min-w-0">
-                        <b className="block text-[14.5px] font-extrabold tracking-tight">{s.name}</b>
-                        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px]" style={{ color: mut }}>
-                          {branding?.showDuration !== false ? <span>{s.durationMin} min</span> : null}
-                          {s.description ? <span>· {s.description}</span> : null}
+                      <span className="min-w-0 flex-1 overflow-hidden">
+                        <b className="block truncate text-[13.5px] font-extrabold tracking-tight">{s.name}</b>
+                        <span className="mt-0.5 block truncate text-[12px]" style={{ color: mut }}>
+                          {branding?.showDuration !== false ? `${s.durationMin} min` : ""}
+                          {s.description ? ` · ${s.description}` : ""}
                         </span>
                       </span>
                       {branding?.showPrice !== false ? (
-                        <em className="shrink-0 not-italic text-[15px] font-extrabold">
+                        <em className="shrink-0 not-italic text-[13.5px] font-extrabold">
                           {formatMoney(s.priceCents, site.currency)}
                         </em>
                       ) : null}
@@ -446,9 +449,9 @@ export function BookingWidget({
             </section>
 
             {branding?.showStaff !== false && site.staff.length > 0 ? (
-              <section>
-                <h3 className="mb-2.5 text-[15px] font-extrabold tracking-tight">Who</h3>
-                <div className="flex flex-wrap gap-2">
+              <section className="min-w-0">
+                <h3 className="mb-2 text-[14px] font-extrabold tracking-tight">Who</h3>
+                <div className="flex min-w-0 flex-wrap gap-1.5">
                   <Chip active={!staffId} accent={accent} onAccent={onAccent} line={line} onClick={() => setStaffId("")}>
                     Anyone
                   </Chip>
@@ -468,51 +471,50 @@ export function BookingWidget({
               </section>
             ) : null}
 
-            <section>
-              <div className="mb-2.5 flex items-end justify-between gap-2">
-                <h3 className="text-[15px] font-extrabold tracking-tight">Day</h3>
-                <span className="text-[12px]" style={{ color: mut }}>
+            <section className="min-w-0">
+              <div className="mb-2 flex min-w-0 items-end justify-between gap-2">
+                <h3 className="text-[14px] font-extrabold tracking-tight">Day</h3>
+                <span className="max-w-[40%] truncate text-[11px]" style={{ color: mut }}>
                   {site.timezone}
                 </span>
               </div>
-              <div className="sw-w-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-2 pt-0.5">
-                {days.map((d) => {
-                  const dt = new Date(`${d}T12:00:00Z`);
-                  const weekday = dt.toLocaleDateString("en-US", { weekday: "short" });
-                  const dayNum = dt.toLocaleDateString("en-US", { day: "numeric" });
-                  const on = d === date;
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDate(d)}
-                      className="grid min-h-[52px] min-w-[64px] shrink-0 gap-0.5 border px-2 py-2.5 text-center transition"
-                      style={{
-                        borderRadius: Math.max(radius - 6, 10),
-                        borderColor: on ? accent : line,
-                        background: on ? accent : "transparent",
-                        color: on ? onAccent : ink,
-                      }}
-                    >
-                      <span className="text-[11px] font-bold uppercase tracking-wide opacity-80">
-                        {weekday}
-                      </span>
-                      <span className="text-[17px] font-extrabold leading-none">{dayNum}</span>
-                    </button>
-                  );
-                })}
+              <div className="sw-w-scroll w-full min-w-0 max-w-full overflow-x-auto pb-1.5">
+                <div className="flex w-max gap-1.5 pr-1">
+                  {days.map((d) => {
+                    const dt = new Date(`${d}T12:00:00Z`);
+                    const weekday = dt.toLocaleDateString("en-US", { weekday: "short" });
+                    const dayNum = dt.toLocaleDateString("en-US", { day: "numeric" });
+                    const on = d === date;
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDate(d)}
+                        className="grid h-[52px] w-[52px] shrink-0 gap-0.5 border text-center transition"
+                        style={{
+                          borderRadius: Math.max(radius - 6, 10),
+                          borderColor: on ? accent : line,
+                          background: on ? accent : "transparent",
+                          color: on ? onAccent : ink,
+                        }}
+                      >
+                        <span className="text-[10px] font-bold uppercase tracking-wide opacity-80">
+                          {weekday}
+                        </span>
+                        <span className="text-[15px] font-extrabold leading-none">{dayNum}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </section>
 
-            <section>
-              <h3 className="mb-2.5 text-[15px] font-extrabold tracking-tight">Time</h3>
-              <div
-                className="sw-w-scroll grid max-h-[240px] grid-cols-2 gap-2 overflow-y-auto px-0.5 pb-2 sm:grid-cols-3"
-                style={{ scrollbarGutter: "stable" }}
-              >
+            <section className="min-w-0">
+              <h3 className="mb-2 text-[14px] font-extrabold tracking-tight">Time</h3>
+              <div className="sw-w-scroll grid max-h-[220px] w-full min-w-0 grid-cols-2 gap-1.5 overflow-y-auto pb-1">
                 {slots.length === 0 && !loadingSlots ? (
                   <div
-                    className="col-span-full rounded-2xl border border-dashed px-4 py-8 text-center text-sm"
+                    className="col-span-2 rounded-xl border border-dashed px-3 py-6 text-center text-[13px]"
                     style={{ borderColor: line, color: mut }}
                   >
                     No openings this day. Try another date.
@@ -526,7 +528,7 @@ export function BookingWidget({
                         type="button"
                         disabled={!s.available}
                         onClick={() => setSlotStart(s.start)}
-                        className="min-h-[44px] border px-2 py-2.5 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
+                        className="min-h-[40px] min-w-0 border px-1.5 py-2 text-[12.5px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
                         style={{
                           borderRadius: Math.max(radius - 6, 10),
                           borderColor: on ? accent : line,
@@ -610,15 +612,15 @@ export function BookingWidget({
 
       {step !== "done" ? (
         <footer
-          className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3.5 sm:px-5 sm:py-4 backdrop-blur-md"
+          className="flex min-w-0 items-center justify-between gap-2 border-t px-3.5 py-3 backdrop-blur-md"
           style={{
             borderColor: line,
             background: `color-mix(in srgb, ${panel} 92%, transparent)`,
           }}
         >
-          <div className="min-w-0">
-            <b className="block truncate text-[14.5px] font-extrabold">{service?.name}</b>
-            <span className="text-[13px]" style={{ color: mut }}>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <b className="block truncate text-[13px] font-extrabold">{service?.name}</b>
+            <span className="block truncate text-[12px]" style={{ color: mut }}>
               {slotStart
                 ? new Date(slotStart).toLocaleString(undefined, {
                     weekday: "short",
@@ -636,13 +638,13 @@ export function BookingWidget({
           {step === "pick" ? (
             <button
               type="button"
-              className="shrink-0 px-5 py-3 text-sm font-extrabold transition hover:brightness-105 disabled:opacity-40"
+              className="shrink-0 px-4 py-2.5 text-[13px] font-extrabold transition hover:brightness-105 disabled:opacity-40"
               style={{
                 background: accent,
                 color: onAccent,
                 borderRadius: Math.max(radius - 4, 10),
                 boxShadow: slotStart
-                  ? `0 12px 28px color-mix(in srgb, ${accent} 35%, transparent)`
+                  ? `0 10px 22px color-mix(in srgb, ${accent} 32%, transparent)`
                   : "none",
               }}
               disabled={!slotStart}
@@ -651,10 +653,10 @@ export function BookingWidget({
               Continue
             </button>
           ) : (
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 gap-1.5">
               <button
                 type="button"
-                className="border px-4 py-3 text-sm font-bold"
+                className="border px-3 py-2.5 text-[13px] font-bold"
                 style={{ borderColor: line, borderRadius: Math.max(radius - 4, 10) }}
                 onClick={() => setStep("pick")}
               >
@@ -662,12 +664,12 @@ export function BookingWidget({
               </button>
               <button
                 type="button"
-                className="px-5 py-3 text-sm font-extrabold transition hover:brightness-105 disabled:opacity-40"
+                className="px-4 py-2.5 text-[13px] font-extrabold transition hover:brightness-105 disabled:opacity-40"
                 style={{
                   background: accent,
                   color: onAccent,
                   borderRadius: Math.max(radius - 4, 10),
-                  boxShadow: `0 12px 28px color-mix(in srgb, ${accent} 35%, transparent)`,
+                  boxShadow: `0 10px 22px color-mix(in srgb, ${accent} 32%, transparent)`,
                 }}
                 disabled={!name || !email || submitting}
                 onClick={confirm}

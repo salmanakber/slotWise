@@ -50,7 +50,14 @@ function PaymentsClient() {
 
   useEffect(() => {
     const s = search.get("stripe");
-    if (s === "return") setMsg("Stripe onboarding returned — refresh status below.");
+    if (s === "return") {
+      setMsg("Stripe onboarding returned — syncing status…");
+      void (async () => {
+        await fetch("/api/site/stripe/connect", { credentials: "same-origin" });
+        await load();
+        setMsg("Stripe status updated.");
+      })();
+    }
     if (s === "refresh") setMsg("Stripe link expired — click Connect again.");
   }, [search]);
 
@@ -58,10 +65,32 @@ function PaymentsClient() {
     setConnecting(true);
     setMsg("");
     try {
-      const res = await fetch("/api/site/stripe/connect", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not start Connect");
-      window.location.href = data.url;
+      const res = await fetch("/api/site/stripe/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+      });
+      let data: { url?: string; error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Stripe Connect returned an invalid response");
+      }
+      if (!res.ok) {
+        throw new Error(
+          data.error ||
+            (res.status === 503
+              ? "Stripe keys are missing. Add them in Platform → Stripe."
+              : res.status === 401
+                ? "Sign in again, then retry Connect."
+                : "Could not start Stripe Connect"),
+        );
+      }
+      if (!data.url || typeof data.url !== "string") {
+        throw new Error("Stripe did not return an onboarding link. Check platform Stripe keys.");
+      }
+      // Full navigation — Express onboarding must leave the app
+      window.location.assign(data.url);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Connect failed");
       setConnecting(false);

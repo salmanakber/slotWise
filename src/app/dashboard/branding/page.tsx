@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 export default function BrandingPage() {
   const [themeKey, setThemeKey] = useState("amber-light");
   const [accent, setAccent] = useState("#f5a000");
+  const [inkColor, setInkColor] = useState("#0f1b2d");
   const [radius, setRadius] = useState(14);
   const [font, setFont] = useState("Manrope");
   const [layout, setLayout] = useState<"INLINE" | "POPUP" | "FLOATING">("INLINE");
@@ -31,6 +32,7 @@ export default function BrandingPage() {
     if (!t) return;
     setThemeKey(t.key);
     setAccent(t.accent);
+    setInkColor(t.ink);
     setRadius(t.radius);
     setFont(t.font);
   }
@@ -51,6 +53,7 @@ export default function BrandingPage() {
         body: JSON.stringify({
           themeKey,
           accent,
+          inkColor,
           radius,
           font,
           layout,
@@ -80,7 +83,7 @@ export default function BrandingPage() {
         <section className="sw-card">
           <h2 className="mb-1 text-[15px] font-extrabold">Theme and color</h2>
           <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            Pick one of 8 themes, then fine-tune the accent color.
+            Pick one of 8 themes, then fine-tune accent and text colors.
           </p>
           <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {THEMES.map((t) => (
@@ -106,6 +109,14 @@ export default function BrandingPage() {
           </div>
           <Row label="Accent color">
             <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} aria-label="Accent" />
+          </Row>
+          <Row label="Text color">
+            <input
+              type="color"
+              value={inkColor}
+              onChange={(e) => setInkColor(e.target.value)}
+              aria-label="Text color"
+            />
           </Row>
         </section>
 
@@ -173,7 +184,7 @@ export default function BrandingPage() {
             className="relative min-h-[430px] overflow-hidden rounded-[14px] border border-[var(--ln)] bg-[var(--bg)] p-4"
             style={{
               ["--pbg" as string]: theme.bg,
-              ["--pink" as string]: theme.ink,
+              ["--pink" as string]: inkColor || theme.ink,
               ["--pln" as string]: theme.line,
               ["--pac" as string]: accent,
               ["--pr" as string]: `${radius}px`,

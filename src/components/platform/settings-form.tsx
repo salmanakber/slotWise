@@ -13,7 +13,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [form, setForm] = useState(initial);
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
-  const [postmarkToken, setPostmarkToken] = useState("");
+  const [resendApiKey, setResendApiKey] = useState("");
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
   const [webflowClientSecret, setWebflowClientSecret] = useState("");
   const [googleClientSecret, setGoogleClientSecret] = useState("");
@@ -48,7 +48,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       }
 
       if (section === "providers") {
-        payload.emailProvider = form.emailProvider;
+        payload.emailProvider = "resend";
         payload.emailFrom = form.emailFrom;
         payload.smsProvider = form.smsProvider;
         payload.twilioAccountSid = form.twilioAccountSid;
@@ -61,7 +61,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.aiProvider = form.aiProvider;
         payload.openaiModel = form.openaiModel;
         payload.groqModel = form.groqModel;
-        if (postmarkToken.trim()) payload.postmarkToken = postmarkToken.trim();
+        if (resendApiKey.trim()) payload.resendApiKey = resendApiKey.trim();
         if (twilioAuthToken.trim()) payload.twilioAuthToken = twilioAuthToken.trim();
         if (webflowClientSecret.trim()) payload.webflowClientSecret = webflowClientSecret.trim();
         if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
@@ -87,7 +87,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       setForm(data);
       setStripeSecretKey("");
       setStripeWebhookSecret("");
-      setPostmarkToken("");
+      setResendApiKey("");
       setTwilioAuthToken("");
       setWebflowClientSecret("");
       setGoogleClientSecret("");
@@ -196,25 +196,29 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       {section === "providers" ? (
         <>
           <section className="sw-card">
-            <h2 className="mb-1 text-[15px] font-extrabold">Email (Postmark)</h2>
+            <h2 className="mb-1 text-[15px] font-extrabold">Email (Resend)</h2>
             <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-              Used for booking confirmations and reminders.
+              Booking confirmations via Resend. Use a verified domain/from address in your Resend
+              account.
             </p>
             <Field label="From address">
               <input
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={form.emailFrom ?? ""}
                 onChange={(e) => set("emailFrom", e.target.value || null)}
-                placeholder="tidyflaw@gmail.com"
+                placeholder="bookings@yourdomain.com"
               />
             </Field>
-            <Field label="Server token" hint={form.postmarkTokenHint ?? "Not set"}>
+            <Field
+              label="API key"
+              hint={form.resendApiKeyHint ?? form.postmarkTokenHint ?? "Not set"}
+            >
               <input
                 type="password"
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
-                value={postmarkToken}
-                onChange={(e) => setPostmarkToken(e.target.value)}
-                placeholder="Paste new token to rotate"
+                value={resendApiKey}
+                onChange={(e) => setResendApiKey(e.target.value)}
+                placeholder="re_… paste to rotate"
                 autoComplete="new-password"
               />
             </Field>

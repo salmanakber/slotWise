@@ -21,7 +21,7 @@ const TAB_META: Record<Tab, { label: string; icon: string }> = {
   create: { label: "New", icon: icons.plus },
   theme: { label: "Theme", icon: icons.palette },
   tools: { label: "Tools", icon: icons.wrench },
-  settings: { label: "Settings", icon: icons.settings },
+  settings: { label: "More", icon: icons.settings },
 };
 
 export async function boot(root: HTMLElement) {
@@ -83,14 +83,15 @@ export async function boot(root: HTMLElement) {
     return state.bootstrap?.entitlements.gates[feature];
   }
 
+  function upgradeUrl() {
+    return state.bootstrap?.entitlements.upgradeUrl || `${api.APP_URL}/dashboard/plans`;
+  }
+
+  /** Subtle inline upgrade chip — never a bulky card */
   function upgradeLock(feature: string, label: string) {
     const g = gate(feature);
     if (!g || g.allowed) return "";
-    const url = state.bootstrap?.entitlements.upgradeUrl || `${api.APP_URL}/dashboard/plans`;
-    return `<div class="lock">
-      <strong>${label} · ${g.upgradeLabel}+</strong>
-      <a class="lock-link" href="${url}" target="_blank" rel="noreferrer">Pro · Upgrade</a>
-    </div>`;
+    return `<span class="upgrade-chip"><b>${escapeHtml(label)}</b> · ${escapeHtml(g.upgradeLabel)}+ <a href="${upgradeUrl()}" target="_blank" rel="noreferrer">Upgrade</a></span>`;
   }
 
   function modeBanner() {
@@ -100,14 +101,24 @@ export async function boot(root: HTMLElement) {
       ${icons.alert}
       <div>
         <b>Design mode required</b><br/>
-        Canvas embed needs Design mode. Current: <b>${escapeHtml(mode)}</b>. Press <b>D</b> or click Design in the Webflow toolbar, select a section, then place the widget.
+        Switch to Design (press <b>D</b>), select a section, then place the widget. Current: <b>${escapeHtml(mode)}</b>
       </div>
     </div>`;
+  }
+
+  function tabButton(t: Tab) {
+    const meta = TAB_META[t];
+    const createClass = t === "create" ? " tab-create" : "";
+    return `<button type="button" class="tab${createClass}" data-tab="${t}" aria-selected="${state.tab === t}" title="${meta.label}">
+      <span class="ico">${meta.icon}</span>
+      <span class="tab-label">${meta.label}</span>
+    </button>`;
   }
 
   function shell(body: string) {
     const plan = state.bootstrap?.plan.tier || "FREE";
     const name = state.bootstrap?.site.name || "Slotwise";
+    const showFab = state.tab !== "create" && Boolean(state.bootstrap);
     root.innerHTML = `
       <div class="app">
         <header class="topnav">
@@ -119,29 +130,29 @@ export async function boot(root: HTMLElement) {
             </div>
           </div>
           <div class="nav-actions">
+            <a class="link-upgrade" href="${upgradeUrl()}" target="_blank" rel="noreferrer">Upgrade</a>
+            <a class="btn btn-sm btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Payments, Stripe, calendars, and settings">
+              ${iconLabel(icons.grid, "Full dashboard")}
+            </a>
             <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle theme">
               ${state.theme === "light" ? icons.moon : icons.sun}
             </button>
-            <a class="btn btn-upgrade" href="${state.bootstrap?.entitlements.upgradeUrl || `${api.APP_URL}/dashboard/plans`}" target="_blank" rel="noreferrer">
-              Upgrade
-            </a>
-            <button type="button" class="btn btn-primary" id="publishBtn">
-              ${iconLabel(icons.rocket, "Publish")}
+            <button type="button" class="btn btn-icon btn-primary" id="publishBtn" title="Publish">
+              <span class="ico">${icons.rocket}</span>
             </button>
           </div>
         </header>
         ${modeBanner()}
         <nav class="tabs" role="tablist">
-          ${(Object.keys(TAB_META) as Tab[])
-            .map(
-              (t) =>
-                `<button type="button" class="tab" data-tab="${t}" aria-selected="${state.tab === t}">${iconLabel(TAB_META[t].icon, TAB_META[t].label)}</button>`,
-            )
-            .join("")}
+          ${(Object.keys(TAB_META) as Tab[]).map(tabButton).join("")}
         </nav>
         <main class="main">${body}</main>
         <p id="status" class="status" data-tone="${state.statusOk ? "ok" : "bad"}">${state.status}</p>
         <p class="footer-note">Support <a href="mailto:tidyflaw@gmail.com">tidyflaw@gmail.com</a></p>
+        <button type="button" class="fab${showFab ? "" : " is-hidden"}" id="fabNew" title="New event">
+          <span class="fab-plus"><span class="ico">${icons.plus}</span></span>
+          New event
+        </button>
       </div>
     `;
     wireChrome();
@@ -159,6 +170,10 @@ export async function boot(root: HTMLElement) {
       void render();
     });
     root.querySelector("#publishBtn")?.addEventListener("click", () => void onPublish());
+    root.querySelector("#fabNew")?.addEventListener("click", () => {
+      state.tab = "create";
+      void render();
+    });
   }
 
   async function refresh() {
@@ -188,6 +203,7 @@ export async function boot(root: HTMLElement) {
       state.branding = brandingRes?.branding ?? {
         themeKey: state.bootstrap.site.themeKey,
         accent: state.bootstrap.site.accent,
+        inkColor: "#0f1b2d",
         radius: 14,
         font: "Manrope",
       };
@@ -237,49 +253,49 @@ export async function boot(root: HTMLElement) {
   }
 
   function cardTitle(icon: string, title: string) {
-    return `<div class="card-h">${icon}<h2>${title}</h2></div>`;
+    return `<div class="card-h"><span class="ico">${icon}</span><h2>${title}</h2></div>`;
   }
 
   function viewHome() {
     if (!state.bootstrap) {
       return `<section class="card">
         ${cardTitle(icons.layout, "Connect Slotwise")}
-        <p class="lead">Authorize Webflow once — no separate Slotwise login for embedding.</p>
-        <a class="btn btn-primary" href="${api.APP_URL}/api/webflow/install" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Install / reconnect")}</a>
+        <p class="lead">Authorize Webflow once — no separate Slotwise login.</p>
+        <a class="btn btn-primary btn-block" href="${api.APP_URL}/api/webflow/install" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Install / reconnect")}</a>
       </section>`;
     }
     const lim = state.bootstrap.entitlements.eventsLimit;
-    return `<section class="card">
-      ${cardTitle(icons.home, "Dashboard")}
-      <p class="lead">Events, canvas embed, and publish — without leaving Designer.</p>
+    return `<a class="dash-banner" href="${api.APP_URL}/dashboard/payments" target="_blank" rel="noreferrer">
+        <span class="dash-banner-copy">
+          <strong>Explore full dashboard</strong>
+          <small>Stripe payments, calendars, and settings</small>
+        </span>
+        <span class="ico">${icons.external}</span>
+      </a>
+      <section class="card">
+      ${cardTitle(icons.home, "Overview")}
+      <p class="lead">Events, canvas, and publish — without leaving Designer.</p>
       <div class="stats">
         <div class="stat">
-          <div class="top">${icons.calendar}<span>Events</span></div>
-          <b>${state.bootstrap.counts.services}${lim != null ? `<span style="font-size:11px;font-weight:600;color:var(--mut)"> / ${lim}</span>` : ""}</b>
+          <div class="top"><span class="ico">${icons.calendar}</span><span class="label">Events</span></div>
+          <b>${state.bootstrap.counts.services}${lim != null ? `<span class="lim">/${lim}</span>` : ""}</b>
         </div>
         <div class="stat">
-          <div class="top">${icons.check}<span>Bookings</span></div>
+          <div class="top"><span class="ico">${icons.check}</span><span class="label">Booked</span></div>
           <b>${state.bootstrap.counts.bookings}</b>
         </div>
         <div class="stat">
-          <div class="top">${icons.crown}<span>Plan</span></div>
-          <b>${escapeHtml(state.bootstrap.entitlements.label)}</b>
+          <div class="top"><span class="ico">${icons.crown}</span><span class="label">Plan</span></div>
+          <b style="font-size:12px">${escapeHtml(state.bootstrap.entitlements.label)}</b>
         </div>
       </div>
-      <div class="actions-grid">
+      <div class="actions-stack">
         <button type="button" class="btn btn-primary" id="embedBtn" ${!state.canDesign ? "disabled" : ""}>
           ${iconLabel(icons.layout, state.canDesign ? "Place on canvas" : "Switch to Design mode")}
         </button>
-        <button type="button" class="btn" id="gotoCreate">${iconLabel(icons.plus, "Create event")}</button>
-        <a class="btn" href="${api.APP_URL}/book/${state.bootstrap.site.publicKey}?embed=1" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Preview widget")}</a>
+        <button type="button" class="btn btn-accent" id="gotoCreate">${iconLabel(icons.plus, "New event")}</button>
+        <a class="btn" href="${api.APP_URL}/book/${state.bootstrap.site.publicKey}?embed=1" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Preview")}</a>
       </div>
-    </section>
-    <section class="card">
-      ${cardTitle(icons.spark, "Pro unlocks")}
-      <p class="lead">AI copy, import/export, and advanced event fields.</p>
-      ${upgradeLock("ai_descriptions", "AI descriptions")}
-      ${upgradeLock("import_export", "Import / export")}
-      ${upgradeLock("analytics", "Funnel analytics")}
     </section>`;
   }
 
@@ -288,23 +304,23 @@ export async function boot(root: HTMLElement) {
       return `<section class="card">
         ${cardTitle(icons.calendar, "Events")}
         <div class="empty">No events yet.</div>
-        <button type="button" class="btn btn-primary" id="gotoCreate">${iconLabel(icons.plus, "New event")}</button>
+        <button type="button" class="btn btn-primary btn-block" id="gotoCreate">${iconLabel(icons.plus, "New event")}</button>
       </section>`;
     }
     return `<section class="card">
       ${cardTitle(icons.calendar, "Events")}
-      <p class="lead">These power the live booking widget.</p>
+      <p class="lead">Live in your booking widget.</p>
       <div class="list">
         ${state.services
           .map(
             (s) => `<div class="row">
             <div class="swatch" style="background:${s.color || "var(--ac)"}"></div>
             <div class="meta">
-              <b>${escapeHtml(s.name)} ${s.featured ? '<span class="pill">Featured</span>' : ""} ${!s.active ? '<span class="pill">Off</span>' : ""}</b>
+              <b>${escapeHtml(s.name)}${s.featured ? '<span class="pill">Featured</span>' : ""}${!s.active ? '<span class="pill">Off</span>' : ""}</b>
               <small>${s.durationMin} min · ${escapeHtml(s.category || s.locationType)}</small>
             </div>
             <div class="price">${money(s.priceCents, state.bootstrap?.site.currency)}</div>
-            <button type="button" class="btn btn-icon btn-ghost" data-del="${s.id}" title="Delete">${icons.trash}</button>
+            <button type="button" class="btn btn-icon btn-ghost" data-del="${s.id}" title="Delete"><span class="ico">${icons.trash}</span></button>
           </div>`,
           )
           .join("")}
@@ -317,22 +333,22 @@ export async function boot(root: HTMLElement) {
     const atLimit = lim != null && state.services.length >= lim;
     return `<section class="card">
       ${cardTitle(icons.plus, "Create event")}
-      <p class="lead">Title, AI description, category, and booking rules.</p>
-      ${atLimit ? upgradeLock("events", "More than " + lim + " events") : ""}
+      <p class="lead">Title, AI copy, and booking rules.</p>
+      ${atLimit ? upgradeLock("events", "Event limit") : ""}
       <form id="eventForm">
         <label class="field"><span>Title</span><input name="name" required maxlength="120" placeholder="Deep home clean" ${atLimit ? "disabled" : ""} /></label>
         <label class="field"><span>Description</span>
           <textarea name="description" placeholder="What clients get…" ${atLimit ? "disabled" : ""}></textarea>
           <div class="desc-tools">
-            <button type="button" class="btn btn-primary" id="aiBtn" ${atLimit ? "disabled" : ""}>${iconLabel(icons.spark, "Write with AI")}</button>
+            <button type="button" class="btn btn-primary btn-sm" id="aiBtn" ${atLimit ? "disabled" : ""}>${iconLabel(icons.spark, "Write with AI")}</button>
             <select id="aiTone" ${atLimit ? "disabled" : ""}>
               <option value="friendly">Friendly</option>
               <option value="professional">Professional</option>
               <option value="premium">Premium</option>
               <option value="concise">Concise</option>
             </select>
+            ${upgradeLock("ai_descriptions", "AI")}
           </div>
-          ${upgradeLock("ai_descriptions", "AI writing")}
         </label>
         <div class="field-row">
           <label class="field"><span>Category</span>
@@ -363,19 +379,19 @@ export async function boot(root: HTMLElement) {
             <label class="field"><span>Buffer before</span><input name="bufferBeforeMin" type="number" min="0" value="0" ${!gate("buffers")?.allowed || atLimit ? "disabled" : ""} /></label>
             <label class="field"><span>Buffer after</span><input name="bufferAfterMin" type="number" min="0" value="15" ${!gate("buffers")?.allowed || atLimit ? "disabled" : ""} /></label>
           </div>
-          ${upgradeLock("buffers", "Custom buffers")}
+          ${upgradeLock("buffers", "Buffers")}
           <div class="field-row">
             <label class="field"><span>Capacity</span><input name="capacity" type="number" min="1" value="1" ${!gate("capacity")?.allowed || atLimit ? "disabled" : ""} /></label>
             <label class="field"><span>Color</span><input name="color" type="color" value="${state.bootstrap?.site.accent || "#f5a000"}" ${atLimit ? "disabled" : ""} /></label>
           </div>
-          ${upgradeLock("capacity", "Group capacity")}
-          <label class="field" style="display:flex;align-items:center;gap:8px">
+          ${upgradeLock("capacity", "Capacity")}
+          <label class="inline-check">
             <input name="featured" type="checkbox" ${!gate("featured_events")?.allowed || atLimit ? "disabled" : ""} />
-            <span style="text-transform:none;letter-spacing:0;font-size:11.5px;color:var(--ink)">Featured on widget</span>
+            <span>Featured on widget</span>
           </label>
-          ${upgradeLock("featured_events", "Featured events")}
+          ${upgradeLock("featured_events", "Featured")}
         </details>
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:6px" ${atLimit ? "disabled" : ""}>${iconLabel(icons.check, "Save event")}</button>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:4px" ${atLimit ? "disabled" : ""}>${iconLabel(icons.check, "Save event")}</button>
       </form>
     </section>`;
   }
@@ -389,6 +405,10 @@ export async function boot(root: HTMLElement) {
     }
     const current = state.branding?.themeKey || state.bootstrap.site.themeKey;
     const accent = state.branding?.accent || state.bootstrap.site.accent;
+    const ink =
+      state.branding?.inkColor ||
+      state.themes.find((t) => t.key === current)?.ink ||
+      "#0f1b2d";
     const radius = state.branding?.radius ?? 14;
     const themes =
       state.themes.length > 0
@@ -399,7 +419,7 @@ export async function boot(root: HTMLElement) {
               name: current,
               bg: "#ffffff",
               panel: "#ffffff",
-              ink: "#0f1b2d",
+              ink,
               line: "#e1e6ee",
               accent,
               radius,
@@ -409,7 +429,7 @@ export async function boot(root: HTMLElement) {
           ];
     return `<section class="card">
       ${cardTitle(icons.palette, "Widget theme")}
-      <p class="lead">Applies to the live booking widget on your site.</p>
+      <p class="lead">Applies to the live booking widget.</p>
       <div class="theme-grid">
         ${themes
           .map((t) => {
@@ -422,37 +442,44 @@ export async function boot(root: HTMLElement) {
           })
           .join("")}
       </div>
-      <div class="field-row" style="margin-top:8px">
-        <label class="field"><span>Accent</span>
+      <div class="color-pair">
+        <label class="color-field"><span>Accent</span>
           <input type="color" id="brandAccent" value="${escapeHtml(accent)}" />
         </label>
-        <label class="field"><span>Radius</span>
-          <input type="range" id="brandRadius" min="0" max="28" value="${radius}" />
+        <label class="color-field"><span>Text / ink</span>
+          <input type="color" id="brandInk" value="${escapeHtml(ink)}" />
         </label>
       </div>
-      <button type="button" class="btn btn-primary" id="saveBranding" style="width:100%">
+      <label class="field" style="margin-top:8px"><span>Radius · <span id="radiusVal">${radius}</span>px</span>
+        <input type="range" id="brandRadius" min="0" max="28" value="${radius}" />
+      </label>
+      <button type="button" class="btn btn-primary btn-block" id="saveBranding">
         ${iconLabel(icons.check, "Save branding")}
       </button>
     </section>`;
   }
 
   function viewTools() {
+    const locked = !gate("import_export")?.allowed;
     return `<section class="card">
       ${cardTitle(icons.upload, "Import & export")}
       <p class="lead">JSON / CSV for agency clones.</p>
       ${upgradeLock("import_export", "Import / export")}
-      <div class="actions-grid">
-        <button type="button" class="btn" id="exportJson" ${!gate("import_export")?.allowed ? "disabled" : ""}>${iconLabel(icons.download, "Export JSON")}</button>
-        <button type="button" class="btn" id="exportCsv" ${!gate("import_export")?.allowed ? "disabled" : ""}>${iconLabel(icons.download, "Export CSV")}</button>
-        <label class="field"><span>Import JSON</span>
-          <input type="file" id="importFile" accept="application/json,.json" ${!gate("import_export")?.allowed ? "disabled" : ""} />
-        </label>
+      <div class="tools-row">
+        <button type="button" class="btn btn-sm" id="exportJson" ${locked ? "disabled" : ""}>${iconLabel(icons.download, "JSON")}</button>
+        <button type="button" class="btn btn-sm" id="exportCsv" ${locked ? "disabled" : ""}>${iconLabel(icons.download, "CSV")}</button>
       </div>
+      <label class="dropzone" id="dropzone" ${locked ? 'aria-disabled="true"' : ""}>
+        <input type="file" id="importFile" accept="application/json,.json" ${locked ? "disabled" : ""} />
+        <span class="dz-icon"><span class="ico">${icons.upload}</span></span>
+        <strong>Drop JSON or browse</strong>
+        <small>Merge events into this site</small>
+      </label>
     </section>
     <section class="card">
       ${cardTitle(icons.layout, "Canvas")}
-      <p class="lead">Insert a live booking iframe — no copy-paste.</p>
-      <button type="button" class="btn btn-primary" id="embedBtn2" ${!state.canDesign ? "disabled" : ""}>
+      <p class="lead">Insert a live booking iframe.</p>
+      <button type="button" class="btn btn-primary btn-block" id="embedBtn2" ${!state.canDesign ? "disabled" : ""}>
         ${iconLabel(icons.layout, state.canDesign ? "Place on canvas" : "Switch to Design mode")}
       </button>
     </section>`;
@@ -462,16 +489,16 @@ export async function boot(root: HTMLElement) {
     return `<section class="card">
       ${cardTitle(icons.settings, "Appearance")}
       <p class="lead">Panel theme (independent of your site).</p>
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:5px">
         <button type="button" class="btn ${state.theme === "light" ? "btn-primary" : ""}" id="lightBtn">${iconLabel(icons.sun, "Light")}</button>
         <button type="button" class="btn ${state.theme === "dark" ? "btn-primary" : ""}" id="darkBtn">${iconLabel(icons.moon, "Dark")}</button>
       </div>
     </section>
     <section class="card">
       ${cardTitle(icons.users, "Site")}
-      <p class="lead">Key <code style="font-size:10.5px">${escapeHtml(state.bootstrap?.site.publicKey || "—")}</code></p>
-      <div class="actions-grid">
-        <a class="btn" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Full dashboard")}</a>
+      <p class="lead">Key <code style="font-size:10px">${escapeHtml(state.bootstrap?.site.publicKey || "—")}</code></p>
+      <div class="actions-stack">
+        <a class="btn btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">${iconLabel(icons.grid, "Dashboard")}</a>
         <a class="btn" href="${api.APP_URL}/dashboard/plans" target="_blank" rel="noreferrer">${iconLabel(icons.zap, "Manage plan")}</a>
       </div>
     </section>`;
@@ -483,6 +510,55 @@ export async function boot(root: HTMLElement) {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function wireDropzone() {
+    const dz = root.querySelector("#dropzone") as HTMLElement | null;
+    const input = root.querySelector("#importFile") as HTMLInputElement | null;
+    if (!dz || !input || input.disabled) return;
+
+    const setDrag = (on: boolean) => dz.classList.toggle("is-drag", on);
+    ["dragenter", "dragover"].forEach((ev) => {
+      dz.addEventListener(ev, (e) => {
+        e.preventDefault();
+        setDrag(true);
+      });
+    });
+    ["dragleave", "drop"].forEach((ev) => {
+      dz.addEventListener(ev, (e) => {
+        e.preventDefault();
+        setDrag(false);
+      });
+    });
+    dz.addEventListener("drop", (e) => {
+      const file = (e as DragEvent).dataTransfer?.files?.[0];
+      if (file) void handleImportFile(file);
+    });
+  }
+
+  async function handleImportFile(file: File) {
+    if (!state.bootstrap) return;
+    if (!gate("import_export")?.allowed) {
+      setStatus("Import / export requires Pro", false);
+      return;
+    }
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as { services?: api.Service[] } | api.Service[];
+      const services = Array.isArray(parsed) ? parsed : parsed.services || [];
+      const res = await api.importServices({
+        webflowSiteId: state.webflowSiteId,
+        publicKey: state.bootstrap.site.publicKey,
+        services,
+        mode: "merge",
+      });
+      await refresh();
+      setStatus(`Imported ${res.created} events`);
+      state.tab = "events";
+      void render();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Import failed", false);
+    }
   }
 
   async function render() {
@@ -522,6 +598,12 @@ export async function boot(root: HTMLElement) {
       void render();
     });
 
+    const radiusEl = root.querySelector("#brandRadius") as HTMLInputElement | null;
+    const radiusVal = root.querySelector("#radiusVal");
+    radiusEl?.addEventListener("input", () => {
+      if (radiusVal) radiusVal.textContent = radiusEl.value;
+    });
+
     root.querySelectorAll("[data-theme-key]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         if (!state.bootstrap) return;
@@ -534,6 +616,7 @@ export async function boot(root: HTMLElement) {
             publicKey: state.bootstrap.site.publicKey,
             themeKey,
             accent: picked?.accent,
+            inkColor: picked?.ink,
             radius: picked?.radius,
             font: picked?.font,
           });
@@ -552,7 +635,8 @@ export async function boot(root: HTMLElement) {
     root.querySelector("#saveBranding")?.addEventListener("click", async () => {
       if (!state.bootstrap) return;
       const accentEl = root.querySelector("#brandAccent") as HTMLInputElement | null;
-      const radiusEl = root.querySelector("#brandRadius") as HTMLInputElement | null;
+      const inkEl = root.querySelector("#brandInk") as HTMLInputElement | null;
+      const radiusInput = root.querySelector("#brandRadius") as HTMLInputElement | null;
       try {
         setStatus("Saving branding…");
         const res = await api.patchBranding({
@@ -560,7 +644,8 @@ export async function boot(root: HTMLElement) {
           publicKey: state.bootstrap.site.publicKey,
           themeKey: state.branding?.themeKey || state.bootstrap.site.themeKey,
           accent: accentEl?.value,
-          radius: radiusEl ? Number(radiusEl.value) : undefined,
+          inkColor: inkEl?.value,
+          radius: radiusInput ? Number(radiusInput.value) : undefined,
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;
@@ -666,26 +751,10 @@ export async function boot(root: HTMLElement) {
     root.querySelector("#exportJson")?.addEventListener("click", () => openExport("json"));
     root.querySelector("#exportCsv")?.addEventListener("click", () => openExport("csv"));
 
+    wireDropzone();
     root.querySelector("#importFile")?.addEventListener("change", async (ev) => {
       const file = (ev.target as HTMLInputElement).files?.[0];
-      if (!file || !state.bootstrap) return;
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text) as { services?: api.Service[] } | api.Service[];
-        const services = Array.isArray(parsed) ? parsed : parsed.services || [];
-        const res = await api.importServices({
-          webflowSiteId: state.webflowSiteId,
-          publicKey: state.bootstrap.site.publicKey,
-          services,
-          mode: "merge",
-        });
-        await refresh();
-        setStatus(`Imported ${res.created} events`);
-        state.tab = "events";
-        void render();
-      } catch (e) {
-        setStatus(e instanceof Error ? e.message : "Import failed", false);
-      }
+      if (file) await handleImportFile(file);
     });
   }
 

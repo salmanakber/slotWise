@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 const bodySchema = z.object({
   themeKey: z.string().min(1),
   accent: z.string().min(4).max(9),
+  inkColor: z.string().min(4).max(9).optional().nullable(),
   radius: z.number().int().min(0).max(28),
   font: z.string().min(1),
   layout: z.enum(["INLINE", "POPUP", "FLOATING"]),

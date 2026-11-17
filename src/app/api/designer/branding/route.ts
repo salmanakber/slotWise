@@ -19,16 +19,31 @@ const patchSchema = z.object({
   publicKey: z.string().optional().nullable(),
   themeKey: z.string().min(1).optional(),
   accent: z.string().min(4).max(9).optional(),
+  inkColor: z.string().min(4).max(9).optional().nullable(),
   radius: z.number().int().min(0).max(28).optional(),
   font: z.string().min(1).optional(),
 });
 
+type BrandingRow = {
+  themeKey?: string | null;
+  accent?: string | null;
+  inkColor?: string | null;
+  radius?: number | null;
+  font?: string | null;
+  businessName?: string | null;
+};
+
+function readInk(branding: BrandingRow | null | undefined, fallback: string) {
+  return branding?.inkColor ?? fallback;
+}
+
 function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteForDesigner>>>) {
-  const branding = site.branding;
+  const branding = site.branding as BrandingRow | null;
   const theme = getTheme(branding?.themeKey ?? "amber-light");
   return {
     themeKey: branding?.themeKey ?? theme.key,
     accent: branding?.accent ?? theme.accent,
+    inkColor: readInk(branding, theme.ink),
     radius: branding?.radius ?? theme.radius,
     font: branding?.font ?? theme.font,
     businessName: branding?.businessName ?? site.name,
@@ -63,20 +78,25 @@ export async function PATCH(request: Request) {
     const data = {
       themeKey: body.themeKey ?? undefined,
       accent: body.accent ?? theme?.accent,
+      inkColor: body.inkColor === undefined ? undefined : body.inkColor,
       radius: body.radius ?? theme?.radius,
       font: body.font ?? theme?.font,
       buttonStyle: theme?.button,
     };
 
+    // inkColor is on Branding schema; cast until prisma generate runs
+    const updateData: Record<string, unknown> = {
+      ...(data.themeKey !== undefined ? { themeKey: data.themeKey } : {}),
+      ...(data.accent !== undefined ? { accent: data.accent } : {}),
+      ...(data.inkColor !== undefined ? { inkColor: data.inkColor } : {}),
+      ...(data.radius !== undefined ? { radius: data.radius } : {}),
+      ...(data.font !== undefined ? { font: data.font } : {}),
+      ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
+    };
+
     const branding = await prisma.branding.upsert({
       where: { siteId: site.id },
-      update: {
-        ...(data.themeKey !== undefined ? { themeKey: data.themeKey } : {}),
-        ...(data.accent !== undefined ? { accent: data.accent } : {}),
-        ...(data.radius !== undefined ? { radius: data.radius } : {}),
-        ...(data.font !== undefined ? { font: data.font } : {}),
-        ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
-      },
+      update: updateData as Parameters<typeof prisma.branding.upsert>[0]["update"],
       create: {
         siteId: site.id,
         themeKey: data.themeKey ?? theme?.key ?? "amber-light",
@@ -85,7 +105,12 @@ export async function PATCH(request: Request) {
         font: data.font ?? theme?.font ?? "Manrope",
         buttonStyle: data.buttonStyle ?? theme?.button ?? "solid",
         businessName: site.name,
-      },
+        ...(data.inkColor !== undefined
+          ? { inkColor: data.inkColor }
+          : theme?.ink
+            ? { inkColor: theme.ink }
+            : {}),
+      } as Parameters<typeof prisma.branding.upsert>[0]["create"],
     });
 
     const refreshed = await findSiteForDesigner({

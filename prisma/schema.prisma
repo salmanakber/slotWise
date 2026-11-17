@@ -166,6 +166,7 @@ model Branding {
   site         Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
   themeKey     String       @default("amber-light")
   accent       String       @default("#f5a000")
+  inkColor     String?
   radius       Int          @default(14)
   font         String       @default("Manrope")
   buttonStyle  String       @default("solid")
@@ -413,9 +414,9 @@ model PlatformConfig {
   stripeSaveCardForNoShow          Boolean @default(true)
 
   // Email
-  emailProvider                    String  @default("postmark")
+  emailProvider                    String  @default("resend")
   emailFrom                        String?
-  postmarkTokenEncrypted           String?
+  postmarkTokenEncrypted           String? // stores Resend API key (legacy column name)
 
   // SMS / WhatsApp (Twilio)
   smsProvider                      String  @default("twilio")

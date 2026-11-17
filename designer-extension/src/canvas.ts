@@ -110,6 +110,10 @@ export async function insertBookingIframe(publicKey: string) {
   if (!parent?.append) throw new Error("Select a section or container on the canvas first");
 
   const src = `${APP_URL}/book/${encodeURIComponent(publicKey)}?embed=1`;
+  const wrapStyle =
+    "width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;display:block;";
+  const frameStyle =
+    "display:block;width:100%;max-width:100%;min-height:640px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
 
   try {
     if (typeof api.elementBuilder === "function") {
@@ -117,24 +121,28 @@ export async function insertBookingIframe(publicKey: string) {
       root.setTag("div");
       root.setAttribute("data-slotwise-widget", publicKey);
       root.setAttribute("data-site", publicKey);
+      root.setAttribute("style", wrapStyle);
       const frame = root.append(api.elementPresets.DOM);
       frame.setTag("iframe");
       frame.setAttribute("src", src);
       frame.setAttribute("title", "Slotwise booking");
       frame.setAttribute("loading", "lazy");
-      frame.setAttribute("style", "width:100%;min-height:720px;border:0;border-radius:16px;");
+      frame.setAttribute("scrolling", "no");
+      frame.setAttribute("style", frameStyle);
       await parent.append(root);
     } else {
       const wrap = await parent.append(api.elementPresets.DOM);
       await wrap.setTag("div");
       await wrap.setAttribute("data-slotwise-widget", publicKey);
       await wrap.setAttribute("data-site", publicKey);
+      await wrap.setAttribute("style", wrapStyle);
       const iframe = await wrap.append(api.elementPresets.DOM);
       await iframe.setTag("iframe");
       await iframe.setAttribute("src", src);
       await iframe.setAttribute("title", "Slotwise booking");
       await iframe.setAttribute("loading", "lazy");
-      await iframe.setAttribute("style", "width:100%;min-height:720px;border:0;border-radius:16px;");
+      await iframe.setAttribute("scrolling", "no");
+      await iframe.setAttribute("style", frameStyle);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

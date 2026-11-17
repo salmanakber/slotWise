@@ -143,6 +143,7 @@ export type DesignerTheme = {
 export type DesignerBranding = {
   themeKey: string;
   accent: string;
+  inkColor?: string | null;
   radius: number;
   font: string;
   businessName?: string | null;
@@ -165,6 +166,7 @@ export function patchBranding(body: {
   publicKey?: string | null;
   themeKey?: string;
   accent?: string;
+  inkColor?: string | null;
   radius?: number;
   font?: string;
 }) {

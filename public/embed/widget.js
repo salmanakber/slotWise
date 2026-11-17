@@ -9,10 +9,12 @@
     var css = document.createElement("style");
     css.id = STYLE_ID;
     css.textContent =
-      ".slotwise-host{position:relative;width:100%;isolation:isolate;overflow:visible}" +
-      ".slotwise-frame{display:block;width:100%;border:0;border-radius:18px;background:transparent;" +
-      "min-height:720px;overflow:visible;box-shadow:0 18px 50px rgba(15,27,45,.12);transition:min-height .25s ease,height .25s ease}" +
-      ".slotwise-skel{position:absolute;inset:0;border-radius:18px;overflow:hidden;" +
+      ".slotwise-host{position:relative;display:block;width:100%;max-width:100%;min-width:0;" +
+      "box-sizing:border-box;isolation:isolate;overflow:hidden}" +
+      ".slotwise-frame{display:block;width:100%;max-width:100%;border:0;border-radius:16px;" +
+      "background:transparent;min-height:640px;overflow:hidden;" +
+      "box-shadow:0 14px 40px rgba(15,27,45,.1);transition:min-height .25s ease,height .25s ease}" +
+      ".slotwise-skel{position:absolute;inset:0;border-radius:16px;overflow:hidden;" +
       "background:linear-gradient(135deg,#f7f8fb,#eef2f7);pointer-events:none}" +
       ".slotwise-skel::after{content:'';position:absolute;inset:0;" +
       "background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);" +
@@ -30,7 +32,11 @@
 
     ensureStyles();
     el.classList.add("slotwise-host");
-    el.style.overflow = "visible";
+    el.style.width = "100%";
+    el.style.maxWidth = "100%";
+    el.style.minWidth = "0";
+    el.style.overflow = "hidden";
+    el.style.boxSizing = "border-box";
 
     var skel = document.createElement("div");
     skel.className = "slotwise-skel";
@@ -43,10 +49,13 @@
     iframe.setAttribute("loading", "lazy");
     iframe.setAttribute("allow", "payment *");
     iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+    iframe.setAttribute("scrolling", "no");
 
-    var minH = parseInt(el.getAttribute("data-min-height") || "720", 10);
+    var minH = parseInt(el.getAttribute("data-min-height") || "640", 10);
     iframe.style.minHeight = minH + "px";
-    iframe.style.overflow = "visible";
+    iframe.style.width = "100%";
+    iframe.style.maxWidth = "100%";
+    iframe.style.overflow = "hidden";
 
     function onMessage(ev) {
       var data = ev && ev.data;
@@ -78,9 +87,7 @@
       (script && script.src && script.src.replace(/\/embed\/widget\.js.*$/, "")) ||
       window.location.origin;
 
-    nodes.forEach(function (el) {
-      mount(el, base);
-    });
+    for (var i = 0; i < nodes.length; i++) mount(nodes[i], base);
   }
 
   if (document.readyState === "loading") {

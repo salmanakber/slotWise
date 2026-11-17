@@ -18,7 +18,11 @@ export type PlatformPublicSettings = {
   stripeSaveCardForNoShow: boolean;
   emailProvider: string;
   emailFrom: string | null;
+  resendApiKeySet: boolean;
+  resendApiKeyHint: string | null;
+  /** @deprecated use resendApiKeySet */
   postmarkTokenSet: boolean;
+  /** @deprecated use resendApiKeyHint */
   postmarkTokenHint: string | null;
   smsProvider: string;
   twilioAccountSid: string | null;
@@ -96,10 +100,20 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       stripeAllowDeposits: row.stripeAllowDeposits,
       stripeAllowPayOnSite: row.stripeAllowPayOnSite,
       stripeSaveCardForNoShow: row.stripeSaveCardForNoShow,
-      emailProvider: row.emailProvider,
+      emailProvider: row.emailProvider === "postmark" ? "resend" : row.emailProvider,
       emailFrom: row.emailFrom || process.env.EMAIL_FROM || null,
-      postmarkTokenSet: Boolean(postmark || process.env.POSTMARK_API_TOKEN),
-      postmarkTokenHint: maskSecret(postmark || process.env.POSTMARK_API_TOKEN),
+      resendApiKeySet: Boolean(
+        postmark || process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN,
+      ),
+      resendApiKeyHint: maskSecret(
+        postmark || process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN,
+      ),
+      postmarkTokenSet: Boolean(
+        postmark || process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN,
+      ),
+      postmarkTokenHint: maskSecret(
+        postmark || process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN,
+      ),
       smsProvider: row.smsProvider,
       twilioAccountSid: row.twilioAccountSid || process.env.TWILIO_ACCOUNT_SID || null,
       twilioAuthTokenSet: Boolean(twilio || process.env.TWILIO_AUTH_TOKEN),
@@ -165,10 +179,12 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       stripeAllowDeposits: true,
       stripeAllowPayOnSite: true,
       stripeSaveCardForNoShow: true,
-      emailProvider: "postmark",
+      emailProvider: "resend",
       emailFrom: process.env.EMAIL_FROM || null,
-      postmarkTokenSet: Boolean(process.env.POSTMARK_API_TOKEN),
-      postmarkTokenHint: maskSecret(process.env.POSTMARK_API_TOKEN),
+      resendApiKeySet: Boolean(process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN),
+      resendApiKeyHint: maskSecret(process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN),
+      postmarkTokenSet: Boolean(process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN),
+      postmarkTokenHint: maskSecret(process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN),
       smsProvider: "twilio",
       twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || null,
       twilioAuthTokenSet: Boolean(process.env.TWILIO_AUTH_TOKEN),
@@ -215,7 +231,16 @@ export async function getPlatformSecrets() {
         safeDecrypt(row.stripeWebhookSecretEncrypted) || process.env.STRIPE_WEBHOOK_SECRET || null,
       applicationFeePercent: row.applicationFeePercent,
       emailFrom: row.emailFrom || process.env.EMAIL_FROM || null,
-      postmarkToken: safeDecrypt(row.postmarkTokenEncrypted) || process.env.POSTMARK_API_TOKEN || null,
+      resendApiKey:
+        safeDecrypt(row.postmarkTokenEncrypted) ||
+        process.env.RESEND_API_KEY ||
+        process.env.POSTMARK_API_TOKEN ||
+        null,
+      postmarkToken:
+        safeDecrypt(row.postmarkTokenEncrypted) ||
+        process.env.RESEND_API_KEY ||
+        process.env.POSTMARK_API_TOKEN ||
+        null,
       twilioAccountSid: row.twilioAccountSid || process.env.TWILIO_ACCOUNT_SID || null,
       twilioAuthToken: safeDecrypt(row.twilioAuthTokenEncrypted) || process.env.TWILIO_AUTH_TOKEN || null,
       twilioFromNumber: row.twilioFromNumber || process.env.TWILIO_FROM_NUMBER || null,
@@ -252,7 +277,8 @@ export async function getPlatformSecrets() {
       stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || null,
       applicationFeePercent: 0,
       emailFrom: process.env.EMAIL_FROM || null,
-      postmarkToken: process.env.POSTMARK_API_TOKEN || null,
+      resendApiKey: process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN || null,
+      postmarkToken: process.env.RESEND_API_KEY || process.env.POSTMARK_API_TOKEN || null,
       twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || null,
       twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || null,
       twilioFromNumber: process.env.TWILIO_FROM_NUMBER || null,
@@ -290,6 +316,7 @@ export type PlatformSettingsUpdate = {
   stripeSaveCardForNoShow?: boolean;
   emailProvider?: string;
   emailFrom?: string | null;
+  resendApiKey?: string;
   postmarkToken?: string;
   smsProvider?: string;
   twilioAccountSid?: string | null;
@@ -334,7 +361,11 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
   }
   if (input.emailProvider) data.emailProvider = input.emailProvider;
   if (input.emailFrom !== undefined) data.emailFrom = input.emailFrom || null;
-  if (input.postmarkToken?.trim()) data.postmarkTokenEncrypted = encryptSecret(input.postmarkToken.trim());
+  const emailKey = input.resendApiKey?.trim() || input.postmarkToken?.trim();
+  if (emailKey) {
+    data.postmarkTokenEncrypted = encryptSecret(emailKey);
+    data.emailProvider = "resend";
+  }
   if (input.smsProvider) data.smsProvider = input.smsProvider;
   if (input.twilioAccountSid !== undefined) data.twilioAccountSid = input.twilioAccountSid || null;
   if (input.twilioAuthToken?.trim()) data.twilioAuthTokenEncrypted = encryptSecret(input.twilioAuthToken.trim());

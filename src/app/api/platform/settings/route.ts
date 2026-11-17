@@ -24,6 +24,7 @@ const bodySchema = z.object({
   stripeSaveCardForNoShow: z.boolean().optional(),
   emailProvider: z.string().optional(),
   emailFrom: z.string().nullable().optional(),
+  resendApiKey: z.string().optional(),
   postmarkToken: z.string().optional(),
   smsProvider: z.string().optional(),
   twilioAccountSid: z.string().nullable().optional(),

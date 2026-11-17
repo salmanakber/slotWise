@@ -2,8 +2,8 @@ import { DEFAULT_EMAIL_FROM } from "@/lib/brand";
 import { getPlatformSecrets } from "@/lib/platform-config";
 
 /**
- * Email delivery — Postmark when a token is set in platform admin (or env).
- * Without a token, messages are logged so local booking still works.
+ * Email delivery via Resend when an API key is set in platform admin (or env).
+ * Without a key, messages are logged so local booking still works.
  */
 export async function sendBookingConfirmation(input: {
   to: string;
@@ -22,35 +22,39 @@ export async function sendBookingConfirmation(input: {
     `— ${input.businessName} via Slotwise`,
   ].join("\n");
 
-  if (!secrets.postmarkToken) {
+  const apiKey =
+    secrets.resendApiKey ||
+    secrets.postmarkToken ||
+    process.env.RESEND_API_KEY ||
+    null;
+
+  if (!apiKey) {
     console.info("[email:dev]", { from, to: input.to, subject, body });
     return { queued: false, mode: "log" as const };
   }
 
   try {
-    const res = await fetch("https://api.postmarkapp.com/email", {
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        Accept: "application/json",
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "X-Postmark-Server-Token": secrets.postmarkToken,
       },
       body: JSON.stringify({
-        From: from,
-        To: input.to,
-        Subject: subject,
-        TextBody: body,
-        MessageStream: "outbound",
+        from,
+        to: [input.to],
+        subject,
+        text: body,
       }),
     });
     if (!res.ok) {
       const text = await res.text();
-      console.error("[email:postmark]", text);
+      console.error("[email:resend]", text);
       return { queued: false, mode: "error" as const };
     }
-    return { queued: true, mode: "postmark" as const };
+    return { queued: true, mode: "resend" as const };
   } catch (e) {
-    console.error("[email:postmark]", e);
+    console.error("[email:resend]", e);
     return { queued: false, mode: "error" as const };
   }
 }
