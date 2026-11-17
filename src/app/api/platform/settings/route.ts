@@ -13,11 +13,19 @@ export async function GET() {
 }
 
 const bodySchema = z.object({
-  stripeMode: z.enum(["test", "live"]).optional(),
+  stripeMode: z
+    .union([z.enum(["test", "live"]), z.string()])
+    .optional()
+    .transform((v) => (v === "live" || v === "test" ? v : undefined)),
   stripePublishableKey: z.string().nullable().optional(),
   stripeSecretKey: z.string().optional(),
   stripeWebhookSecret: z.string().optional(),
-  applicationFeePercent: z.number().int().min(0).max(30).optional(),
+  applicationFeePercent: z.preprocess((v) => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    const n = typeof v === "number" ? v : Number(v);
+    if (!Number.isFinite(n)) return undefined;
+    return Math.round(n);
+  }, z.number().int().min(0).max(30).optional()),
   stripeRequireOnboarding: z.boolean().optional(),
   stripeAllowDeposits: z.boolean().optional(),
   stripeAllowPayOnSite: z.boolean().optional(),
@@ -40,7 +48,13 @@ const bodySchema = z.object({
   zoomClientId: z.string().nullable().optional(),
   zoomClientSecret: z.string().optional(),
   zapierSigningSecret: z.string().optional(),
-  aiProvider: z.enum(["openai", "groq", "template"]).optional(),
+  zapierEnabled: z.boolean().optional(),
+  aiProvider: z
+    .union([z.enum(["openai", "groq", "template"]), z.string()])
+    .optional()
+    .transform((v) =>
+      v === "openai" || v === "groq" || v === "template" ? v : undefined,
+    ),
   openaiApiKey: z.string().optional(),
   openaiModel: z.string().nullable().optional(),
   groqApiKey: z.string().optional(),
@@ -53,7 +67,15 @@ export async function PATCH(request: Request) {
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid settings payload", details: parsed.error.flatten() }, { status: 400 });
+    const flat = parsed.error.flatten();
+    const first =
+      Object.entries(flat.fieldErrors)
+        .map(([k, v]) => `${k}: ${(v || []).join(", ")}`)
+        .join("; ") || flat.formErrors.join("; ");
+    return NextResponse.json(
+      { error: first ? `Invalid settings: ${first}` : "Invalid settings payload", details: flat },
+      { status: 400 },
+    );
   }
 
   try {

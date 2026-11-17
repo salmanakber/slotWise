@@ -37,8 +37,16 @@ export async function POST(request: Request) {
     const site = await requireDemoSite();
 
     if (provider === "zapier") {
+      const { getPlatformPublicSettings } = await import("@/lib/platform-config");
+      const platform = await getPlatformPublicSettings();
+      if (!platform.zapierEnabled) {
+        return NextResponse.json(
+          { error: "Zapier is coming soon. You’ll be able to connect it in one click." },
+          { status: 503 },
+        );
+      }
       return NextResponse.json(
-        { error: "Zapier is coming soon. You’ll be able to connect it in one click." },
+        { error: "Zapier one-click connect isn’t ready yet. Keep it enabled in admin for launch." },
         { status: 503 },
       );
     }

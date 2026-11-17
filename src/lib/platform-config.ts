@@ -43,6 +43,7 @@ export type PlatformPublicSettings = {
   zoomClientSecretHint: string | null;
   zapierSigningSecretSet: boolean;
   zapierSigningSecretHint: string | null;
+  zapierEnabled: boolean;
   aiProvider: string;
   openaiApiKeySet: boolean;
   openaiApiKeyHint: string | null;
@@ -151,6 +152,9 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       zapierSigningSecretHint: maskSecret(
         safeDecrypt(row.zapierSigningSecretEncrypted) || process.env.ZAPIER_SIGNING_SECRET,
       ),
+      zapierEnabled: Boolean(
+        (row as { zapierEnabled?: boolean }).zapierEnabled,
+      ),
       aiProvider: row.aiProvider || "openai",
       openaiApiKeySet: Boolean(
         safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY,
@@ -204,6 +208,7 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       zoomClientSecretHint: maskSecret(process.env.ZOOM_CLIENT_SECRET),
       zapierSigningSecretSet: Boolean(process.env.ZAPIER_SIGNING_SECRET),
       zapierSigningSecretHint: maskSecret(process.env.ZAPIER_SIGNING_SECRET),
+      zapierEnabled: false,
       aiProvider: "openai",
       openaiApiKeySet: Boolean(process.env.OPENAI_API_KEY),
       openaiApiKeyHint: maskSecret(process.env.OPENAI_API_KEY),
@@ -332,6 +337,7 @@ export type PlatformSettingsUpdate = {
   zoomClientId?: string | null;
   zoomClientSecret?: string;
   zapierSigningSecret?: string;
+  zapierEnabled?: boolean;
   aiProvider?: "openai" | "groq" | "template";
   openaiApiKey?: string;
   openaiModel?: string | null;
@@ -392,6 +398,7 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
   if (input.zapierSigningSecret?.trim()) {
     data.zapierSigningSecretEncrypted = encryptSecret(input.zapierSigningSecret.trim());
   }
+  if (input.zapierEnabled !== undefined) data.zapierEnabled = input.zapierEnabled;
   if (input.aiProvider) data.aiProvider = input.aiProvider;
   if (input.openaiApiKey?.trim()) data.openaiApiKeyEncrypted = encryptSecret(input.openaiApiKey.trim());
   if (input.openaiModel !== undefined) data.openaiModel = input.openaiModel || null;

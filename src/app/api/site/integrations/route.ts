@@ -17,6 +17,9 @@ function keysReadyFor(
   provider: IntegrationProvider,
   settings: Awaited<ReturnType<typeof getPlatformPublicSettings>>,
 ) {
+  if (provider === "zapier") {
+    return Boolean(settings.zapierEnabled);
+  }
   if (provider === "google_calendar" || provider === "meet") {
     return Boolean(settings.googleClientId && settings.googleClientSecretSet);
   }

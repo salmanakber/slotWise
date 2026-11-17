@@ -36,13 +36,16 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       const payload: Record<string, unknown> = {};
 
       if (section === "stripe") {
-        payload.stripeMode = form.stripeMode;
-        payload.stripePublishableKey = form.stripePublishableKey;
-        payload.applicationFeePercent = form.applicationFeePercent;
-        payload.stripeRequireOnboarding = form.stripeRequireOnboarding;
-        payload.stripeAllowDeposits = form.stripeAllowDeposits;
-        payload.stripeAllowPayOnSite = form.stripeAllowPayOnSite;
-        payload.stripeSaveCardForNoShow = form.stripeSaveCardForNoShow;
+        payload.stripeMode = form.stripeMode === "live" ? "live" : "test";
+        payload.stripePublishableKey = form.stripePublishableKey || null;
+        const fee = Number(form.applicationFeePercent);
+        payload.applicationFeePercent = Number.isFinite(fee)
+          ? Math.min(30, Math.max(0, Math.round(fee)))
+          : 0;
+        payload.stripeRequireOnboarding = Boolean(form.stripeRequireOnboarding);
+        payload.stripeAllowDeposits = Boolean(form.stripeAllowDeposits);
+        payload.stripeAllowPayOnSite = Boolean(form.stripeAllowPayOnSite);
+        payload.stripeSaveCardForNoShow = Boolean(form.stripeSaveCardForNoShow);
         if (stripeSecretKey.trim()) payload.stripeSecretKey = stripeSecretKey.trim();
         if (stripeWebhookSecret.trim()) payload.stripeWebhookSecret = stripeWebhookSecret.trim();
       }
@@ -67,6 +70,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
         if (microsoftClientSecret.trim()) payload.microsoftClientSecret = microsoftClientSecret.trim();
         if (zoomClientSecret.trim()) payload.zoomClientSecret = zoomClientSecret.trim();
+        payload.zapierEnabled = Boolean(form.zapierEnabled);
         if (zapierSigningSecret.trim()) payload.zapierSigningSecret = zapierSigningSecret.trim();
         if (openaiApiKey.trim()) payload.openaiApiKey = openaiApiKey.trim();
         if (groqApiKey.trim()) payload.groqApiKey = groqApiKey.trim();
@@ -117,8 +121,11 @@ export function PlatformSettingsForm({ initial, section }: Props) {
           <section className="sw-card">
             <h2 className="mb-1 text-[15px] font-extrabold">Platform Stripe</h2>
             <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-              Keys are stored encrypted. Leave secret fields blank to keep the current value. Webhook URL:{" "}
-              <code className="font-semibold">/api/stripe/webhook</code>
+              Keys are stored encrypted. Leave secret fields blank to keep the current value. Webhook
+              endpoint:{" "}
+              <code className="font-semibold">
+                https://slotwise.hindaralabs.com/api/stripe/webhook
+              </code>
             </p>
 
             <Field label="Mode">
@@ -355,19 +362,19 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 autoComplete="new-password"
               />
             </Field>
-            <Field
-              label="Zapier signing secret"
-              hint={form.zapierSigningSecretHint ?? "Not set"}
-            >
-              <input
-                type="password"
-                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
-                value={zapierSigningSecret}
-                onChange={(e) => setZapierSigningSecret(e.target.value)}
-                placeholder="Paste new secret to rotate"
-                autoComplete="new-password"
-              />
-            </Field>
+          </section>
+
+          <section className="sw-card">
+            <h2 className="mb-1 text-[15px] font-extrabold">Zapier</h2>
+            <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+              When off, site owners see Zapier as Coming soon. Turn on when you’re ready to offer
+              one-click Zapier connect.
+            </p>
+            <Toggle
+              label="Enable Zapier for site owners"
+              on={Boolean(form.zapierEnabled)}
+              set={(v) => set("zapierEnabled", v)}
+            />
           </section>
 
           <section className="sw-card">

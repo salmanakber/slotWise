@@ -448,6 +448,8 @@ model PlatformConfig {
   zoomClientId                     String?
   zoomClientSecretEncrypted        String?
   zapierSigningSecretEncrypted     String?
+  /** When false, site owners see Zapier as Coming soon. */
+  zapierEnabled                    Boolean @default(false)
 
   // Ops
   maintenanceMode                  Boolean @default(false)

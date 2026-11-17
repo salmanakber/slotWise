@@ -96,7 +96,6 @@ function IntegrationsClient() {
   }, [search]);
 
   async function connect(provider: string) {
-    if (provider === "zapier") return;
     setBusy(provider);
     setMsg("");
     try {
@@ -214,7 +213,7 @@ function IntegrationsClient() {
           const meta = PROVIDER_META[key];
           if (!row || !meta) return null;
           const pending = busy === key;
-          const comingSoon = key === "zapier";
+          const comingSoon = key === "zapier" && !row.platformConfigured;
 
           return (
             <div key={key} className="border-t border-[var(--ln)] py-3">
