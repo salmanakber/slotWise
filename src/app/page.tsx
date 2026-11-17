@@ -187,7 +187,7 @@ export default function HomePage() {
               Studio Nine
             </div>
             <div className="space-y-2">
-              {["Deep home clean · $120", "Standard clean · $80", "Move-out clean · $210"].map((row, i) => (
+              {["Consultation · Free", "Strategy call · $80", "Workshop session · $210"].map((row, i) => (
                 <div
                   key={row}
                   className="flex items-center justify-between rounded-2xl border px-4 py-3 text-sm"

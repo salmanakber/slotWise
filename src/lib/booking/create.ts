@@ -1,8 +1,9 @@
-import { BookingStatus, Prisma } from "@prisma/client";
+import { BookingStatus, Prisma, Role } from "@prisma/client";
 import { addMinutes } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { getDaySlots, rankSlots } from "@/lib/booking/availability";
 import { sendBookingConfirmation } from "@/lib/email";
+import { notifyZapierBooking } from "@/lib/zapier";
 import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
 
@@ -25,12 +26,22 @@ export async function loadSiteBundle(publicKey: string) {
       where: { publicKey },
       include: {
         branding: true,
+        notificationSettings: true,
         services: { where: { active: true }, orderBy: { sortOrder: "asc" } },
         staff: { where: { active: true }, orderBy: { name: "asc" } },
         availability: true,
         timeOff: true,
         stripeAccount: true,
         plan: true,
+        workspace: {
+          include: {
+            memberships: {
+              where: { role: Role.WORKSPACE_OWNER },
+              take: 1,
+              include: { user: { select: { email: true } } },
+            },
+          },
+        },
       },
     }),
     getPlatformSecrets(),
@@ -226,6 +237,10 @@ export async function createBooking(input: {
   });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const ownerEmail =
+    site.notificationSettings?.replyToEmail ||
+    site.workspace?.memberships?.[0]?.user?.email ||
+    null;
   await sendBookingConfirmation({
     to: booking.customerEmail,
     reference: booking.reference,
@@ -233,7 +248,27 @@ export async function createBooking(input: {
     whenLabel: booking.startsAt.toISOString(),
     manageUrl: `${appUrl}/manage/${booking.manageToken}`,
     businessName: site.branding?.businessName || site.name,
+    fromEmail: site.notificationSettings?.fromEmail || null,
+    replyToEmail: ownerEmail,
   }).catch((err) => console.error("confirmation email failed", err));
+
+  await notifyZapierBooking({
+    siteId: site.id,
+    event: "booking.created",
+    payload: {
+      reference: booking.reference,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      customerPhone: booking.customerPhone,
+      serviceName: booking.service.name,
+      startsAt: booking.startsAt.toISOString(),
+      endsAt: booking.endsAt.toISOString(),
+      amountCents: booking.amountCents,
+      currency: booking.currency,
+      manageUrl: `${appUrl}/manage/${booking.manageToken}`,
+      siteName: site.branding?.businessName || site.name,
+    },
+  }).catch((err) => console.error("zapier notify failed", err));
 
   return booking;
 }

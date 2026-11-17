@@ -198,15 +198,16 @@ export function PlatformSettingsForm({ initial, section }: Props) {
           <section className="sw-card">
             <h2 className="mb-1 text-[15px] font-extrabold">Email (Resend)</h2>
             <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-              Booking confirmations via Resend. Use a verified domain/from address in your Resend
-              account.
+              Platform fallback From for booking emails. Prefer a verified domain address (e.g.
+              bookings@yourdomain.com). Sites can override this under Dashboard → Notifications.
+              Customer replies use each site’s Reply-To.
             </p>
-            <Field label="From address">
+            <Field label="Default from address">
               <input
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={form.emailFrom ?? ""}
                 onChange={(e) => set("emailFrom", e.target.value || null)}
-                placeholder="bookings@yourdomain.com"
+                placeholder="hello@yourdomain.com"
               />
             </Field>
             <Field

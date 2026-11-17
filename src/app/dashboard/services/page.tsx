@@ -121,7 +121,7 @@ export default function ServicesPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-3 py-2 font-normal"
-              placeholder="Deep home clean"
+              placeholder="30-minute consultation"
             />
           </label>
           <label className="grid gap-1 text-sm font-semibold">

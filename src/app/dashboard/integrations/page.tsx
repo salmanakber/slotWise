@@ -43,7 +43,7 @@ const PROVIDER_META: Record<string, { label: string; blurb: string }> = {
   },
   zapier: {
     label: "Zapier / Make",
-    blurb: "Outbound webhooks for automations",
+    blurb: "Paste a Catch Hook URL — Slotwise sends each new booking to Zapier",
   },
   zoom: {
     label: "Zoom",
@@ -76,6 +76,7 @@ function IntegrationsClient() {
   const [data, setData] = useState<IntegrationsPayload | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [zapierUrl, setZapierUrl] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/site/integrations");
@@ -95,14 +96,14 @@ function IntegrationsClient() {
     if (error) setMsg(`Connect failed: ${error}`);
   }, [search]);
 
-  async function connect(provider: string) {
+  async function connect(provider: string, extra?: { webhookUrl?: string }) {
     setBusy(provider);
     setMsg("");
     try {
       const res = await fetch("/api/site/integrations/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({ provider, ...extra }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -113,8 +114,10 @@ function IntegrationsClient() {
         return;
       }
       await load();
-      if (json.webhookUrl) setMsg("Zapier webhook ready — copy the URL below.");
-      else setMsg("Connected");
+      if (provider === "zapier") {
+        setZapierUrl("");
+        setMsg("Zapier connected. New bookings will POST to your Catch Hook.");
+      } else setMsg("Connected");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Connect failed");
     } finally {
@@ -254,7 +257,7 @@ function IntegrationsClient() {
                     >
                       {pending ? "…" : "Disconnect"}
                     </button>
-                  ) : row.platformConfigured ? (
+                  ) : key === "zapier" ? null : row.platformConfigured ? (
                     <button
                       type="button"
                       className="sw-btn sw-btn-primary"
@@ -268,18 +271,39 @@ function IntegrationsClient() {
                   )}
                 </div>
               </div>
-              {key === "zapier" && row.webhookUrl ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px]">
-                  <code className="max-w-full break-all rounded-lg border border-[var(--ln)] bg-[var(--bg)] px-2 py-1.5 font-semibold">
-                    {row.webhookUrl}
-                  </code>
-                  <button
-                    type="button"
-                    className="sw-btn"
-                    onClick={() => void copyWebhook(row.webhookUrl!)}
-                  >
-                    Copy
-                  </button>
+              {key === "zapier" ? (
+                <div className="mt-3 grid gap-2 rounded-xl border border-[var(--ln)] bg-[var(--bg)] p-3 text-[13px]">
+                  <ol className="list-decimal space-y-1 pl-4" style={{ color: "var(--mut)" }}>
+                    <li>
+                      In Zapier: Create Zap → <b>Webhooks by Zapier</b> → <b>Catch Hook</b>
+                    </li>
+                    <li>Copy the webhook URL Zapier shows (hooks.zapier.com/…)</li>
+                    <li>Paste it below and click Save</li>
+                    <li>Turn the Zap on — each new Slotwise booking is sent there</li>
+                  </ol>
+                  {row.connected && row.webhookUrl ? (
+                    <p className="text-[12px]" style={{ color: "var(--mut)" }}>
+                      Sending to:{" "}
+                      <code className="break-all font-semibold">{row.webhookUrl}</code>
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="url"
+                      className="min-w-[240px] flex-1 rounded-[10px] border border-[var(--ln)] bg-[var(--panel)] px-2.5 py-2"
+                      placeholder="https://hooks.zapier.com/hooks/catch/…"
+                      value={zapierUrl || (row.connected ? "" : "")}
+                      onChange={(e) => setZapierUrl(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="sw-btn sw-btn-primary"
+                      disabled={pending || !zapierUrl.trim()}
+                      onClick={() => void connect("zapier", { webhookUrl: zapierUrl.trim() })}
+                    >
+                      {pending ? "…" : row.connected ? "Update hook" : "Save & connect"}
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>

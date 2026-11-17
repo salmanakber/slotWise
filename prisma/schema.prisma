@@ -382,6 +382,10 @@ model NotificationSettings {
   emailConfirm       Boolean @default(true)
   emailReminderHours Int     @default(24)
   emailFollowUp      Boolean @default(true)
+  /** Resend "from" — must be on a domain verified in Resend (e.g. bookings@yourdomain.com). */
+  fromEmail          String?
+  /** Where customer replies go (owner inbox). */
+  replyToEmail       String?
   smsEnabled         Boolean @default(false)
   whatsappEnabled    Boolean @default(false)
   quietHours         String  @default("21:00-08:00")

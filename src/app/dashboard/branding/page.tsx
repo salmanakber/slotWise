@@ -14,7 +14,7 @@ export default function BrandingPage() {
   const [radius, setRadius] = useState(14);
   const [font, setFont] = useState("Manrope");
   const [layout, setLayout] = useState<"INLINE" | "POPUP" | "FLOATING">("INLINE");
-  const [name, setName] = useState("Studio Nine");
+  const [name, setName] = useState("Your business");
   const [showLoader, setShowLoader] = useState(true);
   const [loaderStyle, setLoaderStyle] = useState("PULSE");
   const [loading, setLoading] = useState(false);
@@ -225,7 +225,7 @@ export default function BrandingPage() {
                   style={{ borderColor: accent, background: `color-mix(in srgb, ${accent} 16%, var(--pbg))` }}
                 >
                   <span>
-                    Deep home clean
+                    Sample appointment
                     {showDuration ? <small className="block text-xs opacity-70">2 h</small> : null}
                     {showStaff ? <small className="block text-xs opacity-70">with Lena</small> : null}
                   </span>

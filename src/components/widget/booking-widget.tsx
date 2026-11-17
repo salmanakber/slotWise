@@ -249,13 +249,17 @@ export function BookingWidget({
   return (
     <div
       ref={rootRef}
-      className="sw-widget mx-auto box-border w-full max-w-full overflow-hidden"
+      className="sw-widget mx-auto box-border w-full overflow-hidden"
       style={{
         background: panel,
         color: ink,
         border: `1px solid ${line}`,
         borderRadius: embed ? Math.min(radius, 16) : radius,
-        maxWidth: embed ? "100%" : 400,
+        /* Centered card that never stretches awkwardly in full-width sections */
+        width: "100%",
+        maxWidth: "min(100%, 26.5rem)",
+        marginInline: "auto",
+        containerType: "inline-size",
         boxShadow: embed
           ? "none"
           : `0 1px 2px color-mix(in srgb, ${ink} 6%, transparent), 0 22px 48px color-mix(in srgb, ${ink} 10%, transparent)`,
@@ -283,6 +287,10 @@ export function BookingWidget({
         .sw-w-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
         .sw-w-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 22%, transparent); border-radius: 99px; }
         .sw-widget *, .sw-widget *::before, .sw-widget *::after { box-sizing: border-box; }
+        .sw-w-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.375rem; }
+        @container (min-width: 22rem) {
+          .sw-w-times { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
         @media (prefers-reduced-motion: reduce) {
           .sw-w-rise, .sw-w-check { animation: none !important; }
         }
@@ -511,11 +519,15 @@ export function BookingWidget({
 
             <section className="min-w-0">
               <h3 className="mb-2 text-[14px] font-extrabold tracking-tight">Time</h3>
-              <div className="sw-w-scroll grid max-h-[220px] w-full min-w-0 grid-cols-2 gap-1.5 overflow-y-auto pb-1">
+              <div className="sw-w-scroll sw-w-times max-h-[220px] w-full min-w-0 overflow-y-auto pb-1">
                 {slots.length === 0 && !loadingSlots ? (
                   <div
-                    className="col-span-2 rounded-xl border border-dashed px-3 py-6 text-center text-[13px]"
-                    style={{ borderColor: line, color: mut }}
+                    className="rounded-xl border border-dashed px-3 py-6 text-center text-[13px]"
+                    style={{
+                      borderColor: line,
+                      color: mut,
+                      gridColumn: "1 / -1",
+                    }}
                   >
                     No openings this day. Try another date.
                   </div>

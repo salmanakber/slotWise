@@ -9,6 +9,8 @@ const bodySchema = z.object({
   emailConfirm: z.boolean().optional(),
   emailReminderHours: z.number().int().min(0).max(168).optional(),
   emailFollowUp: z.boolean().optional(),
+  fromEmail: z.string().email().nullable().optional().or(z.literal("")),
+  replyToEmail: z.string().email().nullable().optional().or(z.literal("")),
   smsEnabled: z.boolean().optional(),
   whatsappEnabled: z.boolean().optional(),
   quietHours: z.string().max(40).optional(),
@@ -39,10 +41,20 @@ export async function PATCH(request: Request) {
 
   try {
     const site = await requireDemoSite();
+    const raw = parsed.data;
+    const data = {
+      ...raw,
+      ...(raw.fromEmail !== undefined
+        ? { fromEmail: raw.fromEmail === "" ? null : raw.fromEmail }
+        : {}),
+      ...(raw.replyToEmail !== undefined
+        ? { replyToEmail: raw.replyToEmail === "" ? null : raw.replyToEmail }
+        : {}),
+    };
     const settings = await prisma.notificationSettings.upsert({
       where: { siteId: site.id },
-      update: parsed.data,
-      create: { siteId: site.id, ...parsed.data },
+      update: data,
+      create: { siteId: site.id, ...data },
     });
     return NextResponse.json(settings);
   } catch {

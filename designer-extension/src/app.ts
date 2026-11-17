@@ -332,28 +332,29 @@ export async function boot(root: HTMLElement) {
   function viewCreate() {
     const lim = state.bootstrap?.entitlements.eventsLimit;
     const atLimit = lim != null && state.services.length >= lim;
+    const aiOk = Boolean(gate("ai_descriptions")?.allowed) && !atLimit;
     return `<section class="card">
       ${cardTitle(icons.plus, "Create event")}
       <p class="lead">Title, AI copy, and booking rules.</p>
       ${atLimit ? upgradeLock("events", "Event limit") : ""}
       <form id="eventForm">
-        <label class="field"><span>Title</span><input name="name" required maxlength="120" placeholder="Deep home clean" ${atLimit ? "disabled" : ""} /></label>
+        <label class="field"><span>Title</span><input name="name" required maxlength="120" placeholder="30-minute consultation" ${atLimit ? "disabled" : ""} /></label>
         <label class="field"><span>Description</span>
-          <textarea name="description" placeholder="What clients get…" ${atLimit ? "disabled" : ""}></textarea>
+          <textarea name="description" placeholder="Briefly describe this offering…" ${atLimit ? "disabled" : ""}></textarea>
           <div class="desc-tools">
-            <button type="button" class="btn btn-primary btn-sm" id="aiBtn" ${atLimit ? "disabled" : ""}>${iconLabel(icons.spark, "Write with AI")}</button>
-            <select id="aiTone" ${atLimit ? "disabled" : ""}>
+            <button type="button" class="btn btn-primary btn-sm" id="aiBtn" ${aiOk ? "" : "disabled"}>${iconLabel(icons.spark, "Write with AI")}</button>
+            <select id="aiTone" ${aiOk ? "" : "disabled"}>
               <option value="friendly">Friendly</option>
               <option value="professional">Professional</option>
               <option value="premium">Premium</option>
               <option value="concise">Concise</option>
             </select>
-            ${upgradeLock("ai_descriptions", "AI")}
+            ${aiOk ? "" : upgradeLock("ai_descriptions", "AI writing")}
           </div>
         </label>
         <div class="field-row">
           <label class="field"><span>Category</span>
-            <input name="category" placeholder="Cleaning" ${!gate("categories")?.allowed || atLimit ? "disabled" : ""} />
+            <input name="category" placeholder="General" ${!gate("categories")?.allowed || atLimit ? "disabled" : ""} />
           </label>
           <label class="field"><span>Duration</span>
             <input name="durationMin" type="number" min="5" step="5" value="30" required ${atLimit ? "disabled" : ""} />

@@ -6,6 +6,8 @@ type Settings = {
   emailConfirm: boolean;
   emailReminderHours: number;
   emailFollowUp: boolean;
+  fromEmail: string | null;
+  replyToEmail: string | null;
   smsEnabled: boolean;
   whatsappEnabled: boolean;
   quietHours: string;
@@ -21,7 +23,13 @@ export default function NotificationsPage() {
     fetch("/api/site/notifications")
       .then((r) => r.json())
       .then((d) => {
-        if (d.id || d.emailConfirm !== undefined) setForm(d);
+        if (d.id || d.emailConfirm !== undefined) {
+          setForm({
+            ...d,
+            fromEmail: d.fromEmail ?? null,
+            replyToEmail: d.replyToEmail ?? null,
+          });
+        }
       })
       .catch(() => undefined);
   }, []);
@@ -52,7 +60,28 @@ export default function NotificationsPage() {
   return (
     <div className="grid gap-3.5">
       <section className="sw-card">
-        <h2 className="mb-3 text-[15px] font-extrabold">Email</h2>
+        <h2 className="mb-1 text-[15px] font-extrabold">Email</h2>
+        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+          From address must use a domain verified in Resend. Replies go to your inbox via Reply-To.
+        </p>
+        <Row label="Send from">
+          <input
+            type="email"
+            className="min-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+            placeholder="bookings@yourdomain.com"
+            value={form.fromEmail ?? ""}
+            onChange={(e) => setForm({ ...form, fromEmail: e.target.value || null })}
+          />
+        </Row>
+        <Row label="Reply-To (your inbox)">
+          <input
+            type="email"
+            className="min-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+            placeholder="you@yourdomain.com"
+            value={form.replyToEmail ?? ""}
+            onChange={(e) => setForm({ ...form, replyToEmail: e.target.value || null })}
+          />
+        </Row>
         <Toggle
           label="Booking confirmation"
           on={form.emailConfirm}

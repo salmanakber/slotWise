@@ -128,7 +128,7 @@ export const FEATURE_FLAGS = [
   {
     key: "templates",
     label: "Industry templates",
-    description: "Cleaning, salon, clinic, tutoring…",
+    description: "Salon, clinic, coaching, tutoring…",
     phase: "P2",
     enabled: false,
   },

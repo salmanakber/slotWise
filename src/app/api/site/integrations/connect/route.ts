@@ -1,4 +1,3 @@
-import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
@@ -11,12 +10,13 @@ import {
 } from "@/lib/integrations-oauth";
 import { prisma } from "@/lib/prisma";
 import { requireDemoSite } from "@/lib/site-admin";
-import { appOrigin } from "@/lib/webflow";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   provider: z.string().min(1),
+  /** Zapier/Make Catch Hook URL (https://hooks.zapier.com/… or Make equivalent). */
+  webhookUrl: z.string().url().optional(),
 });
 
 export async function POST(request: Request) {
@@ -38,8 +38,16 @@ export async function POST(request: Request) {
     const site = await requireDemoSite();
 
     if (provider === "zapier") {
-      const token = randomBytes(24).toString("hex");
-      const webhookUrl = `${appOrigin()}/api/webhooks/zapier/${site.publicKey}/${token}`;
+      const hook = parsed.data.webhookUrl?.trim();
+      if (!hook || !/^https:\/\//i.test(hook)) {
+        return NextResponse.json(
+          {
+            error:
+              "Paste your Zapier Catch Hook URL (starts with https://hooks.zapier.com/). Create a Zap → Webhooks by Zapier → Catch Hook, then copy that URL here.",
+          },
+          { status: 400 },
+        );
+      }
 
       const row = await prisma.siteIntegration.upsert({
         where: { siteId_provider: { siteId: site.id, provider: "zapier" } },
@@ -47,13 +55,13 @@ export async function POST(request: Request) {
           siteId: site.id,
           provider: "zapier",
           status: "connected",
-          webhookUrl,
-          meta: { token },
+          webhookUrl: hook,
+          meta: { direction: "outbound" },
         },
         update: {
           status: "connected",
-          webhookUrl,
-          meta: { token },
+          webhookUrl: hook,
+          meta: { direction: "outbound" },
         },
       });
 
@@ -65,6 +73,22 @@ export async function POST(request: Request) {
           meta: { webhookUrl: row.webhookUrl },
         },
       });
+
+      // Optional ping so Zapier can capture a sample while the Zap is on
+      try {
+        await fetch(hook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: "slotwise",
+            event: "zapier.test",
+            message: "Slotwise connected — turn your Zap on, then create a test booking.",
+            sentAt: new Date().toISOString(),
+          }),
+        });
+      } catch {
+        /* Zap may still be off — that's fine */
+      }
 
       return NextResponse.json({
         provider: "zapier",

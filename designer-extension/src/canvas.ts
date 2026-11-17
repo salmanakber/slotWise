@@ -113,7 +113,7 @@ export async function insertBookingIframe(publicKey: string) {
   const wrapStyle =
     "width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;display:block;";
   const frameStyle =
-    "display:block;width:100%;max-width:100%;min-height:640px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
+    "display:block;width:100%;max-width:26.5rem;margin-left:auto;margin-right:auto;min-height:640px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
 
   try {
     if (typeof api.elementBuilder === "function") {
