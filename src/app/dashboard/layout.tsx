@@ -30,8 +30,8 @@ const NAV = [
 ];
 
 const TITLES: Record<string, [string, string]> = {
-  "/dashboard": ["Overview", "How your bookings are doing"],
-  "/dashboard/bookings": ["Bookings", "Every appointment in one place"],
+  "/dashboard": ["Overview", "Bookings, revenue and what’s coming up"],
+  "/dashboard/bookings": ["Bookings", "Customer details, deposits and status"],
   "/dashboard/services": ["Services and rules", "What customers can book, and how"],
   "/dashboard/availability": ["Availability", "Working hours and time off"],
   "/dashboard/notifications": ["Notifications", "Reminders by email, SMS and WhatsApp"],

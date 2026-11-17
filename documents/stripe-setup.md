@@ -10,7 +10,7 @@ Use **both** (same URL). They cover different events.
 
 | Listen on | Events | Why |
 |-----------|--------|-----|
-| **Your account** | `payment_intent.succeeded` | Slotwise creates payments on the **platform**, then transfers to the connected seller (`transfer_data.destination`). Those PaymentIntents fire on **your** account. |
+| **Connected accounts** | `payment_intent.succeeded` | Slotwise uses **direct charges** on the connected account (Managed Risk). Those PaymentIntents fire on the **connected** account. |
 | **Connected accounts** | `account.updated` | When a seller finishes Express onboarding (charges/payouts enabled), Stripe sends this on the **connected** account. |
 
 ### How to add them in Stripe
@@ -22,28 +22,18 @@ Use **both** (same URL). They cover different events.
    https://slotwise.hindaralabs.com/api/stripe/webhook
    ```
 
-3. **First endpoint (or first listen option)**  
-   - Listen to: **Events on your account**  
-   - Events: `payment_intent.succeeded`
+3. Listen to: **Events on Connected accounts**  
+   - Events: `payment_intent.succeeded`, `account.updated`
 
-4. **Second endpoint (or Connected accounts listen)**  
-   - Listen to: **Events on Connected accounts**  
-   - Events: `account.updated`  
-   - Same URL as above
-
-If Stripe only lets you pick one listen type per endpoint, create **two endpoints** with the **same URL** — one for Your account, one for Connected accounts. Each has its own `whsec_…` secret; Slotwise currently stores **one** webhook secret, so prefer:
-
-- Put **both** event types on one endpoint if your Stripe UI allows selecting both sources, **or**
-- Start with **Your account** + `payment_intent.succeeded` + `account.updated` if Connect delivers `account.updated` to the platform in your mode, **or**
-- Use Connected accounts for `account.updated` and Your account for payments — if you have two secrets, keep the **Your account** `whsec_` in Platform settings first (payments), then test Connect status updates.
+4. Paste that endpoint’s signing secret (`whsec_…`) into Slotwise Platform → Stripe.
 
 **Practical recommendation for Slotwise today:**
 
-1. Create endpoint → **Events on your account**  
+1. Create endpoint → **Events on Connected accounts**  
    - `payment_intent.succeeded`  
-   - `account.updated` (include it here too if offered)  
-2. If `account.updated` only appears under Connected accounts, add a **second** endpoint for Connected accounts with `account.updated` (same URL).  
-3. Paste the signing secret from the **primary (Your account)** endpoint into Slotwise as `whsec_…`.
+   - `account.updated`  
+2. Same URL: `https://slotwise.hindaralabs.com/api/stripe/webhook`  
+3. Paste that `whsec_…` into Platform → Stripe.
 
 ---
 
@@ -69,8 +59,7 @@ https://slotwise.hindaralabs.com/api/stripe/webhook
    - Secret key → `STRIPE_SECRET_KEY` or Platform → Stripe
 4. After creating the webhook, copy **Signing secret** (`whsec_…`) → Platform → Stripe → Webhook secret
 5. Enable **Stripe Connect** on the platform  
-   - Slotwise creates connected accounts with **Accounts v2** (`POST /v2/core/accounts`), Express dashboard, and the **recipient** configuration (`stripe_transfers`) for destination charges  
-   - In the Connect settings, acknowledge **platform loss liability** if Stripe asks (Express + Accounts v2 requires `fees_collector` / `losses_collector` = application)  
+   - Slotwise creates connected accounts with **Accounts v2** + **Managed Risk**: Express dashboard, `fees_collector` / `losses_collector` = `stripe`, **merchant** `card_payments`  
 6. Keep **Application fee %** at `0` if Slotwise takes no commission
 
 Paste keys in:
@@ -88,14 +77,13 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 ## Connect (not OAuth “scopes”)
 
-Stripe Connect does **not** use Google-style scopes. Slotwise uses **Accounts v2** with an Express dashboard:
+Stripe Connect does **not** use Google-style scopes. Slotwise uses **Accounts v2** with **Managed Risk** (Express):
 
-- Configuration: **recipient**
-- Capability: `stripe_balance.stripe_transfers` (receive destination-charge transfers)
-- Responsibilities: platform collects Stripe fees and losses (`application`) — required for Express on Accounts v2
-- Onboarding: `POST /v2/core/account_links` (Stripe-hosted)
-
-Payments use destination charges (`transfer_data.destination`) on the platform PaymentIntent. Existing `account.updated` / `payment_intent.succeeded` webhooks still apply (v2 accounts emit v1 events).
+- Configuration: **merchant**
+- Capability: `card_payments`
+- Responsibilities: Stripe collects fees and losses (`stripe`) — [Managed Risk](https://docs.stripe.com/connect/risk-management/connected-accounts-with-managed-risk)
+- Onboarding: `POST /v2/core/account_links` with `Stripe-Version: 2026-10-28.preview`
+- Charges: **direct charges** on the connected account (`stripeAccount` header)
 
 Site owners connect via:
 
@@ -109,12 +97,10 @@ If you ever need legacy `POST /v1/accounts` for a supported compatibility case, 
 
 ## Quick checklist
 
-- [ ] Connect enabled on platform Stripe account (Accounts v2 / Express)  
-- [ ] Platform loss/fee liability acknowledged if prompted by Stripe  
+- [ ] Connect enabled on platform Stripe account (Accounts v2 / Express Managed Risk)  
 - [ ] Publishable + secret keys saved in Platform / `.env`  
 - [ ] Webhook URL: `https://slotwise.hindaralabs.com/api/stripe/webhook`  
-- [ ] **Your account**: `payment_intent.succeeded`  
-- [ ] **Connected accounts** (or Your account if available): `account.updated`  
+- [ ] **Connected accounts**: `payment_intent.succeeded`, `account.updated`  
 - [ ] `whsec_…` saved as webhook secret  
 - [ ] Test with Test mode keys, then switch to Live (`pk_live_`, `sk_live_`, live webhook)  
 

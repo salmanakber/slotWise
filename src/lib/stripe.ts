@@ -71,8 +71,8 @@ export async function createConnectOnboardingLink(
 
 /**
  * Create a connected account via Accounts v2 (POST /v2/core/accounts).
- * Destination charges without on_behalf_of → recipient + stripe_transfers.
- * Express dashboard requires platform fees/losses liability (application).
+ * Managed Risk (SaaS): Stripe collects fees/losses; Express + merchant card_payments.
+ * Compatible with direct charges on the connected account.
  */
 export async function createConnectedAccount(email?: string | null) {
   const client = await getStripe();
@@ -86,30 +86,28 @@ export async function createConnectedAccount(email?: string | null) {
       dashboard: "express",
       defaults: {
         responsibilities: {
-          fees_collector: "application",
-          losses_collector: "application",
+          fees_collector: "stripe",
+          losses_collector: "stripe",
         },
         profile: {
           product_description: "Appointments booked via Slotwise",
         },
       },
       configuration: {
-        recipient: {
+        merchant: {
           capabilities: {
-            stripe_balance: {
-              stripe_transfers: { requested: true },
-            },
+            card_payments: { requested: true },
           },
         },
       },
-      include: ["configuration.recipient", "defaults", "requirements"],
+      include: ["configuration.merchant", "defaults", "requirements"],
     },
     { apiVersion: STRIPE_ACCOUNTS_V2_VERSION },
   )) as unknown as V2Account;
 }
 
 /**
- * PaymentIntent for deposit/full amount.
+ * Direct-charge PaymentIntent on the connected account (Managed Risk / SaaS).
  * Application fee defaults to 0 — Slotwise takes no commission unless you set it in admin.
  */
 export async function createBookingPaymentIntent(input: {
@@ -130,9 +128,11 @@ export async function createBookingPaymentIntent(input: {
       currency: input.currency.toLowerCase(),
       receipt_email: input.customerEmail,
       metadata: { bookingId: input.bookingId, platform: "slotwise" },
-      application_fee_amount: applicationFeeAmount,
-      transfer_data: { destination: input.connectedAccountId },
+      ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
     },
-    { idempotencyKey: `booking_${input.bookingId}` },
+    {
+      stripeAccount: input.connectedAccountId,
+      idempotencyKey: `booking_${input.bookingId}`,
+    },
   );
 }
