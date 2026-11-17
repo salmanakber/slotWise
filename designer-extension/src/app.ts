@@ -232,7 +232,7 @@ export async function boot(root: HTMLElement) {
           " — use Webflow’s Publish if needed",
         false,
       );
-      await notify("Info", "Use Webflow Publish if API publish isn’t available");
+      await notify("Info", "Use Webflow’s Publish button if needed");
     }
   }
 

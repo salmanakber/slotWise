@@ -75,8 +75,6 @@ export default function BrandingPage() {
     }
   }
 
-  const snippet = `<div data-slotwise-widget data-site="${DEMO_PUBLIC_KEY}"></div>\n<script src="${typeof window !== "undefined" ? window.location.origin : ""}/embed/widget.js" async></script>`;
-
   return (
     <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       <div className="grid gap-3.5 content-start">
@@ -279,25 +277,19 @@ export default function BrandingPage() {
         </section>
 
         <section className="sw-card">
-          <h2 className="mb-1 text-[15px] font-extrabold">Install on your site</h2>
+          <h2 className="mb-1 text-[15px] font-extrabold">Add to your website</h2>
           <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            Preferred path: Webflow Custom Code API (connect under Integrations). Fallback for local testing:
+            In Webflow Designer, open Slotwise and choose Place on canvas. Or open a live preview below.
           </p>
           <div className="mb-3 flex flex-wrap gap-2">
             <button type="button" className="sw-btn sw-btn-primary" disabled={saving} onClick={saveBranding}>
               {saving ? "Saving…" : "Save branding"}
             </button>
             <Link href={`/book/${DEMO_PUBLIC_KEY}`} className="sw-btn">
-              Open live widget
+              Open live preview
             </Link>
           </div>
           {savedMsg ? <p className="mb-3 text-[13px] font-semibold text-[var(--at)]">{savedMsg}</p> : null}
-          <pre className="overflow-x-auto rounded-xl border border-[var(--ln)] bg-[var(--bg)] p-3 text-[12.5px] leading-relaxed">
-            {snippet}
-          </pre>
-          <p className="mt-3 text-[12.5px]" style={{ color: "var(--mut)" }}>
-            Marketplace builds should register this script through the API so uninstall can remove it cleanly.
-          </p>
         </section>
       </div>
     </div>

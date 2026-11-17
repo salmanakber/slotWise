@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-/** POST booking payload to the site owner's Zapier/Make Catch Hook URL. */
+/** Send booking details to a connected Zapier destination when enabled. */
 export async function notifyZapierBooking(input: {
   siteId: string;
   event: "booking.created" | "booking.cancelled" | "booking.updated";

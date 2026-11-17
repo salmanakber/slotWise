@@ -62,16 +62,14 @@ export async function GET() {
         provider: "webflow",
         platformConfigured: webflowReady,
         installUrl: webflowReady ? "/api/webflow/install" : null,
-        hint: webflowReady
-          ? null
-          : "Ask platform admin to add Webflow Client ID in Platform → Settings",
+        hint: webflowReady ? null : "Webflow isn’t finished setting up yet",
       },
       stripe: {
         provider: "stripe",
         platformConfigured: stripeReady,
         paymentsUrl: "/dashboard/payments",
         mode: settings.stripeMode,
-        hint: stripeReady ? null : "Ask platform admin to add Stripe keys in Platform → Settings",
+        hint: stripeReady ? null : "Payments aren’t finished setting up yet",
       },
       providers,
     });

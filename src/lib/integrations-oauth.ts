@@ -303,15 +303,10 @@ export async function exchangeOAuthCode(
 }
 
 export function missingKeysHint(provider: IntegrationProvider) {
+  if (provider === "zapier") return "Coming soon";
   const family = oauthFamily(provider);
-  if (family === "google") {
-    return "Ask platform admin to add Google Client ID in Platform → Settings";
-  }
-  if (family === "microsoft") {
-    return "Ask platform admin to add Microsoft Client ID in Platform → Settings";
-  }
-  if (family === "zoom") {
-    return "Ask platform admin to add Zoom Client ID in Platform → Settings";
-  }
-  return "Ask platform admin to configure this integration in Platform → Settings";
+  if (family === "google") return "Google Calendar isn’t set up for your account yet";
+  if (family === "microsoft") return "Outlook isn’t set up for your account yet";
+  if (family === "zoom") return "Zoom isn’t set up for your account yet";
+  return "This connection isn’t available yet";
 }

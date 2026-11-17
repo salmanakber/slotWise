@@ -15,7 +15,6 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   provider: z.string().min(1),
-  /** Zapier/Make Catch Hook URL (https://hooks.zapier.com/… or Make equivalent). */
   webhookUrl: z.string().url().optional(),
 });
 
@@ -38,63 +37,10 @@ export async function POST(request: Request) {
     const site = await requireDemoSite();
 
     if (provider === "zapier") {
-      const hook = parsed.data.webhookUrl?.trim();
-      if (!hook || !/^https:\/\//i.test(hook)) {
-        return NextResponse.json(
-          {
-            error:
-              "Paste an HTTPS webhook URL. Free option: Make.com → Webhooks → Custom webhook. (Zapier Catch Hook requires a paid Zapier plan.)",
-          },
-          { status: 400 },
-        );
-      }
-
-      const row = await prisma.siteIntegration.upsert({
-        where: { siteId_provider: { siteId: site.id, provider: "zapier" } },
-        create: {
-          siteId: site.id,
-          provider: "zapier",
-          status: "connected",
-          webhookUrl: hook,
-          meta: { direction: "outbound" },
-        },
-        update: {
-          status: "connected",
-          webhookUrl: hook,
-          meta: { direction: "outbound" },
-        },
-      });
-
-      await prisma.auditLog.create({
-        data: {
-          scope: "SITE",
-          action: "integration.zapier.connected",
-          siteId: site.id,
-          meta: { webhookUrl: row.webhookUrl },
-        },
-      });
-
-      // Optional ping so Zapier can capture a sample while the Zap is on
-      try {
-        await fetch(hook, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source: "slotwise",
-            event: "zapier.test",
-            message: "Slotwise connected — turn your Zap on, then create a test booking.",
-            sentAt: new Date().toISOString(),
-          }),
-        });
-      } catch {
-        /* Zap may still be off — that's fine */
-      }
-
-      return NextResponse.json({
-        provider: "zapier",
-        status: "connected",
-        webhookUrl: row.webhookUrl,
-      });
+      return NextResponse.json(
+        { error: "Zapier is coming soon. You’ll be able to connect it in one click." },
+        { status: 503 },
+      );
     }
 
     const configured = await platformKeysConfigured(provider);
