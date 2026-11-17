@@ -38,6 +38,9 @@ export async function getApplicationFeePercent() {
 type V2Account = { id: string };
 type V2AccountLink = { url: string };
 
+/** Accounts v2 Connect endpoints require a .preview Stripe-Version header. */
+const STRIPE_ACCOUNTS_V2_VERSION = "2026-10-28.preview";
+
 /** Create a Connect Accounts v2 onboarding link for a site. */
 export async function createConnectOnboardingLink(
   accountId: string,
@@ -46,20 +49,24 @@ export async function createConnectOnboardingLink(
 ) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
-  // rawRequest avoids SDK type gaps on older stripe installs for v2 accountLinks
-  return (await client.rawRequest("POST", "/v2/core/account_links", {
-    account: accountId,
-    use_case: {
-      type: "account_onboarding",
-      account_onboarding: {
-        return_url: returnUrl,
-        refresh_url: refreshUrl,
-        collection_options: {
-          fields: "eventually_due",
+  return (await client.rawRequest(
+    "POST",
+    "/v2/core/account_links",
+    {
+      account: accountId,
+      use_case: {
+        type: "account_onboarding",
+        account_onboarding: {
+          return_url: returnUrl,
+          refresh_url: refreshUrl,
+          collection_options: {
+            fields: "eventually_due",
+          },
         },
       },
     },
-  })) as unknown as V2AccountLink;
+    { apiVersion: STRIPE_ACCOUNTS_V2_VERSION },
+  )) as unknown as V2AccountLink;
 }
 
 /**
@@ -70,31 +77,35 @@ export async function createConnectOnboardingLink(
 export async function createConnectedAccount(email?: string | null) {
   const client = await getStripe();
   if (!client) throw new Error("Stripe not configured");
-  // rawRequest avoids SDK type gaps on older stripe installs for v2 accounts
-  return (await client.rawRequest("POST", "/v2/core/accounts", {
-    ...(email ? { contact_email: email } : {}),
-    display_name: "Slotwise bookings",
-    dashboard: "express",
-    defaults: {
-      responsibilities: {
-        fees_collector: "application",
-        losses_collector: "application",
+  return (await client.rawRequest(
+    "POST",
+    "/v2/core/accounts",
+    {
+      ...(email ? { contact_email: email } : {}),
+      display_name: "Slotwise bookings",
+      dashboard: "express",
+      defaults: {
+        responsibilities: {
+          fees_collector: "application",
+          losses_collector: "application",
+        },
+        profile: {
+          product_description: "Appointments booked via Slotwise",
+        },
       },
-      profile: {
-        product_description: "Appointments booked via Slotwise",
-      },
-    },
-    configuration: {
-      recipient: {
-        capabilities: {
-          stripe_balance: {
-            stripe_transfers: { requested: true },
+      configuration: {
+        recipient: {
+          capabilities: {
+            stripe_balance: {
+              stripe_transfers: { requested: true },
+            },
           },
         },
       },
+      include: ["configuration.recipient", "defaults", "requirements"],
     },
-    include: ["configuration.recipient", "defaults", "requirements"],
-  })) as unknown as V2Account;
+    { apiVersion: STRIPE_ACCOUNTS_V2_VERSION },
+  )) as unknown as V2Account;
 }
 
 /**
