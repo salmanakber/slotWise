@@ -66,6 +66,27 @@ export function webflowDesignerUrl(webflowSiteId: string | null | undefined) {
   return `https://webflow.com/design/${encodeURIComponent(webflowSiteId)}`;
 }
 
+/**
+ * Opens Designer with the Slotwise extension already launched (Hybrid App deep link).
+ * Format: https://<shortName>.design.webflow.com?app=<clientId>
+ * @see https://developers.webflow.com/apps/deep-linking
+ */
+export function webflowDesignerAppUrl(input: {
+  shortName?: string | null;
+  webflowSiteId?: string | null;
+  clientId?: string | null;
+}) {
+  const short = input.shortName?.trim();
+  const clientId = input.clientId?.trim();
+  if (short && clientId) {
+    return `https://${encodeURIComponent(short)}.design.webflow.com?app=${encodeURIComponent(clientId)}`;
+  }
+  if (short) {
+    return `https://${encodeURIComponent(short)}.design.webflow.com`;
+  }
+  return webflowDesignerUrl(input.webflowSiteId);
+}
+
 /** Marketplace Install URL — send site owners here (no Slotwise login). */
 export function webflowMarketplaceInstallUrl() {
   return `${appOrigin()}/api/webflow/install`;

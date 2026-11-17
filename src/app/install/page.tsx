@@ -1,7 +1,12 @@
 import Image from "next/image";
-import Link from "next/link";
 import { CONTACT_EMAIL } from "@/lib/brand";
-import { appOrigin, webflowDesignerUrl, webflowRedirectUri } from "@/lib/webflow";
+import { InstallSuccess } from "@/components/install/install-success";
+import { getPlatformSecrets } from "@/lib/platform-config";
+import {
+  appOrigin,
+  webflowDesignerAppUrl,
+  webflowRedirectUri,
+} from "@/lib/webflow";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +18,7 @@ export default async function InstallPage({
     site?: string;
     name?: string;
     wf?: string;
+    short?: string;
     reason?: string;
     detail?: string;
   }>;
@@ -22,6 +28,7 @@ export default async function InstallPage({
     site = "",
     name = "",
     wf = "",
+    short = "",
     reason = "",
     detail = "",
   } = await searchParams;
@@ -29,7 +36,13 @@ export default async function InstallPage({
   const denied = status === "denied";
   const missing = status === "missing";
   const errored = status === "error";
-  const designerHref = webflowDesignerUrl(wf || null);
+
+  const secrets = connected ? await getPlatformSecrets() : null;
+  const designerAppHref = webflowDesignerAppUrl({
+    shortName: short || null,
+    webflowSiteId: wf || null,
+    clientId: secrets?.webflowClientId || process.env.WEBFLOW_CLIENT_ID || null,
+  });
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0a1018] px-5 py-12 text-[#f4f1ea]">
@@ -53,59 +66,25 @@ export default async function InstallPage({
 
         <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_30px_80px_rgba(0,0,0,.35)] sm:p-8">
           {connected ? (
-            <>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">You’re connected</h1>
-              <p className="mt-3 text-sm leading-relaxed text-[#9aa7b8]">
-                {name ? <strong className="text-white">{name}</strong> : "Your Webflow site"} is linked to
-                Slotwise.
-              </p>
-              {site ? (
-                <p className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
-                  Booking key: <code className="font-bold text-[#f5a000]">{site}</code>
-                </p>
-              ) : null}
-              <ol className="mt-6 space-y-3 text-sm text-[#c9d0da]">
-                <li className="flex gap-3">
-                  <span className="font-extrabold text-[#f5a000]">1</span>
-                  Open the site in <strong>Designer</strong>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-extrabold text-[#f5a000]">2</span>
-                  Apps → <strong>Slotwise</strong> → <strong>Launch App</strong>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-extrabold text-[#f5a000]">3</span>
-                  Switch to <strong>Design</strong> mode, then place the booking widget
-                </li>
-              </ol>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <a
-                  href={designerHref}
-                  className="rounded-full bg-[#f5a000] px-6 py-3 text-sm font-extrabold text-[#1a1203]"
-                >
-                  Open in Designer
-                </a>
-                {site ? (
-                  <Link
-                    href={`/book/${site}?embed=1`}
-                    className="rounded-full border border-white/20 px-6 py-3 text-sm font-bold"
-                  >
-                    Preview booking
-                  </Link>
-                ) : null}
-              </div>
-            </>
+            <InstallSuccess
+              siteName={name || "Your Webflow site"}
+              publicKey={site}
+              designerAppHref={designerAppHref}
+            />
           ) : null}
 
           {denied ? (
             <>
               <h1 className="text-2xl font-extrabold tracking-tight">Authorization cancelled</h1>
               <p className="mt-3 text-sm text-[#9aa7b8]">
-                Webflow didn’t grant access{reason ? ` (${reason})` : ""}. You can try again — no Slotwise
-                login required.
+                Webflow didn’t grant access{reason ? ` (${reason})` : ""}. You can try again — no
+                Slotwise login required. Close this tab and stay in Designer if you still have it
+                open.
               </p>
               <a
                 href="/api/webflow/install"
+                target="_blank"
+                rel="noreferrer"
                 className="mt-8 inline-flex rounded-full bg-[#f5a000] px-6 py-3 text-sm font-extrabold text-[#1a1203]"
               >
                 Install again
@@ -127,7 +106,8 @@ export default async function InstallPage({
             <>
               <h1 className="text-2xl font-extrabold tracking-tight">Token exchange failed</h1>
               <p className="mt-3 text-sm text-[#9aa7b8]">
-                Usually this means the Redirect URI or Client Secret doesn’t match Webflow app settings.
+                Usually this means the Redirect URI or Client Secret doesn’t match Webflow app
+                settings.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-[#c9d0da]">
                 <li>
@@ -148,6 +128,8 @@ export default async function InstallPage({
               ) : null}
               <a
                 href="/api/webflow/install"
+                target="_blank"
+                rel="noreferrer"
                 className="mt-8 inline-flex rounded-full bg-[#f5a000] px-6 py-3 text-sm font-extrabold text-[#1a1203]"
               >
                 Retry install
@@ -159,7 +141,8 @@ export default async function InstallPage({
             <>
               <h1 className="text-2xl font-extrabold tracking-tight">Install Slotwise</h1>
               <p className="mt-3 text-sm text-[#9aa7b8]">
-                Authorize Webflow once, then open Designer to place the booking embed.
+                Authorize Webflow in this window. When you’re done, we’ll open Designer with the
+                Slotwise app — then you can close this tab.
               </p>
               <a
                 href="/api/webflow/install"

@@ -18,6 +18,7 @@ export type ProvisionResult = {
     publicKey: string;
     name: string;
     webflowSiteId: string | null;
+    shortName: string | null;
   }>;
 };
 
@@ -188,6 +189,7 @@ export async function provisionWebflowInstall(token: WebflowAccessToken): Promis
       publicKey: site.publicKey,
       name: site.name,
       webflowSiteId: site.webflowSiteId,
+      shortName: null,
     });
   } else {
     for (const wfSite of wfSites) {
@@ -202,6 +204,7 @@ export async function provisionWebflowInstall(token: WebflowAccessToken): Promis
         publicKey: site.publicKey,
         name: site.name,
         webflowSiteId: site.webflowSiteId,
+        shortName: wfSite.shortName || null,
       });
     }
   }

@@ -69,6 +69,7 @@ export async function GET(request: Request) {
       site: primary?.publicKey || "",
       name: primary?.name || "your site",
       wf: primary?.webflowSiteId || "",
+      short: primary?.shortName || "",
     });
 
     res.cookies.set("wf_oauth_state", "", { path: "/", maxAge: 0 });

@@ -261,7 +261,8 @@ export async function boot(root: HTMLElement) {
       return `<section class="card">
         ${cardTitle(icons.layout, "Connect Slotwise")}
         <p class="lead">Authorize Webflow once — no separate Slotwise login.</p>
-        <a class="btn btn-primary btn-block" href="${api.APP_URL}/api/webflow/install" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Install / reconnect")}</a>
+        <button type="button" class="btn btn-primary btn-block" id="installBtn">${iconLabel(icons.external, "Install / reconnect")}</button>
+        <p class="lead" style="margin-top:8px">Opens a new browser window so Designer stays open. After auth, Slotwise launches here — you can close the auth window.</p>
       </section>`;
     }
     const lim = state.bootstrap.entitlements.eventsLimit;
@@ -585,6 +586,15 @@ export async function boot(root: HTMLElement) {
 
     root.querySelector("#embedBtn")?.addEventListener("click", () => void onEmbed());
     root.querySelector("#embedBtn2")?.addEventListener("click", () => void onEmbed());
+    root.querySelector("#installBtn")?.addEventListener("click", () => {
+      // New browser window — leave Designer / extension panel open
+      window.open(
+        `${api.APP_URL}/api/webflow/install`,
+        "slotwise-webflow-auth",
+        "noopener,noreferrer,width=520,height=720",
+      );
+      setStatus("Authorize in the new window — Designer stays open");
+    });
     root.querySelector("#gotoCreate")?.addEventListener("click", () => {
       state.tab = "create";
       void render();

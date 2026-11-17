@@ -4,7 +4,7 @@ Webflow Designer Extension for placing and previewing the Slotwise booking widge
 
 ## Publish a new version (Webflow upload)
 
-Webflow asks for a zip created by the CLI. Do this from **`designer-extension/`** (not the Next.js root):
+Webflow asks for a zip created by the CLI. Do this from **`designer-extension/`** (not the Next.js root), on your **local machine**.
 
 ### 1. Prerequisites
 
@@ -12,41 +12,57 @@ Webflow asks for a zip created by the CLI. Do this from **`designer-extension/`*
 - Workspace **Admin** on the Hybrid App
 - **2FA** enabled on your Webflow account (required or “Publish extension version” stays disabled)
 
-### 2. Build + bundle
+### 2. Build + bundle (local)
 
 ```bash
 cd designer-extension
-git pull origin main   # if you're on the live server, pull first
 npm install
 npm run bundle
 ```
 
-(`npm run bundle` runs Vite build, then `npx @webflow/webflow-cli extension bundle`.)
+That writes **`designer-extension/bundle.zip`** next to this README (must be under **5 MB**).
 
-That writes **`bundle.zip`** (must be under **5 MB**, no source maps).
-
-Optional: set production app URL before build:
+`npm run bundle` already sets `VITE_SLOTWISE_URL` to `https://slotwise.hindaralabs.com`. Override if needed:
 
 ```bash
-VITE_SLOTWISE_URL=https://slotwise.hindaralabs.com npm run build
+VITE_SLOTWISE_URL=https://slotwise.hindaralabs.com npm run bundle
 ```
 
-### 3. Upload in Webflow
+### 3. Upload that local zip in Webflow
+
+**Important:** upload the file you just built on your Mac:
+
+`/Users/macbook/slotWise/designer-extension/bundle.zip`
 
 1. Open **Workspace settings → Apps & Integrations → Develop**
 2. Select **Slotwise**
 3. Click **Publish extension version**
-4. Upload `designer-extension/bundle.zip`
+4. Upload **`designer-extension/bundle.zip`** from your project (not from Downloads unless you copied it there yourself)
 5. Add short release notes → confirm
 
+Then in Designer: Apps → Slotwise → **Launch App** (not “Launch development app”).
+
+#### Why `scp` looked like the “same” old bundle
+
+This command **downloads** the **server’s** copy into Downloads (old file):
+
+```bash
+# WRONG for publishing — pulls FROM droplet TO your Mac
+scp -i ~/.ssh/montwebsite root@164.90.220.70:/var/www/slotwise/designer-extension/bundle.zip ~/Downloads/slotwise-bundle.zip
+```
+
+The Designer Extension is uploaded to **Webflow**, not run from the droplet. Use the local `bundle.zip` after `npm run bundle`.
+
+If you still want a copy on the droplet for backup, **upload** local → server:
+
+```bash
+# OPTIONAL backup only — push LOCAL new zip TO droplet
+scp -i ~/.ssh/montwebsite \
+  /Users/macbook/slotWise/designer-extension/bundle.zip \
+  root@164.90.220.70:/var/www/slotwise/designer-extension/bundle.zip
+```
+
 Docs: [How to bundle and upload your Designer Extension](https://developers.webflow.com/apps/docs/publishing-your-app)
-
-### 4. Test the uploaded build
-
-1. Open a site in the Designer
-2. Open Apps → **Slotwise**
-3. Click **Launch App** (not “Launch development app”)
-4. Insert the booking embed, then publish the site
 
 ## Local development
 
@@ -59,29 +75,16 @@ npx webflow extension serve
 
 Then in Designer: **Launch development app**.
 
-## Marketplace note
-
-For Marketplace review of a Hybrid App, upload a separate **Source map artifact** ZIP on the submission form — never put `.map` files inside `bundle.zip`.
-
-## Designer dashboard (v2)
-
-The extension opens as a full Slotwise panel in Designer:
-
-- Light / dark theme toggle (top nav)
-- **Upgrade** + **Publish** in the top bar
-- Events CRUD with AI description, categories, buffers, capacity
-- Import / export (Pro+)
-- **Place booking on canvas** via iframe (no copy-paste)
-- Plan gates with clear upgrade CTAs on locked features
-
-Rebuild + re-upload `bundle.zip` after changes.
-
 ## Install URL (Webflow app settings)
 
 Set the Hybrid App **Install URL** to:
 
 `https://slotwise.hindaralabs.com/api/webflow/install`
 
-Do **not** point Install URL at `/login` or `/dashboard/*`. Site owners authorize Webflow once, then use **Launch App** in the Designer to embed — no separate Slotwise password.
+Do **not** point Install URL at `/login` or `/dashboard/*`.
+
+After authorize, users land on `/install?status=connected` which:
+1. Says **you can close this window**
+2. Opens Designer with Slotwise via deep link `https://<site>.design.webflow.com?app=<clientId>`
 
 Support: tidyflaw@gmail.com
