@@ -142,8 +142,9 @@ export async function boot(root: HTMLElement) {
       <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle theme">
         ${state.theme === "light" ? icons.moon : icons.sun}
       </button>
-      <button type="button" class="btn btn-icon btn-primary" id="publishBtn" title="Publish">
+      <button type="button" class="btn btn-primary btn-publish" id="publishBtn" title="Publish">
         <span class="ico">${icons.rocket}</span>
+        <span>Publish</span>
       </button>`;
 
     root.innerHTML = full
@@ -626,11 +627,10 @@ export async function boot(root: HTMLElement) {
           ];
     return `<section class="card">
       ${cardTitle(icons.palette, "Widget theme")}
-      <p class="lead">Accent + text color apply to the live booking widget and Dashboard branding.</p>
       <div class="theme-live" id="themeLive" style="--live-bg:${escapeHtml(themes.find((t) => t.key === current)?.bg || "#fff")};--live-ink:${escapeHtml(ink)};--live-ac:${escapeHtml(accent)};--live-line:${escapeHtml(themes.find((t) => t.key === current)?.line || "#e1e6ee")};--live-r:${radius}px">
         <div class="theme-live-card">
           <b>Sample booking</b>
-          <small>Text uses your ink color</small>
+          <small>Your accent & text colors</small>
           <button type="button" class="theme-live-btn">Book now</button>
         </div>
       </div>
@@ -667,7 +667,6 @@ export async function boot(root: HTMLElement) {
       <button type="button" class="btn btn-primary btn-block" id="saveBranding">
         ${iconLabel(icons.check, "Save branding")}
       </button>
-      <p class="lead" style="margin-top:8px">Saved branding syncs with Dashboard → Branding.</p>
     </section>`;
   }
 
@@ -870,6 +869,9 @@ export async function boot(root: HTMLElement) {
           state.bootstrap.site.themeKey = res.branding.themeKey;
           state.bootstrap.site.accent = res.branding.accent;
           document.documentElement.style.setProperty("--ac", res.branding.accent);
+          if (res.branding.inkColor) {
+            document.documentElement.style.setProperty("--brand-ink", res.branding.inkColor);
+          }
           setStatus("Theme saved · " + (picked?.name || themeKey));
           void render();
         } catch (e) {
@@ -901,7 +903,7 @@ export async function boot(root: HTMLElement) {
         if (res.branding.inkColor) {
           document.documentElement.style.setProperty("--brand-ink", res.branding.inkColor);
         }
-        setStatus("Text & accent saved · open booking page to see it live");
+        setStatus("Branding saved");
         void render();
       } catch (e) {
         setStatus(e instanceof Error ? e.message : "Branding save failed", false);

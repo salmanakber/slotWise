@@ -14,14 +14,14 @@ import {
 import { AdminShell } from "@/components/admin/shell";
 
 const NAV = [
-  { href: "/platform", label: "Activity", icon: <Activity size={15} strokeWidth={2} /> },
-  { href: "/platform/sites", label: "Sites", icon: <LayoutGrid size={15} strokeWidth={2} /> },
-  { href: "/platform/customers", label: "Customers", icon: <Users size={15} strokeWidth={2} /> },
-  { href: "/platform/plans", label: "Plans and prices", icon: <Sparkles size={15} strokeWidth={2} /> },
-  { href: "/platform/stripe", label: "Stripe", icon: <CreditCard size={15} strokeWidth={2} /> },
-  { href: "/platform/config", label: "Configuration", icon: <SlidersHorizontal size={15} strokeWidth={2} /> },
-  { href: "/platform/audit", label: "Audit log", icon: <ListTodo size={15} strokeWidth={2} /> },
-  { href: "/platform/settings", label: "Settings", icon: <Settings2 size={15} strokeWidth={2} /> },
+  { href: "/platform", label: "Activity", icon: <Activity size={16} strokeWidth={2} /> },
+  { href: "/platform/sites", label: "Sites", icon: <LayoutGrid size={16} strokeWidth={2} /> },
+  { href: "/platform/customers", label: "Customers", icon: <Users size={16} strokeWidth={2} /> },
+  { href: "/platform/plans", label: "Plans and prices", icon: <Sparkles size={16} strokeWidth={2} /> },
+  { href: "/platform/stripe", label: "Stripe", icon: <CreditCard size={16} strokeWidth={2} /> },
+  { href: "/platform/config", label: "Configuration", icon: <SlidersHorizontal size={16} strokeWidth={2} /> },
+  { href: "/platform/audit", label: "Audit log", icon: <ListTodo size={16} strokeWidth={2} /> },
+  { href: "/platform/settings", label: "Settings", icon: <Settings2 size={16} strokeWidth={2} /> },
 ];
 
 const TITLES: Record<string, [string, string]> = {

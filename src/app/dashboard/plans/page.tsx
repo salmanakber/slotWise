@@ -15,7 +15,8 @@ type PlanCard = {
   staffLimit: number | null;
   themesLimit: number;
   features: unknown;
-  hasCheckout: boolean;
+  requiresCheckout?: boolean;
+  hasCheckout?: boolean;
 };
 
 const FALLBACK_FEATURES: Record<string, string[]> = {
@@ -32,15 +33,22 @@ function featureList(p: PlanCard): string[] {
   return FALLBACK_FEATURES[p.tier] || [];
 }
 
+function needsStripe(p: PlanCard) {
+  if (p.tier === "FREE") return false;
+  if (typeof p.requiresCheckout === "boolean") return p.requiresCheckout;
+  return p.priceMonthly > 0;
+}
+
 function PlansInner() {
   const search = useSearchParams();
   const [plans, setPlans] = useState<PlanCard[]>([]);
   const [currentTier, setCurrentTier] = useState("FREE");
+  const [stripeReady, setStripeReady] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/site/plan");
+    const res = await fetch("/api/site/plan", { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) {
       setMsg(json.error || "Could not load plans");
@@ -48,6 +56,7 @@ function PlansInner() {
     }
     setPlans(json.plans || []);
     setCurrentTier(json.currentTier || "FREE");
+    setStripeReady(json.stripeReady !== false);
   }, []);
 
   useEffect(() => {
@@ -55,11 +64,48 @@ function PlansInner() {
   }, [load]);
 
   useEffect(() => {
-    const upgraded = search.get("upgraded");
     const canceled = search.get("canceled");
-    if (upgraded) setMsg(`You're now on ${upgraded}. Limits apply immediately.`);
-    if (canceled) setMsg("Checkout canceled — your plan was not changed.");
-  }, [search]);
+    const checkout = search.get("checkout");
+    const sessionId = search.get("session_id");
+    const upgraded = search.get("upgraded");
+
+    if (canceled) {
+      setMsg("Checkout canceled — your plan was not changed.");
+      return;
+    }
+
+    if (checkout === "success" && sessionId) {
+      setMsg("Confirming payment…");
+      void (async () => {
+        try {
+          const res = await fetch("/api/site/plan/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || "Could not confirm payment");
+          setCurrentTier(json.tier || currentTier);
+          setMsg(`You're now on ${json.label || json.tier}. Limits apply immediately.`);
+          await load();
+          // Clean query string without reload
+          window.history.replaceState({}, "", "/dashboard/plans");
+        } catch (e) {
+          setMsg(
+            e instanceof Error
+              ? e.message
+              : "Payment received but plan confirm failed — refresh in a moment.",
+          );
+        }
+      })();
+      return;
+    }
+
+    if (upgraded) {
+      setMsg(`You're now on ${upgraded}. Limits apply immediately.`);
+      void load();
+    }
+  }, [search, load, currentTier]);
 
   async function choose(tier: string) {
     if (tier === currentTier || busy) return;
@@ -71,15 +117,37 @@ function PlansInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Upgrade failed");
-      if (json.checkoutUrl) {
-        window.location.href = json.checkoutUrl;
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.error || "Upgrade failed");
+      }
+
+      // Paid plans MUST redirect to Stripe — never treat as applied
+      if (json.checkoutUrl && typeof json.checkoutUrl === "string") {
+        setMsg("Redirecting to Stripe Checkout…");
+        window.location.assign(json.checkoutUrl);
         return;
       }
-      setCurrentTier(json.tier || tier);
-      setMsg(`Plan updated to ${json.label || tier}. Booking limits now use this plan.`);
-      await load();
+
+      if (tier !== "FREE" && (json.requiresCheckout || needsStripe({ tier, priceMonthly: 1 } as PlanCard))) {
+        throw new Error(
+          json.error ||
+            "Stripe Checkout URL missing. Add Platform → Stripe secret key, then try again.",
+        );
+      }
+
+      if (json.applied || json.unchanged) {
+        setCurrentTier(json.tier || tier);
+        setMsg(
+          json.unchanged
+            ? `Already on ${json.tier || tier}.`
+            : `Plan updated to ${json.label || tier}.`,
+        );
+        await load();
+        return;
+      }
+
+      throw new Error("Unexpected response — plan was not changed.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Upgrade failed");
     } finally {
@@ -102,12 +170,18 @@ function PlansInner() {
             staffLimit: e.staffLimit,
             themesLimit: e.themesLimit,
             features: FALLBACK_FEATURES[tier],
-            hasCheckout: false,
+            requiresCheckout: tier !== "FREE",
           } satisfies PlanCard;
         });
 
   return (
     <div className="grid gap-3.5">
+      {!stripeReady ? (
+        <div className="rounded-xl border border-[var(--ln)] bg-[var(--bg)] px-3.5 py-3 text-[13px] font-semibold text-[var(--bad)]">
+          Stripe keys are missing. Paid upgrades cannot start until Platform → Stripe has a secret
+          key.
+        </div>
+      ) : null}
       {msg ? (
         <div className="rounded-xl border border-[var(--ln)] bg-[var(--bg)] px-3.5 py-3 text-[13px] font-semibold">
           {msg}
@@ -116,6 +190,7 @@ function PlansInner() {
       <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((p) => {
           const current = p.tier === currentTier;
+          const paid = needsStripe(p);
           return (
             <section
               key={p.tier}
@@ -140,21 +215,26 @@ function PlansInner() {
                   <li key={f}>{f}</li>
                 ))}
               </ul>
+              {paid && !current ? (
+                <p className="m-0 text-[11.5px] font-semibold" style={{ color: "var(--mut)" }}>
+                  Opens Stripe Checkout — plan unlocks after payment.
+                </p>
+              ) : null}
               <button
                 type="button"
                 className={`sw-btn ${current ? "" : "sw-btn-primary"}`}
-                disabled={current || busy === p.tier}
+                disabled={current || busy === p.tier || (paid && !stripeReady)}
                 onClick={() => void choose(p.tier)}
               >
                 {busy === p.tier
-                  ? p.priceMonthly > 0
+                  ? paid
                     ? "Opening Stripe…"
                     : "Working…"
                   : current
                     ? "Current plan"
-                    : p.priceMonthly === 0
-                      ? "Switch to Free"
-                      : "Upgrade with Stripe"}
+                    : paid
+                      ? "Upgrade with Stripe"
+                      : "Switch to Free"}
               </button>
             </section>
           );

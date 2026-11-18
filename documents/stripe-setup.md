@@ -45,8 +45,16 @@ https://slotwise.hindaralabs.com/api/stripe/webhook
 
 ### Events Slotwise handles
 
+**On your platform account** (Listen to: Events on your account):
+
+- `checkout.session.completed` — applies paid plan upgrades after Stripe Checkout  
+
+**On Connected accounts**:
+
 - `payment_intent.succeeded` — marks booking paid  
 - `account.updated` — updates connected account charges/payouts flags  
+
+Use the **same webhook URL** for both endpoints if Stripe asks you to split them.
 
 ---
 

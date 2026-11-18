@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
-import { DEMO_PUBLIC_KEY } from "@/lib/constants";
 import { LOADER_STYLES, THEMES } from "@/lib/themes";
+import {
+  applySiteThemeToDocument,
+  broadcastSiteTheme,
+  resolveSiteTheme,
+} from "@/lib/site-theme";
 import { cn } from "@/lib/utils";
 
 export default function BrandingPage() {
+  const [publicKey, setPublicKey] = useState("sw_demo_studio_nine");
   const [themeKey, setThemeKey] = useState("amber-light");
   const [accent, setAccent] = useState("#f5a000");
   const [inkColor, setInkColor] = useState("#0f1b2d");
@@ -27,29 +32,48 @@ export default function BrandingPage() {
 
   const theme = useMemo(() => THEMES.find((t) => t.key === themeKey) ?? THEMES[0], [themeKey]);
 
+  function pushWorkspaceTheme(next?: {
+    themeKey?: string;
+    accent?: string;
+    inkColor?: string;
+    font?: string;
+    radius?: number;
+  }) {
+    const tokens = resolveSiteTheme({
+      themeKey: next?.themeKey ?? themeKey,
+      accent: next?.accent ?? accent,
+      inkColor: next?.inkColor ?? inkColor,
+      font: next?.font ?? font,
+      radius: next?.radius ?? radius,
+    });
+    applySiteThemeToDocument(tokens);
+    broadcastSiteTheme(tokens);
+  }
+
   useEffect(() => {
     let cancelled = false;
-    void fetch(`/api/v1/sites/${DEMO_PUBLIC_KEY}`)
+    void fetch("/api/site/branding", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (cancelled || !data?.branding) return;
-        const b = data.branding;
-        if (b.themeKey) setThemeKey(b.themeKey);
-        if (b.accent) setAccent(b.accent);
-        if (b.inkColor) setInkColor(b.inkColor);
-        else if (b.theme?.ink) setInkColor(b.theme.ink);
-        if (typeof b.radius === "number") setRadius(b.radius);
-        if (b.font) setFont(b.font);
-        if (b.layout === "INLINE" || b.layout === "POPUP" || b.layout === "FLOATING") {
-          setLayout(b.layout);
+        if (cancelled || !data) return;
+        if (data.publicKey) setPublicKey(data.publicKey);
+        if (data.themeKey) setThemeKey(data.themeKey);
+        if (data.accent) setAccent(data.accent);
+        if (data.inkColor) setInkColor(data.inkColor);
+        if (typeof data.radius === "number") setRadius(data.radius);
+        if (data.font) setFont(data.font);
+        if (data.layout === "INLINE" || data.layout === "POPUP" || data.layout === "FLOATING") {
+          setLayout(data.layout);
         }
-        if (b.businessName) setName(b.businessName);
-        if (typeof b.showLoader === "boolean") setShowLoader(b.showLoader);
-        if (b.loaderStyle) setLoaderStyle(b.loaderStyle);
-        if (typeof b.showPrice === "boolean") setShowPrice(b.showPrice);
-        if (typeof b.showDuration === "boolean") setShowDuration(b.showDuration);
-        if (typeof b.showStaff === "boolean") setShowStaff(b.showStaff);
-        if (typeof b.showBadge === "boolean") setShowBadge(b.showBadge);
+        if (data.businessName) setName(data.businessName);
+        if (typeof data.showLoader === "boolean") setShowLoader(data.showLoader);
+        if (data.loaderStyle) setLoaderStyle(data.loaderStyle);
+        if (typeof data.showPrice === "boolean") setShowPrice(data.showPrice);
+        if (typeof data.showDuration === "boolean") setShowDuration(data.showDuration);
+        if (typeof data.showStaff === "boolean") setShowStaff(data.showStaff);
+        if (typeof data.showBadge === "boolean") setShowBadge(data.showBadge);
+        const tokens = resolveSiteTheme(data);
+        applySiteThemeToDocument(tokens);
       })
       .catch(() => undefined);
     return () => {
@@ -65,15 +89,13 @@ export default function BrandingPage() {
     setInkColor(t.ink);
     setRadius(t.radius);
     setFont(t.font);
-    // Preview workspace chrome immediately; Save persists for next visit
-    const root = document.documentElement;
-    root.style.setProperty("--bg", t.bg);
-    root.style.setProperty("--pn", t.panel);
-    root.style.setProperty("--ink", t.ink);
-    root.style.setProperty("--ln", t.line);
-    root.style.setProperty("--ac", t.accent);
-    root.style.setProperty("--at", t.accent);
-    root.style.setProperty("--sf", `color-mix(in srgb, ${t.accent} 16%, #ffffff)`);
+    pushWorkspaceTheme({
+      themeKey: t.key,
+      accent: t.accent,
+      inkColor: t.ink,
+      font: t.font,
+      radius: t.radius,
+    });
   }
 
   function playLoader() {
@@ -86,8 +108,8 @@ export default function BrandingPage() {
     setSaving(true);
     setSavedMsg("");
     try {
-      const res = await fetch(`/api/v1/sites/${DEMO_PUBLIC_KEY}/branding`, {
-        method: "PUT",
+      const res = await fetch("/api/site/branding", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           themeKey,
@@ -106,8 +128,11 @@ export default function BrandingPage() {
         }),
       });
       if (!res.ok) throw new Error("Save failed — is Postgres running?");
-      setSavedMsg("Saved. Live on the public booking page and workspace.");
-      window.dispatchEvent(new Event("slotwise:branding"));
+      const data = await res.json();
+      const tokens = resolveSiteTheme(data);
+      applySiteThemeToDocument(tokens);
+      broadcastSiteTheme(tokens);
+      setSavedMsg("Saved. Workspace and booking page now use this theme.");
     } catch (e) {
       setSavedMsg(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -121,7 +146,7 @@ export default function BrandingPage() {
         <section className="sw-card">
           <h2 className="mb-1 text-[15px] font-extrabold">Theme and color</h2>
           <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            Pick one of 8 themes, then fine-tune accent and text colors.
+            Themes update this workspace and the public booking widget together.
           </p>
           <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {THEMES.map((t) => (
@@ -146,13 +171,26 @@ export default function BrandingPage() {
             ))}
           </div>
           <Row label="Accent color">
-            <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} aria-label="Accent" />
+            <input
+              type="color"
+              value={accent}
+              onChange={(e) => {
+                const v = e.target.value;
+                setAccent(v);
+                pushWorkspaceTheme({ accent: v });
+              }}
+              aria-label="Accent"
+            />
           </Row>
           <Row label="Text color">
             <input
               type="color"
               value={inkColor}
-              onChange={(e) => setInkColor(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setInkColor(v);
+                pushWorkspaceTheme({ inkColor: v });
+              }}
               aria-label="Text color"
             />
           </Row>
@@ -161,155 +199,151 @@ export default function BrandingPage() {
         <section className="sw-card">
           <h2 className="mb-3 text-[15px] font-extrabold">Shape and type</h2>
           <Row label="Corner radius">
-            <input type="range" min={0} max={28} value={radius} onChange={(e) => setRadius(Number(e.target.value))} />
+            <input
+              type="range"
+              min={0}
+              max={28}
+              value={radius}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setRadius(v);
+                pushWorkspaceTheme({ radius: v });
+              }}
+            />
+            <span className="text-[12px] font-semibold" style={{ color: "var(--mut)" }}>
+              {radius}px
+            </span>
           </Row>
           <Row label="Font">
-            <select value={font} onChange={(e) => setFont(e.target.value)} className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2">
-              {["Match my site", "Manrope", "Figtree", "Sora", "Young Serif"].map((f) => (
-                <option key={f}>{f}</option>
+            <select
+              className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+              value={font}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFont(v);
+                pushWorkspaceTheme({ font: v });
+              }}
+            >
+              {["Manrope", "Figtree", "Sora", "Young Serif", "Match my site"].map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
               ))}
             </select>
           </Row>
-          <Row label="How it opens">
-            <Seg
-              value={layout}
-              onChange={(v) => setLayout(v as typeof layout)}
-              options={[
-                ["INLINE", "Inline"],
-                ["POPUP", "Popup"],
-                ["FLOATING", "Floating"],
-              ]}
-            />
-          </Row>
-          <Row label="Business name" hint="Shown at the top of the widget">
-            <input
+          <Row label="Widget layout">
+            <select
               className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+              value={layout}
+              onChange={(e) => setLayout(e.target.value as typeof layout)}
+            >
+              <option value="INLINE">Inline</option>
+              <option value="POPUP">Popup</option>
+              <option value="FLOATING">Floating button</option>
+            </select>
+          </Row>
+          <Row label="Business name">
+            <input
+              className="w-full max-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </Row>
-          <Toggle label="Staff picker" on={showStaff} set={setShowStaff} />
-          <Toggle label="Show prices" on={showPrice} set={setShowPrice} />
-          <Toggle label="Show durations" on={showDuration} set={setShowDuration} />
-          <Toggle label="Show “Powered by Slotwise”" on={showBadge} set={setShowBadge} />
         </section>
 
         <section className="sw-card">
-          <h2 className="mb-1 text-[15px] font-extrabold">Brand loader</h2>
-          <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            Shown while slots load. Uses Slotwise mark colors, tinted by your accent.
-          </p>
-          <Toggle label="Show brand loader" hint="While availability and payment steps load" on={showLoader} set={setShowLoader} />
-          <Row label="Animation" hint="Custom Lottie upload comes next">
-            <Seg
+          <h2 className="mb-3 text-[15px] font-extrabold">Widget options</h2>
+          <Toggle label="Show prices" on={showPrice} set={setShowPrice} />
+          <Toggle label="Show duration" on={showDuration} set={setShowDuration} />
+          <Toggle label="Show staff picker" on={showStaff} set={setShowStaff} />
+          <Toggle label="Show Slotwise badge" on={showBadge} set={setShowBadge} />
+          <Toggle label="Show loading animation" on={showLoader} set={setShowLoader} />
+          <Row label="Loader style">
+            <select
+              className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
               value={loaderStyle}
-              onChange={setLoaderStyle}
-              options={LOADER_STYLES.map((l) => [l.key, l.label])}
-            />
-          </Row>
-          <Row label="Preview loader" hint="Plays over the live preview for 2 seconds">
-            <button type="button" className="sw-btn" onClick={playLoader}>
-              Play preview
-            </button>
+              onChange={(e) => setLoaderStyle(e.target.value)}
+              disabled={!showLoader}
+            >
+              {LOADER_STYLES.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
           </Row>
         </section>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="sw-btn sw-btn-primary"
+            disabled={saving}
+            onClick={() => void saveBranding()}
+          >
+            {saving ? "Saving…" : "Save branding"}
+          </button>
+          {savedMsg ? (
+            <span className="text-[13px] font-semibold text-[var(--at)]">{savedMsg}</span>
+          ) : null}
+        </div>
       </div>
 
-      <div className="grid gap-3.5 content-start xl:sticky xl:top-4 xl:self-start">
+      <div className="grid gap-3.5 content-start">
         <section className="sw-card">
-          <h2 className="mb-3 text-[15px] font-extrabold">Live preview</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="m-0 text-[15px] font-extrabold">Live preview</h2>
+            <button type="button" className="sw-btn" onClick={playLoader}>
+              Preview loader
+            </button>
+          </div>
           <div
-            className="relative min-h-[430px] overflow-hidden rounded-[14px] border border-[var(--ln)] bg-[var(--bg)] p-4"
+            className="overflow-hidden rounded-2xl border p-4"
             style={{
+              borderColor: theme.line,
+              background: theme.bg,
+              color: inkColor || theme.ink,
               ["--pbg" as string]: theme.bg,
+              ["--ppn" as string]: theme.panel,
               ["--pink" as string]: inkColor || theme.ink,
               ["--pln" as string]: theme.line,
               ["--pac" as string]: accent,
-              ["--pr" as string]: `${radius}px`,
-              fontFamily: font === "Match my site" ? "inherit" : `${font}, system-ui, sans-serif`,
+              borderRadius: radius,
+              fontFamily: font === "Match my site" ? "inherit" : font,
             }}
           >
             {loading && showLoader ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-[color-mix(in_srgb,var(--pbg)_88%,transparent)] backdrop-blur-[2px]">
+              <div className="flex min-h-[220px] items-center justify-center">
                 <BrandLoader style={loaderStyle} accent={accent} />
               </div>
-            ) : null}
-
-            {layout === "FLOATING" ? (
-              <button
-                type="button"
-                className="absolute bottom-4 right-4 rounded-full px-5 py-3 font-extrabold text-[var(--on)]"
-                style={{ background: accent }}
-              >
-                Book now
-              </button>
             ) : (
-              <div
-                className="relative z-[1] mx-auto mt-3 max-w-[340px] border p-[calc(12px*1.4)] shadow-[0_14px_34px_rgba(0,0,0,.16)]"
-                style={{
-                  background: "var(--pbg)",
-                  color: "var(--pink)",
-                  borderColor: "var(--pln)",
-                  borderRadius: "var(--pr)",
-                }}
-              >
-                <div className="mb-2.5 flex items-center gap-2 font-extrabold">
-                  <i className="inline-block h-3.5 w-3.5 rounded-full" style={{ background: accent }} />
-                  {name}
+              <div className="grid gap-3">
+                <div className="text-[13px] font-semibold" style={{ color: "var(--mut)" }}>
+                  {name || "Your business"}
                 </div>
-                <button
-                  type="button"
-                  className="mb-1.5 flex w-full items-center justify-between rounded-[calc(var(--pr)-4px)] border p-3 text-left"
-                  style={{ borderColor: accent, background: `color-mix(in srgb, ${accent} 16%, var(--pbg))` }}
+                <div
+                  className="rounded-xl border px-3 py-3"
+                  style={{ borderColor: theme.line, background: theme.panel }}
                 >
-                  <span>
-                    Sample appointment
-                    {showDuration ? <small className="block text-xs opacity-70">2 h</small> : null}
-                    {showStaff ? <small className="block text-xs opacity-70">with Lena</small> : null}
-                  </span>
-                  {showPrice ? <b>$120</b> : null}
-                </button>
-                <div className="my-2.5 flex gap-1.5">
-                  {["Mon", "Tue", "Wed", "Thu"].map((d, i) => (
-                    <button
-                      key={d}
-                      type="button"
-                      className="flex-1 rounded-[calc(var(--pr)-6px)] border py-2 text-[13px]"
-                      style={
-                        i === 2
-                          ? { background: accent, color: "#1a1203", borderColor: accent }
-                          : { borderColor: "var(--pln)", background: "transparent" }
-                      }
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-                <div className="mb-3 grid grid-cols-3 gap-1.5">
-                  {["09:00", "10:00", "11:30"].map((t, i) => (
-                    <button
-                      key={t}
-                      type="button"
-                      className="rounded-[calc(var(--pr)-6px)] border py-2 text-[13px]"
-                      style={
-                        i === 1
-                          ? { background: accent, color: "#1a1203", borderColor: accent }
-                          : { borderColor: "var(--pln)", background: "transparent" }
-                      }
-                    >
-                      {t}
-                    </button>
-                  ))}
+                  <div className="flex items-center justify-between gap-2">
+                    <b>Consultation</b>
+                    {showDuration ? <span className="text-[12px]">45 min</span> : null}
+                  </div>
+                  {showPrice ? (
+                    <div className="mt-1 text-[13px] font-bold" style={{ color: accent }}>
+                      $80
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"
-                  className="w-full rounded-[calc(var(--pr)-4px)] border-[1.5px] py-3 font-extrabold"
+                  className="rounded-xl px-3 py-2.5 text-[13px] font-extrabold"
                   style={{ background: accent, borderColor: accent, color: "#1a1203" }}
                 >
-                  Confirm booking
+                  Book now
                 </button>
                 {showBadge ? (
-                  <span className="mt-2.5 block text-center text-[11.5px] opacity-60">Powered by Slotwise</span>
+                  <div className="text-center text-[11px] font-semibold opacity-60">Powered by Slotwise</div>
                 ) : null}
               </div>
             )}
@@ -319,105 +353,54 @@ export default function BrandingPage() {
         <section className="sw-card">
           <h2 className="mb-1 text-[15px] font-extrabold">Add to your website</h2>
           <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            In Webflow Designer, open Slotwise and choose Place on canvas. Or open a live preview below.
+            In Webflow Designer, open Slotwise and choose Place on canvas. Theme changes there sync
+            here automatically.
           </p>
-          <div className="mb-3 flex flex-wrap gap-2">
-            <button type="button" className="sw-btn sw-btn-primary" disabled={saving} onClick={saveBranding}>
-              {saving ? "Saving…" : "Save branding"}
-            </button>
-            <Link href={`/book/${DEMO_PUBLIC_KEY}`} className="sw-btn">
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/book/${publicKey}`} className="sw-btn sw-btn-primary">
               Open live preview
             </Link>
           </div>
-          {savedMsg ? <p className="mb-3 text-[13px] font-semibold text-[var(--at)]">{savedMsg}</p> : null}
         </section>
       </div>
     </div>
   );
 }
 
-function Row({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
-      <div>
-        <b>{label}</b>
-        {hint ? (
-          <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-            {hint}
-          </small>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">{children}</div>
+      <b>{label}</b>
+      <div className="flex items-center gap-2">{children}</div>
     </div>
   );
 }
 
 function Toggle({
   label,
-  hint,
   on,
   set,
 }: {
   label: string;
-  hint?: string;
   on: boolean;
   set: (v: boolean) => void;
 }) {
   return (
-    <Row label={label} hint={hint}>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
+      <b>{label}</b>
       <button
         type="button"
         role="switch"
         aria-checked={on}
         onClick={() => set(!on)}
-        className={cn(
-          "relative h-6 w-[42px] rounded-full border-0 transition",
-          on ? "bg-[var(--ac)]" : "bg-[var(--ln)]",
-        )}
+        className={`relative h-6 w-[42px] rounded-full ${on ? "bg-[var(--ac)]" : "bg-[var(--ln)]"}`}
       >
         <span
-          className={cn(
-            "absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full bg-white transition",
-            on && "translate-x-[18px]",
-          )}
+          className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full bg-white transition ${
+            on ? "translate-x-[18px]" : ""
+          }`}
         />
       </button>
-    </Row>
-  );
-}
-
-function Seg({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: Array<[string, string] | readonly [string, string]>;
-}) {
-  return (
-    <div className="inline-flex flex-wrap rounded-full border border-[var(--ln)] bg-[var(--bg)] p-[3px]">
-      {options.map(([v, label]) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => onChange(v)}
-          className={cn(
-            "rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
-            value === v ? "bg-[var(--ac)] text-[var(--on)]" : "text-[var(--mut)]",
-          )}
-        >
-          {label}
-        </button>
-      ))}
     </div>
   );
 }

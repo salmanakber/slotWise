@@ -15,7 +15,8 @@
   --sh: 0 1px 2px rgba(15, 27, 45, 0.06), 0 10px 28px rgba(15, 27, 45, 0.06);
 }
 
-[data-theme="dark"] {
+/* Fallback night palette — site branding (inline / data-site-theme) always wins when set */
+[data-theme="dark"]:not([data-site-theme]) {
   --bg: #0b1524;
   --pn: #132238;
   --ink: #eaf0f8;
@@ -153,6 +154,107 @@ textarea {
 
 .sw-fade-in {
   animation: sw-in 0.35s ease;
+}
+
+/* —— Workspace sidebar nav —— */
+.sw-sidebar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--ac) 7%, var(--pn)) 0%, var(--pn) 42%),
+    var(--pn);
+}
+
+.sw-sidebar-brand:hover {
+  background: color-mix(in srgb, var(--ac) 8%, transparent);
+}
+
+.sw-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--mut);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sw-nav-item:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ac) 8%, var(--bg));
+}
+
+.sw-nav-item.is-active {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ac) 14%, var(--pn));
+  border-color: color-mix(in srgb, var(--ac) 28%, var(--ln));
+  box-shadow: inset 3px 0 0 var(--ac);
+}
+
+.sw-nav-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  color: var(--mut);
+}
+
+.sw-nav-item:hover .sw-nav-ico,
+.sw-nav-item.is-active .sw-nav-ico {
+  color: var(--at);
+  background: color-mix(in srgb, var(--ac) 16%, #fff);
+  border-color: color-mix(in srgb, var(--ac) 34%, var(--ln));
+}
+
+.sw-nav-label {
+  line-height: 1.2;
+}
+
+@media (min-width: 1024px) {
+  .sw-sidebar-nav {
+    width: 100%;
+  }
+
+  .sw-nav-item {
+    width: 100%;
+    padding: 7px 10px 7px 8px;
+  }
+
+  .sw-nav-item.is-active {
+    box-shadow: inset 3px 0 0 var(--ac);
+  }
+}
+
+@media (max-width: 1023px) {
+  .sw-nav-item {
+    min-height: 36px;
+    padding: 6px 10px;
+    border-radius: 999px;
+  }
+
+  .sw-nav-item.is-active {
+    box-shadow: none;
+  }
+
+  .sw-nav-ico {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+  }
 }
 
 @keyframes ldr-pulse {

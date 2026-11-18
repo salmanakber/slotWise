@@ -2,16 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { LogOut, Moon, Sun } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import {
+  applySiteThemeToDocument,
+  SITE_THEME_CHANNEL,
+  SITE_THEME_EVENT,
+  siteThemeSignature,
+  type SiteThemeTokens,
+} from "@/lib/site-theme";
 
 export type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
 };
+
+function navActive(pathname: string, href: string) {
+  // Exact match for section roots so Overview/Activity don't stay lit on every child route
+  if (href === "/dashboard" || href === "/platform") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function AdminShell({
   title,
@@ -33,14 +47,8 @@ export function AdminShell({
   const pathname = usePathname();
   const { data: session } = useSession();
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [brand, setBrand] = useState<{
-    accent: string;
-    inkColor: string;
-    bg: string;
-    panel: string;
-    line: string;
-    font: string;
-  } | null>(null);
+  const [brand, setBrand] = useState<SiteThemeTokens | null>(null);
+  const sigRef = useRef("");
 
   useEffect(() => {
     const saved = window.localStorage.getItem("sw-theme");
@@ -49,150 +57,148 @@ export function AdminShell({
 
   useEffect(() => {
     let cancelled = false;
+
+    const applyPayload = (d: Partial<SiteThemeTokens> & { accent?: string }) => {
+      if (!d?.accent || !d.bg || !d.panel || !d.inkColor || !d.line) return;
+      const tokens: SiteThemeTokens = {
+        themeKey: d.themeKey || "amber-light",
+        accent: d.accent,
+        inkColor: d.inkColor,
+        bg: d.bg,
+        panel: d.panel,
+        line: d.line,
+        font: d.font || "Manrope",
+        radius: typeof d.radius === "number" ? d.radius : 14,
+      };
+      const sig = siteThemeSignature(tokens);
+      if (sig === sigRef.current) {
+        // Still re-apply DOM in case Night toggle wiped vars
+        applySiteThemeToDocument(tokens);
+        return;
+      }
+      sigRef.current = sig;
+      setBrand(tokens);
+      applySiteThemeToDocument(tokens);
+    };
+
     const loadBrand = () => {
-      void fetch("/api/site/branding")
+      void fetch("/api/site/branding", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (cancelled || !d?.accent) return;
-          setBrand({
-            accent: d.accent,
-            inkColor: d.inkColor,
-            bg: d.bg,
-            panel: d.panel,
-            line: d.line,
-            font: d.font,
-          });
+          if (cancelled || !d) return;
+          applyPayload(d);
         })
         .catch(() => undefined);
     };
+
     loadBrand();
+    const poll = window.setInterval(loadBrand, 5000);
     const onFocus = () => loadBrand();
-    const onBrand = () => loadBrand();
+    const onBrand = (e: Event) => {
+      const detail = (e as CustomEvent).detail as SiteThemeTokens | null;
+      if (detail?.accent) applyPayload(detail);
+      else loadBrand();
+    };
     const onVis = () => {
       if (document.visibilityState === "visible") loadBrand();
     };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sw-site-theme-bump") loadBrand();
+    };
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel(SITE_THEME_CHANNEL);
+      bc.onmessage = () => loadBrand();
+    } catch {
+      bc = null;
+    }
+
     window.addEventListener("focus", onFocus);
-    window.addEventListener("slotwise:branding", onBrand);
+    window.addEventListener(SITE_THEME_EVENT, onBrand);
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("storage", onStorage);
     return () => {
       cancelled = true;
+      window.clearInterval(poll);
       window.removeEventListener("focus", onFocus);
-      window.removeEventListener("slotwise:branding", onBrand);
+      window.removeEventListener(SITE_THEME_EVENT, onBrand);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("storage", onStorage);
+      bc?.close();
     };
   }, [pathname]);
 
   useEffect(() => {
+    // UI contrast preference only — never wipe site branding colors
     document.documentElement.dataset.theme = theme === "dark" ? "dark" : "";
     window.localStorage.setItem("sw-theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (!brand) return;
-    const root = document.documentElement;
-    const accent = brand.accent;
-    const hex = accent.replace("#", "");
-    let on = "#1a1203";
-    if (hex.length >= 6) {
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      on = lum > 0.62 ? "#1a1203" : "#ffffff";
-    }
-    // Only apply site branding colors in light mode so dark toggle still works
-    if (theme === "light") {
-      root.style.setProperty("--bg", brand.bg);
-      root.style.setProperty("--pn", brand.panel);
-      root.style.setProperty("--ink", brand.inkColor);
-      root.style.setProperty("--ln", brand.line);
-      root.style.setProperty("--ac", accent);
-      root.style.setProperty("--on", on);
-      root.style.setProperty("--at", accent);
-      root.style.setProperty("--sf", `color-mix(in srgb, ${accent} 16%, #ffffff)`);
-      if (brand.font && brand.font !== "Match my site") {
-        root.style.setProperty(
-          "font-family",
-          `${brand.font}, var(--font-figtree), Figtree, system-ui, sans-serif`,
-        );
-      }
-    } else {
-      root.style.setProperty("--ac", accent);
-      root.style.setProperty("--at", accent);
-      root.style.removeProperty("--bg");
-      root.style.removeProperty("--pn");
-      root.style.removeProperty("--ink");
-      root.style.removeProperty("--ln");
-      root.style.removeProperty("--on");
-      root.style.removeProperty("--sf");
-      root.style.removeProperty("font-family");
-    }
-    return () => {
-      [
-        "--bg",
-        "--pn",
-        "--ink",
-        "--ln",
-        "--ac",
-        "--on",
-        "--at",
-        "--sf",
-        "font-family",
-      ].forEach((k) => root.style.removeProperty(k));
-    };
-  }, [brand, theme]);
+    if (brand) applySiteThemeToDocument(brand);
+  }, [theme, brand]);
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[220px_minmax(0,1fr)]">
-      <aside className="sticky top-0 flex h-auto flex-row gap-1 overflow-x-auto border-b border-[var(--ln)] bg-[var(--pn)] p-2.5 lg:h-screen lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-3">
-        <Link href="/dashboard" className="mb-1.5 flex min-w-[140px] items-center gap-2 px-2 py-1 lg:mb-3">
-          <Image src="/logo.png" alt="" width={24} height={24} className="rounded-md" />
-          <div>
+    <div className="sw-shell grid min-h-screen lg:grid-cols-[248px_minmax(0,1fr)]">
+      <aside className="sw-sidebar sticky top-0 z-20 flex h-auto flex-row gap-1.5 overflow-x-auto border-b border-[var(--ln)] bg-[var(--pn)] px-2.5 py-2 lg:h-screen lg:flex-col lg:gap-0 lg:overflow-y-auto lg:overflow-x-hidden lg:border-b-0 lg:border-r lg:px-3 lg:py-4">
+        <Link
+          href={brandLabel.toLowerCase().includes("platform") ? "/platform" : "/dashboard"}
+          className="sw-sidebar-brand mb-0 flex min-w-[148px] shrink-0 items-center gap-2.5 rounded-xl px-2 py-2 lg:mb-5"
+        >
+          <span className="sw-sidebar-mark relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[11px] bg-[var(--sf)] ring-1 ring-[var(--ln)]">
+            <Image src="/logo.png" alt="" width={22} height={22} className="rounded-md" />
+          </span>
+          <div className="min-w-0">
             <div
-              className="text-[14px] font-bold leading-none tracking-tight"
+              className="truncate text-[14px] font-bold leading-none tracking-tight"
               style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
             >
               Slotwise
             </div>
-            <div className="mt-0.5 text-[10px] font-semibold" style={{ color: "var(--mut)" }}>
+            <div className="mt-1 truncate text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--mut)" }}>
               {brandLabel}
             </div>
           </div>
         </Link>
 
-        {nav.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold",
-                active
-                  ? "bg-[var(--sf)] text-[var(--at)]"
-                  : "text-[var(--mut)] hover:bg-[var(--bg)] hover:text-[var(--ink)]",
-              )}
-            >
-              <span className="opacity-80">{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
+        <nav className="sw-sidebar-nav flex flex-1 flex-row gap-1 lg:flex-col lg:gap-0.5" aria-label="Workspace">
+          {nav.map((item) => {
+            const active = navActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn("sw-nav-item", active && "is-active")}
+              >
+                <span className="sw-nav-ico" aria-hidden>
+                  {item.icon}
+                </span>
+                <span className="sw-nav-label">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-        <div className="mt-auto hidden space-y-2 lg:block">
-          <div className="rounded-xl border border-[var(--ln)] p-3 text-[13px]">
-            <div className="font-bold">{session?.user?.name || brandMeta.split("·")[0]?.trim()}</div>
-            <div style={{ color: "var(--mut)" }}>{session?.user?.email || brandMeta}</div>
-            <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--at)]">
+        <div className="sw-sidebar-foot mt-auto hidden lg:flex lg:flex-col lg:gap-2.5 lg:pt-4">
+          <div className="rounded-2xl border border-[var(--ln)] bg-[var(--bg)] p-3">
+            <div className="truncate text-[13px] font-bold">
+              {session?.user?.name || brandMeta.split("·")[0]?.trim()}
+            </div>
+            <div className="mt-0.5 truncate text-[11.5px]" style={{ color: "var(--mut)" }}>
+              {session?.user?.email || brandMeta}
+            </div>
+            <div className="mt-2 inline-flex rounded-full bg-[var(--sf)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--at)]">
               {session?.user?.role?.replaceAll("_", " ") || "Signed in"}
             </div>
           </div>
           <button
             type="button"
-            className="sw-btn w-full"
+            className="sw-nav-item !text-[var(--mut)] hover:!text-[var(--ink)]"
             onClick={() => signOut({ callbackUrl: "/login" })}
           >
-            Sign out
+            <span className="sw-nav-ico" aria-hidden>
+              <LogOut size={16} strokeWidth={2} />
+            </span>
+            <span className="sw-nav-label">Sign out</span>
           </button>
         </div>
       </aside>
@@ -214,31 +220,34 @@ export function AdminShell({
             {headerAside}
             <button
               type="button"
-              className="sw-btn lg:hidden"
+              className="sw-btn inline-flex items-center gap-1.5 lg:hidden"
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
+              <LogOut size={14} strokeWidth={2} />
               Sign out
             </button>
             <div className="inline-flex rounded-full border border-[var(--ln)] bg-[var(--bg)] p-[3px]">
               <button
                 type="button"
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold",
                   theme === "light" ? "bg-[var(--ac)] text-[var(--on)]" : "text-[var(--mut)]",
                 )}
                 onClick={() => setTheme("light")}
               >
+                <Sun size={13} strokeWidth={2.25} />
                 Light
               </button>
               <button
                 type="button"
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold",
                   theme === "dark" ? "bg-[var(--ac)] text-[var(--on)]" : "text-[var(--mut)]",
                 )}
                 onClick={() => setTheme("dark")}
               >
-                Amber night
+                <Moon size={13} strokeWidth={2.25} />
+                Night
               </button>
             </div>
           </div>

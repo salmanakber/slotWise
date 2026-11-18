@@ -1,63 +1,27 @@
-"use client";
+import { getDemoSite } from "@/lib/sites";
+import { cssVarsFromTokens, resolveSiteTheme } from "@/lib/site-theme";
+import { DashboardClientLayout } from "./client-layout";
 
-import { Suspense } from "react";
-import { usePathname } from "next/navigation";
-import {
-  Bell,
-  CalendarClock,
-  CreditCard,
-  LayoutGrid,
-  ListChecks,
-  Palette,
-  Plug,
-  Sparkles,
-} from "lucide-react";
-import { AccessBanner } from "@/components/admin/access-banner";
-import { AdminShell } from "@/components/admin/shell";
-import { UsageQuota } from "@/components/admin/usage-quota";
+export const dynamic = "force-dynamic";
 
-/** Site-owner workspace — no Settings (platform secrets / AI live under /platform only). */
-const NAV = [
-  { href: "/dashboard", label: "Overview", icon: <LayoutGrid size={15} strokeWidth={2} /> },
-  { href: "/dashboard/bookings", label: "Bookings", icon: <CalendarClock size={15} strokeWidth={2} /> },
-  { href: "/dashboard/services", label: "Services", icon: <ListChecks size={15} strokeWidth={2} /> },
-  { href: "/dashboard/availability", label: "Availability", icon: <CalendarClock size={15} strokeWidth={2} /> },
-  { href: "/dashboard/notifications", label: "Notifications", icon: <Bell size={15} strokeWidth={2} /> },
-  { href: "/dashboard/payments", label: "Payments", icon: <CreditCard size={15} strokeWidth={2} /> },
-  { href: "/dashboard/branding", label: "Branding", icon: <Palette size={15} strokeWidth={2} /> },
-  { href: "/dashboard/integrations", label: "Integrations", icon: <Plug size={15} strokeWidth={2} /> },
-  { href: "/dashboard/plans", label: "Plans", icon: <Sparkles size={15} strokeWidth={2} /> },
-];
-
-const TITLES: Record<string, [string, string]> = {
-  "/dashboard": ["Overview", "Bookings, revenue and what’s coming up"],
-  "/dashboard/bookings": ["Bookings", "Customer details, deposits and status"],
-  "/dashboard/services": ["Services and rules", "What customers can book, and how"],
-  "/dashboard/availability": ["Availability", "Working hours and time off"],
-  "/dashboard/notifications": ["Notifications", "Reminders by email, SMS and WhatsApp"],
-  "/dashboard/payments": ["Payments", "Deposits, fees and refunds"],
-  "/dashboard/branding": ["Branding and install", "Pick a theme, style the widget, then install it on your site"],
-  "/dashboard/integrations": ["Integrations", "Connect calendars, video and tools"],
-  "/dashboard/plans": ["Plans and billing", "Your plan, usage and upgrades"],
-};
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const [title, subtitle] = TITLES[pathname] ?? ["Dashboard", "Manage your Slotwise site"];
+/** Server-inject site theme so workspace chrome matches Branding / Designer on first paint. */
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const site = await getDemoSite().catch(() => null);
+  const tokens = resolveSiteTheme({
+    themeKey: site?.branding?.themeKey,
+    accent: site?.branding?.accent,
+    inkColor: site?.branding?.inkColor,
+    font: site?.branding?.font,
+    radius: site?.branding?.radius,
+  });
 
   return (
-    <AdminShell
-      title={title}
-      subtitle={subtitle}
-      nav={NAV}
-      brandLabel="Site admin"
-      brandMeta="Your workspace"
-      headerAside={<UsageQuota />}
-    >
-      <Suspense fallback={null}>
-        <AccessBanner />
-      </Suspense>
-      {children}
-    </AdminShell>
+    <>
+      <style
+        id="sw-site-theme"
+        dangerouslySetInnerHTML={{ __html: cssVarsFromTokens(tokens) }}
+      />
+      <DashboardClientLayout>{children}</DashboardClientLayout>
+    </>
   );
 }

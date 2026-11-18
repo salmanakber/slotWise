@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { PlanTier } from "@prisma/client";
 import { z } from "zod";
+import type Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { requireDemoSite } from "@/lib/site-admin";
 import { getStripe } from "@/lib/stripe";
@@ -14,6 +15,19 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({
   tier: z.enum(["FREE", "PRO", "BUSINESS", "AGENCY"]),
 });
+
+const FALLBACK_PRICE_CENTS: Record<string, number> = {
+  FREE: 0,
+  PRO: 1500,
+  BUSINESS: 3900,
+  AGENCY: 9900,
+};
+
+function paidAmountCents(plan: { tier: string; priceMonthly: number }) {
+  if (plan.tier === PlanTier.FREE) return 0;
+  if (plan.priceMonthly > 0) return plan.priceMonthly;
+  return FALLBACK_PRICE_CENTS[plan.tier] ?? 0;
+}
 
 /** Current plan + catalog for the site workspace. */
 export async function GET() {
@@ -28,22 +42,26 @@ export async function GET() {
     });
     const currentTier = (site.plan?.tier as PlanTier) || PlanTier.FREE;
     const entitlements = entitlementsForTier(currentTier);
+    const stripe = await getStripe();
 
     return NextResponse.json({
       currentTier,
       planLabel: entitlements.label,
-      plans: plans.map((p) => ({
-        id: p.id,
-        tier: p.tier,
-        name: p.name,
-        priceMonthly: p.priceMonthly,
-        bookingsLimit: p.bookingsLimit,
-        staffLimit: p.staffLimit,
-        themesLimit: p.themesLimit,
-        features: p.features,
-        // Paid plans always go through Checkout when Stripe is configured
-        hasCheckout: p.tier !== PlanTier.FREE && p.priceMonthly > 0,
-      })),
+      stripeReady: Boolean(stripe),
+      plans: plans.map((p) => {
+        const amount = paidAmountCents(p);
+        return {
+          id: p.id,
+          tier: p.tier,
+          name: p.name,
+          priceMonthly: amount,
+          bookingsLimit: p.bookingsLimit,
+          staffLimit: p.staffLimit,
+          themesLimit: p.themesLimit,
+          features: p.features,
+          requiresCheckout: p.tier !== PlanTier.FREE && amount > 0,
+        };
+      }),
     });
   } catch (e) {
     return NextResponse.json(
@@ -53,10 +71,76 @@ export async function GET() {
   }
 }
 
+async function createSubscriptionCheckout(input: {
+  stripe: Stripe;
+  siteId: string;
+  siteName: string;
+  planId: string;
+  planTier: string;
+  planName: string;
+  amountCents: number;
+  stripePriceMoId: string | null;
+  customerEmail?: string;
+}) {
+  const origin = appOrigin();
+  const successUrl = `${origin}/dashboard/plans?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${origin}/dashboard/plans?canceled=1`;
+
+  const base = {
+    mode: "subscription" as const,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    customer_email: input.customerEmail,
+    client_reference_id: input.siteId,
+    metadata: {
+      siteId: input.siteId,
+      planId: input.planId,
+      planTier: input.planTier,
+    },
+    subscription_data: {
+      metadata: {
+        siteId: input.siteId,
+        planId: input.planId,
+        planTier: input.planTier,
+      },
+    },
+  };
+
+  // Prefer catalog price ID; if it fails (wrong account / deleted), fall back to inline price_data
+  if (input.stripePriceMoId) {
+    try {
+      return await input.stripe.checkout.sessions.create({
+        ...base,
+        line_items: [{ price: input.stripePriceMoId, quantity: 1 }],
+      });
+    } catch (err) {
+      console.warn("[site.plan] stripePriceMoId failed, using price_data", err);
+    }
+  }
+
+  return input.stripe.checkout.sessions.create({
+    ...base,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: input.amountCents,
+          recurring: { interval: "month" },
+          product_data: {
+            name: `Slotwise ${input.planName}`,
+            description: `${input.planName} plan · ${input.siteName}`,
+          },
+        },
+      },
+    ],
+  });
+}
+
 /**
  * Change site plan.
- * - FREE (or free downgrade): apply immediately.
- * - Paid tiers: always open Stripe Checkout (price ID or inline price_data).
+ * - FREE: apply immediately.
+ * - Paid: NEVER apply here — only return Stripe Checkout URL. Webhook / session verify applies plan.
  */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -78,72 +162,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, unchanged: true, tier: plan.tier });
     }
 
-    const isPaid = plan.tier !== PlanTier.FREE && plan.priceMonthly > 0;
+    const amountCents = paidAmountCents(plan);
+    const requiresPayment = plan.tier !== PlanTier.FREE && amountCents > 0;
 
-    if (isPaid) {
+    if (requiresPayment) {
       const stripe = await getStripe();
       if (!stripe) {
         return NextResponse.json(
           {
             error:
-              "Stripe is not configured. Add platform Stripe keys in Platform → Stripe before upgrading.",
+              "Stripe is not configured. Add secret key in Platform → Stripe, then try Upgrade again.",
           },
           { status: 503 },
         );
       }
 
-      const origin = appOrigin();
-      const lineItem = plan.stripePriceMoId
-        ? { price: plan.stripePriceMoId, quantity: 1 }
-        : {
-            price_data: {
-              currency: "usd",
-              unit_amount: plan.priceMonthly,
-              recurring: { interval: "month" as const },
-              product_data: {
-                name: `Slotwise ${plan.name}`,
-                description: `${plan.name} plan for ${site.name}`,
-              },
-            },
-            quantity: 1,
-          };
-
-      const sessionCheckout = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        line_items: [lineItem],
-        success_url: `${origin}/dashboard/plans?upgraded=${plan.tier}`,
-        cancel_url: `${origin}/dashboard/plans?canceled=1`,
-        customer_email:
+      const sessionCheckout = await createSubscriptionCheckout({
+        stripe,
+        siteId: site.id,
+        siteName: site.name,
+        planId: plan.id,
+        planTier: plan.tier,
+        planName: plan.name,
+        amountCents,
+        stripePriceMoId: plan.stripePriceMoId,
+        customerEmail:
           typeof session.user.email === "string" ? session.user.email : undefined,
-        metadata: {
-          siteId: site.id,
-          planId: plan.id,
-          planTier: plan.tier,
-        },
-        subscription_data: {
-          metadata: {
-            siteId: site.id,
-            planId: plan.id,
-            planTier: plan.tier,
-          },
-        },
       });
 
       if (!sessionCheckout.url) {
         return NextResponse.json(
-          { error: "Stripe Checkout did not return a URL" },
+          { error: "Stripe Checkout did not return a URL. Check Platform → Stripe keys." },
           { status: 502 },
         );
       }
 
+      // Do NOT update site.planId here — only after successful payment
       return NextResponse.json({
         ok: true,
+        requiresCheckout: true,
         checkoutUrl: sessionCheckout.url,
         tier: plan.tier,
       });
     }
 
-    // Free plan — apply immediately (no payment)
+    // Free only — apply immediately
     await prisma.site.update({
       where: { id: site.id },
       data: { planId: plan.id },
@@ -166,7 +229,7 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("[site.plan]", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Could not change plan" },
+      { error: e instanceof Error ? e.message : "Could not start plan checkout" },
       { status: 500 },
     );
   }
