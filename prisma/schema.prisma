@@ -156,11 +156,28 @@ model Site {
   intakeFields    IntakeField[]
   notificationSettings NotificationSettings?
   calendarChats   CalendarChatSession[]
+  ownerNotifications OwnerNotification[]
   /** Visitors can ask the calendar AI assistant (BETA). */
   calendarChatEnabled Boolean @default(true)
 
   @@index([workspaceId])
   @@index([status])
+}
+
+model OwnerNotification {
+  id        String    @id @default(cuid())
+  siteId    String
+  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  type      String // booking.created | booking.cancelled | chat | payment | meeting | system
+  title     String
+  body      String
+  href      String?
+  meta      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([siteId, createdAt])
+  @@index([siteId, readAt])
 }
 
 model CalendarChatSession {

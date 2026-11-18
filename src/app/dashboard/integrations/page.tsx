@@ -205,7 +205,7 @@ function IntegrationsClient() {
                   setMsg(
                     res.ok
                       ? json.message ||
-                          "Disconnected. Publish your Webflow site. Delete leftover booking blocks on the canvas if they remain."
+                          "Disconnected. Publish your Webflow site so script removal goes live. Delete any leftover booking iframes in Designer."
                       : json.error || "Could not disconnect",
                   );
                   void load();

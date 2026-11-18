@@ -1352,6 +1352,15 @@ details summary {
   text-transform: uppercase;
   font-size: 9px;
 }
+.inbox-unread .mini-meta b {
+  color: var(--ink);
+}
+.inbox-unread {
+  border-left: 3px solid var(--ac);
+  padding-left: 8px;
+  margin-left: -2px;
+}
+
 .ai-chat-hero,
 .ai-chat-card {
   background:

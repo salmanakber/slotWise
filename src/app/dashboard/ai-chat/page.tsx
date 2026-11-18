@@ -116,7 +116,7 @@ export default function AiChatAnalyticsPage() {
           <div className="max-w-xl">
             <div className="mb-2 flex items-center gap-2">
               <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: "var(--ac)" }}>
-                AI Chat for Your Calendar
+                Chat for Your Calendar
               </span>
               <em className="sw-tag !normal-case !tracking-normal">BETA</em>
               <em className="sw-tag !normal-case !tracking-normal">Business+</em>
@@ -181,7 +181,7 @@ export default function AiChatAnalyticsPage() {
             >
               ✦
             </div>
-            <h2 className="m-0 text-[18px] font-extrabold">Business & Agency unlock AI Chat</h2>
+            <h2 className="m-0 text-[18px] font-extrabold">Business & Agency unlock Chat</h2>
             <p className="mx-auto mt-2 max-w-md text-[13.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
               You’re on {data.planLabel || "your current"} plan. Upgrade to enable visitor calendar chat,
               natural AI answers trained on your events & openings, plus owner analytics and graphs.
@@ -365,7 +365,7 @@ export default function AiChatAnalyticsPage() {
               </div>
               <div className="mt-3 grid gap-2">
                 {data.analytics.recentSessions.length ? (
-                  data.analytics.recentSessions.map((s) => (
+                  data.analytics.recentSessions.slice(0, 5).map((s) => (
                     <article
                       key={s.id}
                       className="rounded-xl border border-[var(--ln)] px-3.5 py-3"

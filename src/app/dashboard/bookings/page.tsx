@@ -27,6 +27,8 @@ export default async function BookingsPage() {
     depositCents: b.depositCents,
     currency: b.currency,
     stripePaymentId: b.stripePaymentId,
+    meetingUrl: b.meetingUrl ?? null,
+    meetingProvider: b.meetingProvider ?? null,
     cancelledAt: b.cancelledAt ? b.cancelledAt.toISOString() : null,
     createdAt: b.createdAt.toISOString(),
     service: { name: b.service.name },

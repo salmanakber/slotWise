@@ -38,6 +38,8 @@ const siteInclude = {
       depositCents: true,
       currency: true,
       status: true,
+      meetingUrl: true,
+      meetingProvider: true,
       service: { select: { name: true } },
     },
   },
@@ -181,6 +183,8 @@ export async function siteBootstrapPayload(
       depositCents: b.depositCents,
       currency: b.currency,
       status: b.status,
+      meetingUrl: b.meetingUrl ?? null,
+      meetingProvider: b.meetingProvider ?? null,
     })),
   };
 }

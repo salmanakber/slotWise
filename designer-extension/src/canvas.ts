@@ -114,9 +114,10 @@ export async function insertBookingIframe(publicKey: string) {
     typeof localStorage !== "undefined" && localStorage.getItem("slotwise-canvas-wide") === "1";
   const wrapStyle =
     "width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;display:block;";
+  // Start short; widget.js / postMessage grows height. Avoids a tall empty box after uninstall.
   const frameStyle = wide
-    ? "display:block;width:100%;max-width:100%;margin:0;min-height:720px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
-    : "display:block;width:100%;max-width:26.5rem;margin-left:auto;margin-right:auto;min-height:640px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
+    ? "display:block;width:100%;max-width:100%;margin:0;height:720px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
+    : "display:block;width:100%;max-width:26.5rem;margin-left:auto;margin-right:auto;height:640px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
 
   try {
     if (typeof api.elementBuilder === "function") {

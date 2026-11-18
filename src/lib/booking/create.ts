@@ -10,6 +10,7 @@ import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
 import { sendSms } from "@/lib/sms";
 import { listMeetingTools } from "@/lib/meeting-tools";
+import { createOwnerNotification } from "@/lib/owner-notifications";
 import { createBookingCheckoutSession } from "@/lib/stripe";
 import { appOrigin } from "@/lib/webflow";
 
@@ -286,6 +287,19 @@ export async function createBooking(input: {
       replyToEmail: ownerEmail,
     }).catch((err) => console.error("confirmation email failed", err));
   }
+
+  await createOwnerNotification({
+    siteId: site.id,
+    type: "booking.created",
+    title: `New booking · ${booking.reference}`,
+    body: `${booking.customerName} booked ${booking.service.name} for ${whenLabel}.`,
+    href: "/dashboard/bookings",
+    meta: {
+      bookingId: booking.id,
+      reference: booking.reference,
+      customerEmail: booking.customerEmail,
+    },
+  });
 
   const sync = await syncBookingIntegrations({
     siteId: site.id,

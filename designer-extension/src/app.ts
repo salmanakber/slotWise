@@ -23,7 +23,7 @@ const TAB_META: Record<Tab, { label: string; icon: string }> = {
   events: { label: "Events", icon: icons.calendar },
   create: { label: "New", icon: icons.plus },
   theme: { label: "Theme", icon: icons.palette },
-  chat: { label: "AI", icon: icons.chat },
+  chat: { label: "Chat", icon: icons.chat },
   tools: { label: "Tools", icon: icons.wrench },
   settings: { label: "More", icon: icons.settings },
 };
@@ -44,6 +44,7 @@ export async function boot(root: HTMLElement) {
     selectedBookingId: null as string | null,
     calendarChat: null as api.CalendarChatPayload | null,
     availability: null as api.AvailabilityPayload | null,
+    inbox: null as { unread: number; items: api.InboxItem[] } | null,
     status: "",
     statusOk: true,
     busy: false,
@@ -337,6 +338,7 @@ export async function boot(root: HTMLElement) {
       applyBrandColors(state.branding.accent, state.branding.inkColor);
       void loadCalendarChat().catch(() => undefined);
       void loadAvailability().catch(() => undefined);
+      void loadInbox().catch(() => undefined);
       const planLabel = state.bootstrap.entitlements?.label || state.bootstrap.plan?.tier;
       setStatus(`Connected · ${state.bootstrap.site.name} · ${planLabel}`);
     } catch (e) {
@@ -366,6 +368,17 @@ export async function boot(root: HTMLElement) {
       return;
     }
     state.availability = await api.getAvailability({
+      webflowSiteId: state.webflowSiteId,
+      publicKey: state.bootstrap.site.publicKey,
+    });
+  }
+
+  async function loadInbox() {
+    if (!state.bootstrap || state.bootstrap.uninstalled) {
+      state.inbox = null;
+      return;
+    }
+    state.inbox = await api.getInbox({
       webflowSiteId: state.webflowSiteId,
       publicKey: state.bootstrap.site.publicKey,
     });
@@ -512,18 +525,27 @@ export async function boot(root: HTMLElement) {
         bookings.length
           ? `<div class="home-list">
         ${bookings
-          .map(
-            (b) => `<div class="home-booking">
+          .map((b) => {
+            const meet =
+              b.meetingProvider === "zoom" ? "Zoom" : b.meetingProvider === "meet" ? "Meet" : null;
+            return `<div class="home-booking">
             <div class="mini-meta">
               <b>${escapeHtml(b.customerName)}</b>
-              <small>${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}</small>
+              <small>${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}${
+                meet ? ` · ${meet}` : ""
+              }</small>
             </div>
             <div class="home-booking-actions">
+              ${
+                b.meetingUrl
+                  ? `<a class="btn btn-sm btn-soft" href="${escapeHtml(b.meetingUrl)}" target="_blank" rel="noreferrer" title="Open meeting">${icons.video}</a>`
+                  : ""
+              }
               <em class="pill pill-muted">${escapeHtml(b.status)}</em>
               <button type="button" class="btn btn-sm" data-booking-id="${escapeHtml(b.id)}">Details</button>
             </div>
-          </div>`,
-          )
+          </div>`;
+          })
           .join("")}
       </div>`
           : `<div class="empty">No bookings yet — share your widget to get the first one.</div>`
@@ -531,10 +553,49 @@ export async function boot(root: HTMLElement) {
     </section>`;
   }
 
+  function inboxCard() {
+    if (!state.bootstrap || state.bootstrap.uninstalled) return "";
+    const items = (state.inbox?.items || []).slice(0, 5);
+    const unread = state.inbox?.unread || 0;
+    return `<section class="card inbox-card">
+      <div class="card-h-row">
+        ${cardTitle(icons.bell, "Notifications")}
+        ${unread ? `<em class="pill pill-ac">${unread} new</em>` : `<em class="pill pill-muted">Up to date</em>`}
+      </div>
+      ${
+        items.length
+          ? `<div class="home-list">
+        ${items
+          .map(
+            (n) => `<div class="home-booking ${n.readAt ? "" : "inbox-unread"}">
+            <div class="mini-meta">
+              <b>${escapeHtml(n.title)}</b>
+              <small>${escapeHtml(n.body)}</small>
+            </div>
+            ${
+              n.href
+                ? `<a class="btn btn-sm" href="${api.APP_URL}${escapeHtml(n.href)}" target="_blank" rel="noreferrer">Open</a>`
+                : ""
+            }
+          </div>`,
+          )
+          .join("")}
+      </div>`
+          : `<div class="empty">New bookings and meeting links will show here.</div>`
+      }
+      <div class="quiet-actions">
+        ${unread ? `<button type="button" class="btn btn-quiet" id="markInboxRead">${iconLabel(icons.check, "Mark all read")}</button>` : ""}
+        <a class="link-quiet" href="${api.APP_URL}/dashboard/notifications" target="_blank" rel="noreferrer">Full inbox →</a>
+      </div>
+    </section>`;
+  }
+
   function bookingDrawer() {
     const b = (state.bootstrap?.recentBookings || []).find((x) => x.id === state.selectedBookingId);
     if (!b) return "";
     const currency = b.currency || state.bootstrap?.site.currency || "USD";
+    const meetLabel =
+      b.meetingProvider === "zoom" ? "Zoom" : b.meetingProvider === "meet" ? "Google Meet" : null;
     return `<div class="drawer-root" id="bookingDrawer">
       <button type="button" class="drawer-backdrop" id="closeBookingDrawer" aria-label="Close"></button>
       <aside class="drawer-panel" role="dialog" aria-modal="true">
@@ -551,12 +612,23 @@ export async function boot(root: HTMLElement) {
           <div class="drawer-row"><span>When</span><b>${escapeHtml(formatWhen(b.startsAt))}</b></div>
           <div class="drawer-row"><span>Email</span><b>${escapeHtml(b.customerEmail || "—")}</b></div>
           <div class="drawer-row"><span>Phone</span><b>${escapeHtml(b.customerPhone || "—")}</b></div>
+          <div class="drawer-row"><span>Meeting</span><b>${meetLabel || "Not added yet"}</b></div>
+          <div class="drawer-row"><span>Join link</span><b>${
+            b.meetingUrl
+              ? `<a href="${escapeHtml(b.meetingUrl)}" target="_blank" rel="noreferrer">${escapeHtml(b.meetingUrl)}</a>`
+              : "Customer can add Zoom or Meet after booking"
+          }</b></div>
           <div class="drawer-row"><span>Amount</span><b>${money(b.amountCents || 0, currency)}</b></div>
           <div class="drawer-row"><span>Deposit</span><b>${b.depositCents ? money(b.depositCents, currency) : "None"}</b></div>
           <div class="drawer-row"><span>Notes</span><b>${escapeHtml(b.notes?.trim() || "No notes")}</b></div>
         </div>
         <footer class="drawer-foot">
-          ${b.customerEmail ? `<a class="btn btn-primary btn-block" href="mailto:${escapeHtml(b.customerEmail)}">Email customer</a>` : ""}
+          ${
+            b.meetingUrl
+              ? `<a class="btn btn-primary btn-block" href="${escapeHtml(b.meetingUrl)}" target="_blank" rel="noreferrer">${iconLabel(icons.video, `Open ${meetLabel || "meeting"}`)}</a>`
+              : ""
+          }
+          ${b.customerEmail ? `<a class="btn ${b.meetingUrl ? "" : "btn-primary"} btn-block" href="mailto:${escapeHtml(b.customerEmail)}">Email customer</a>` : ""}
           <button type="button" class="btn btn-block" id="closeBookingDrawer3">Close</button>
         </footer>
       </aside>
@@ -614,6 +686,7 @@ export async function boot(root: HTMLElement) {
         ${bookingsPreview()}
         ${eventsPreview()}
       </div>
+      ${inboxCard()}
       ${aiChatHomeCard()}
       ${paymentCard()}
       ${appsCard()}
@@ -627,7 +700,7 @@ export async function boot(root: HTMLElement) {
     const on = state.calendarChat?.enabled;
     return `<section class="card ai-chat-card">
       <div class="card-h-row">
-        ${cardTitle(icons.chat, "AI Calendar Chat")}
+        ${cardTitle(icons.chat, "Chat")}
         <em class="pill pill-ac">BETA</em>
       </div>
       <p class="lead">Visitors ask “What’s free this weekend?” and get answers from your events.</p>
@@ -640,7 +713,7 @@ export async function boot(root: HTMLElement) {
           : `${upgradeLock("ai_calendar_chat", "Business+ feature")}`
       }
       <div class="quiet-actions">
-        <button type="button" class="btn btn-quiet" id="gotoChat">${iconLabel(icons.spark, allowed ? (on ? "Analytics" : "Set up AI Chat") : "Preview AI Chat")}</button>
+        <button type="button" class="btn btn-quiet" id="gotoChat">${iconLabel(icons.spark, allowed ? (on ? "Analytics" : "Set up Chat") : "Preview Chat")}</button>
         <a class="link-quiet" href="${api.APP_URL}/dashboard/ai-chat" target="_blank" rel="noreferrer">Dashboard →</a>
       </div>
     </section>`;
@@ -649,7 +722,7 @@ export async function boot(root: HTMLElement) {
   function viewChat() {
     if (!state.bootstrap) {
       return `<section class="card">
-        ${cardTitle(icons.chat, "AI Calendar Chat")}
+        ${cardTitle(icons.chat, "Chat")}
         <p class="lead">Connect a site to enable chat and analytics.</p>
       </section>`;
     }
@@ -657,7 +730,7 @@ export async function boot(root: HTMLElement) {
     const chat = state.calendarChat;
     const t = chat?.analytics.totals;
     const questions = chat?.analytics.popularQuestions || [];
-    const sessions = chat?.analytics.recentSessions || [];
+    const sessions = (chat?.analytics.recentSessions || []).slice(0, 5);
     const daily = chat?.analytics.daily || [];
     const maxDaily = Math.max(1, ...daily.map((d) => Math.max(d.sessions, d.questions)), 1);
     const maxQ = Math.max(1, ...questions.map((q) => q.count), 1);
@@ -667,7 +740,7 @@ export async function boot(root: HTMLElement) {
       return `
         <section class="card ai-chat-hero">
           <div class="card-h-row">
-            ${cardTitle(icons.chat, "AI Chat for Your Calendar")}
+            ${cardTitle(icons.chat, "Chat for Your Calendar")}
             <em class="pill pill-ac">BETA</em>
           </div>
           <p class="lead">Natural answers trained on your live events, hours, and open slots — plus owner analytics.</p>
@@ -697,7 +770,7 @@ export async function boot(root: HTMLElement) {
     return `
       <section class="card ai-chat-hero">
         <div class="card-h-row">
-          ${cardTitle(icons.chat, "AI Chat for Your Calendar")}
+          ${cardTitle(icons.chat, "Chat for Your Calendar")}
           <em class="pill pill-ac">BETA</em>
         </div>
         <p class="lead">Natural answers from your calendar — events, hours, and open times.</p>
@@ -744,11 +817,11 @@ export async function boot(root: HTMLElement) {
       </section>
       <section class="card">
         ${cardTitle(icons.users, "Recent chats")}
+        <p class="lead" style="margin-top:0">Latest 5 visitor threads</p>
         ${
           sessions.length
             ? `<div class="home-list">
           ${sessions
-            .slice(0, 8)
             .map(
               (s) => `<div class="home-booking">
               <div class="mini-meta">
@@ -759,7 +832,7 @@ export async function boot(root: HTMLElement) {
             )
             .join("")}
         </div>`
-            : `<div class="empty">Chats will appear when visitors use Ask the calendar.</div>`
+            : `<div class="empty">Chats will appear when visitors use Ask Chat.</div>`
         }
         <a class="btn btn-quiet btn-block" style="margin-top:8px" href="${api.APP_URL}/dashboard/ai-chat" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Open full analytics")}</a>
       </section>
@@ -1037,7 +1110,7 @@ export async function boot(root: HTMLElement) {
       </button>
       <button type="button" class="btn btn-block" id="removeEmbedsBtn" style="margin-top:8px">${iconLabel(icons.trash, "Remove widgets from this page")}</button>
       <button type="button" class="btn btn-block" id="disconnectBtn" style="margin-top:6px">${iconLabel(icons.alert, "Disconnect & clean uninstall")}</button>
-      <p class="lead" style="margin-top:8px">Disconnect strips App custom code and deactivates booking so leftovers stop showing after publish.</p>
+      <p class="lead" style="margin-top:8px">Removes booking widgets on this page, deletes Slotwise Custom Code from the site (Marketplace requirement), turns bookings off, and revokes access. Then <b>Publish</b> so the live site updates. Check other pages for leftover embeds.</p>
     </section>`;
   }
 
@@ -1163,16 +1236,20 @@ export async function boot(root: HTMLElement) {
       void (async () => {
         if (!state.bootstrap) return;
         try {
-          setStatus("Disconnecting Slotwise…");
+          // Marketplace-compliant order: remove canvas embeds first, then purge
+          // App-applied Custom Code via Data API while the OAuth token still works.
+          setStatus("Removing booking widgets from this page…");
+          let removed = 0;
+          try {
+            removed = await removeSlotwiseEmbedsFromCanvas();
+          } catch {
+            /* Designer mode may block — still continue API cleanup */
+          }
+          setStatus("Removing Slotwise scripts from the site…");
           const res = await api.uninstallWebflow({
             webflowSiteId: state.webflowSiteId,
             publicKey: state.bootstrap.site.publicKey,
           });
-          try {
-            await removeSlotwiseEmbedsFromCanvas();
-          } catch {
-            /* ignore */
-          }
           state.bootstrap = {
             uninstalled: true,
             site: {
@@ -1182,7 +1259,10 @@ export async function boot(root: HTMLElement) {
               webflowSiteId: state.bootstrap.site.webflowSiteId,
             },
           } as api.Bootstrap;
-          setStatus(res.message || "Disconnected — publish your Webflow site");
+          setStatus(
+            res.message ||
+              `Disconnected. Removed ${removed} canvas widget(s). Publish the site so script removal goes live.`,
+          );
           void render();
         } catch (e) {
           setStatus(e instanceof Error ? e.message : "Disconnect failed", false);
@@ -1209,6 +1289,22 @@ export async function boot(root: HTMLElement) {
     root.querySelector("#gotoChat")?.addEventListener("click", () => {
       state.tab = "chat";
       void render();
+    });
+    root.querySelector("#markInboxRead")?.addEventListener("click", () => {
+      void (async () => {
+        if (!state.bootstrap) return;
+        try {
+          state.inbox = await api.markInboxRead({
+            webflowSiteId: state.webflowSiteId,
+            publicKey: state.bootstrap.site.publicKey,
+            all: true,
+          });
+          setStatus("Notifications marked read");
+          void render();
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Could not update inbox", false);
+        }
+      })();
     });
     root.querySelector("#refreshChat")?.addEventListener("click", () => {
       void (async () => {

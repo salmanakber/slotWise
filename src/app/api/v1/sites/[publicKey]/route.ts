@@ -14,10 +14,10 @@ export async function GET(
     // If Webflow app was uninstalled, deactivate so leftover iframes stop working
     const row = await prisma.site.findUnique({
       where: { publicKey },
-      select: { id: true, webflowSiteId: true },
+      select: { id: true, webflowSiteId: true, status: true },
     });
-    if (row?.webflowSiteId) {
-      await validateWebflowConnection(row.id).catch(() => undefined);
+    if (row?.webflowSiteId && row.status === "ACTIVE") {
+      await validateWebflowConnection(row.id, { force: true }).catch(() => undefined);
     }
 
     const site = await loadSiteBundle(publicKey);

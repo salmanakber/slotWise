@@ -15,10 +15,12 @@ const bodySchema = z.object({
 });
 
 /**
- * Clean uninstall: strip App custom code (while token works), deactivate site,
- * delete Webflow token. Call this BEFORE or when disconnecting from Webflow.
- * After marketplace uninstall, token is often already revoked — we still deactivate
- * so leftover canvas iframes stop loading a live widget.
+ * Marketplace-compliant uninstall (Webflow guidelines):
+ * - DELETE App-applied Custom Code at site + page level (no leftover JS / no tombstone scripts)
+ * - Deactivate Slotwise so booking embeds stop serving
+ * - Revoke + delete OAuth token
+ * Call from Designer Disconnect BEFORE the owner revokes in Webflow settings, while the token works.
+ * Canvas DOM embeds must be removed via Designer API (see designer-extension) — Webflow leaves those elements.
  */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -76,7 +78,7 @@ export async function POST(request: Request) {
     {
       ...result,
       message:
-        "Slotwise disconnected. Publish your Webflow site so removed custom code goes live. Delete any leftover booking blocks on the canvas if they remain.",
+        "Slotwise cleaned up: App scripts removed from the site, bookings turned off, and Webflow access revoked. Publish your site so script removal goes live. If any booking iframe remains on a page, delete it in Designer (other pages too), then Publish.",
     },
     {
       headers: {

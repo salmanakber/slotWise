@@ -81,8 +81,11 @@ export default async function DashboardOverviewPage() {
           <Link href="/dashboard/bookings" className="sw-btn">
             All bookings
           </Link>
+          <Link href="/dashboard/notifications" className="sw-btn">
+            Notifications
+          </Link>
           <Link href="/dashboard/ai-chat" className="sw-btn">
-            AI Chat
+            Chat
           </Link>
           <Link href="/dashboard/branding" className="sw-btn sw-btn-primary">
             Style widget
@@ -213,9 +216,25 @@ export default async function DashboardOverviewPage() {
                     {row.staff.length
                       ? ` · ${row.staff.map((s) => s.staff.name).join(", ")}`
                       : ""}
+                    {row.meetingProvider === "zoom"
+                      ? " · Zoom"
+                      : row.meetingProvider === "meet"
+                        ? " · Meet"
+                        : ""}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
+                  {row.meetingUrl ? (
+                    <a
+                      href={row.meetingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mb-1 block text-[11.5px] font-extrabold underline"
+                      style={{ color: "var(--ac)" }}
+                    >
+                      Join {row.meetingProvider === "zoom" ? "Zoom" : "Meet"}
+                    </a>
+                  ) : null}
                   <div className="text-[12.5px] font-extrabold">
                     {formatMoney(row.amountCents, row.currency)}
                   </div>
@@ -254,9 +273,27 @@ export default async function DashboardOverviewPage() {
                   <div className="truncate font-semibold">{row.customerName}</div>
                   <div className="truncate text-[12.5px]" style={{ color: "var(--mut)" }}>
                     {row.service.name}
+                    {row.meetingProvider === "zoom"
+                      ? " · Zoom"
+                      : row.meetingProvider === "meet"
+                        ? " · Meet"
+                        : ""}
                   </div>
                 </div>
-                <em className={`sw-tag ${statusClass(row.status)}`}>{row.status}</em>
+                <div className="shrink-0 text-right">
+                  {row.meetingUrl ? (
+                    <a
+                      href={row.meetingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mb-1 block text-[11.5px] font-extrabold underline"
+                      style={{ color: "var(--ac)" }}
+                    >
+                      Join
+                    </a>
+                  ) : null}
+                  <em className={`sw-tag ${statusClass(row.status)}`}>{row.status}</em>
+                </div>
               </div>
             ))
           ) : (

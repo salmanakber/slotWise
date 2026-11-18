@@ -1,7 +1,9 @@
 import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
+import { getPlatformSecrets } from "@/lib/platform-config";
 
 const WEBFLOW_API = "https://api.webflow.com/v2";
+const WEBFLOW_REVOKE = "https://webflow.com/oauth/revoke_authorization";
 
 async function wfFetch(path: string, accessToken: string, init?: RequestInit) {
   return fetch(`${WEBFLOW_API}${path}`, {
@@ -14,15 +16,26 @@ async function wfFetch(path: string, accessToken: string, init?: RequestInit) {
   });
 }
 
-/** Remove site-level custom code this app applied. */
+/**
+ * Marketplace rule: on uninstall, remove Custom Code the App applied at site + page
+ * level. Do NOT leave replacement / “tombstone” scripts — that fails review.
+ * @see https://developers.webflow.com/apps/docs/marketplace-guidelines
+ * @see https://developers.webflow.com/data/docs/working-with-custom-code
+ */
 export async function deleteSiteCustomCode(accessToken: string, webflowSiteId: string) {
-  const res = await wfFetch(`/sites/${webflowSiteId}/custom_code`, accessToken, {
+  const del = await wfFetch(`/sites/${webflowSiteId}/custom_code`, accessToken, {
     method: "DELETE",
   });
-  return res.ok || res.status === 404;
+  // Belt-and-suspenders: empty apply list so nothing from this App stays applied
+  const empty = await wfFetch(`/sites/${webflowSiteId}/custom_code`, accessToken, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scripts: [] }),
+  });
+  return (del.ok || del.status === 404) && (empty.ok || empty.status === 404 || empty.status === 400);
 }
 
-/** Remove page-level custom code this app applied on every page. */
+/** Remove page-level custom code this App applied on every page. */
 export async function deleteAllPageCustomCode(accessToken: string, webflowSiteId: string) {
   const pagesRes = await wfFetch(`/sites/${webflowSiteId}/pages`, accessToken);
   if (!pagesRes.ok) return 0;
@@ -37,16 +50,51 @@ export async function deleteAllPageCustomCode(accessToken: string, webflowSiteId
   return removed;
 }
 
+/** Strip every script this App applied (site + all pages). */
+export async function purgeAppCustomCode(accessToken: string, webflowSiteId: string) {
+  const pagesCleared = await deleteAllPageCustomCode(accessToken, webflowSiteId);
+  const siteCleared = await deleteSiteCustomCode(accessToken, webflowSiteId);
+  return { pagesCleared, siteCleared };
+}
+
 export async function pingWebflowSite(accessToken: string, webflowSiteId: string) {
   const res = await wfFetch(`/sites/${webflowSiteId}`, accessToken);
   return res.ok;
 }
 
+/** Revoke the OAuth token at Webflow after cleanup (Marketplace token hygiene). */
+export async function revokeWebflowAccessToken(accessToken: string) {
+  try {
+    const secrets = await getPlatformSecrets();
+    const clientId = secrets.webflowClientId || process.env.WEBFLOW_CLIENT_ID || "";
+    const clientSecret =
+      secrets.webflowClientSecret || process.env.WEBFLOW_CLIENT_SECRET || "";
+    if (!clientId || !clientSecret) return false;
+    const res = await fetch(WEBFLOW_REVOKE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        access_token: accessToken,
+      }),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("[webflow-uninstall] revoke", e);
+    return false;
+  }
+}
+
 /**
- * Full uninstall cleanup while we still have (or just lost) OAuth access.
- * - Strip App custom code from site + pages (when token works)
- * - Mark Slotwise site inactive so embeds collapse
- * - Delete stored Webflow token
+ * Compliant uninstall while OAuth still works:
+ * 1. Delete App-applied custom code (site + every page) — no leftover JS
+ * 2. Mark Slotwise site inactive (booking embed stops serving)
+ * 3. Revoke + delete stored Webflow token
+ *
+ * Designer canvas iframes are NOT Data API resources — remove them via Designer API
+ * before calling this (see designer-extension disconnect). Owner must Publish so
+ * custom-code removal goes live.
  */
 export async function uninstallSlotwiseFromWebflowSite(opts: {
   siteId: string;
@@ -66,14 +114,18 @@ export async function uninstallSlotwiseFromWebflowSite(opts: {
       : null);
 
   let customCodeCleared = false;
+  let pagesCleared = 0;
+  let tokenRevoked = false;
+
   if (access && site.webflowSiteId) {
     try {
-      customCodeCleared = await deleteSiteCustomCode(access, site.webflowSiteId);
-      await deleteAllPageCustomCode(access, site.webflowSiteId);
-      customCodeCleared = true;
+      const purged = await purgeAppCustomCode(access, site.webflowSiteId);
+      pagesCleared = purged.pagesCleared;
+      customCodeCleared = purged.siteCleared;
     } catch (e) {
       console.error("[webflow-uninstall] custom code", e);
     }
+    tokenRevoked = await revokeWebflowAccessToken(access);
   }
 
   await prisma.$transaction([
@@ -94,6 +146,8 @@ export async function uninstallSlotwiseFromWebflowSite(opts: {
           webflowSiteId: site.webflowSiteId,
           reason: opts.reason || "uninstall",
           customCodeCleared,
+          pagesCleared,
+          tokenRevoked,
         },
       },
     }),
@@ -104,12 +158,16 @@ export async function uninstallSlotwiseFromWebflowSite(opts: {
     publicKey: site.publicKey,
     webflowSiteId: site.webflowSiteId,
     customCodeCleared,
+    pagesCleared,
+    tokenRevoked,
   };
 }
 
 /**
- * If Webflow OAuth was revoked (app uninstalled), deactivate the Slotwise site
- * so leftover iframes/scripts stop showing a live booking widget.
+ * If Webflow OAuth was revoked (app uninstalled from Marketplace), deactivate
+ * Slotwise so leftover iframes stop serving a live booking widget.
+ * Note: without a valid token we cannot call Custom Code DELETE — Webflow removes
+ * App-applied scripts on the owner’s next publish after revoke.
  */
 export async function validateWebflowConnection(siteId: string, opts?: { force?: boolean }) {
   const site = await prisma.site.findUnique({
@@ -130,7 +188,7 @@ export async function validateWebflowConnection(siteId: string, opts?: { force?:
   }
 
   const checkedAt = site.webflowToken.lastValidatedAt?.getTime() || 0;
-  const stale = Date.now() - checkedAt > 6 * 60 * 60 * 1000; // 6h
+  const stale = Date.now() - checkedAt > 10 * 60 * 1000; // 10 minutes
   if (!opts?.force && !stale && site.status === "ACTIVE") {
     return { connected: true as const, reason: "cached" };
   }
@@ -148,6 +206,7 @@ export async function validateWebflowConnection(siteId: string, opts?: { force?:
 
   const alive = await pingWebflowSite(access, site.webflowSiteId).catch(() => false);
   if (!alive) {
+    // Token already dead — still try cleanup path (custom code may no-op) + deactivate
     await uninstallSlotwiseFromWebflowSite({
       siteId: site.id,
       accessToken: access,

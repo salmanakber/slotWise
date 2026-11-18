@@ -188,37 +188,42 @@ export function CalendarChat({
         }
       `}</style>
 
-      {/* Compact launcher — doesn’t steal vertical space from the calendar */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="sw-chat-fab absolute right-3 top-[4.85rem] z-[20] flex items-center gap-2 px-3 py-2 text-left"
+      {/* Compact strip directly above Continue — CTA stays fully visible below */}
+      <div
+        className="sw-chat-dock shrink-0 px-3 pb-1 pt-0.5"
         style={{
-          borderRadius: Math.max(radius, 999),
+          borderTop: `1px solid ${line}`,
           background: panel,
-          color: ink,
-          border: `1px solid ${line}`,
-          boxShadow: `0 10px 28px color-mix(in srgb, ${ink} 14%, transparent), 0 0 0 1px color-mix(in srgb, ${accent} 12%, transparent)`,
         }}
-        aria-haspopup="dialog"
-        aria-expanded={open}
       >
-        <span
-          className="grid h-7 w-7 shrink-0 place-items-center text-[12px] font-black"
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="sw-chat-fab flex w-full items-center gap-2 px-2 py-1.5 text-left"
           style={{
-            borderRadius: "50%",
-            background: `linear-gradient(145deg, ${accent}, color-mix(in srgb, ${accent} 55%, ${ink}))`,
-            color: onAccent,
+            borderRadius: Math.max(radius - 6, 10),
+            background: `color-mix(in srgb, ${accent} 8%, ${panel})`,
+            color: ink,
+            border: `1px solid color-mix(in srgb, ${accent} 28%, ${line})`,
           }}
-          aria-hidden
+          aria-haspopup="dialog"
+          aria-expanded={open}
         >
-          ✦
-        </span>
-        <span className="pr-0.5">
-          <span className="flex items-center gap-1.5">
-            <span className="text-[12px] font-extrabold tracking-tight">Ask AI</span>
+          <span
+            className="grid h-7 w-7 shrink-0 place-items-center text-[12px] font-black"
+            style={{
+              borderRadius: "50%",
+              background: accent,
+              color: onAccent,
+            }}
+            aria-hidden
+          >
+            ✦
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold tracking-tight">
+            Ask Chat
             <em
-              className="rounded px-1 py-px text-[8px] font-black uppercase tracking-[0.08em] not-italic"
+              className="ml-1.5 rounded px-1 py-px text-[8px] font-black uppercase tracking-[0.08em] not-italic"
               style={{
                 background: `color-mix(in srgb, ${accent} 16%, transparent)`,
                 color: accent,
@@ -227,8 +232,11 @@ export function CalendarChat({
               Beta
             </em>
           </span>
-        </span>
-      </button>
+          <span className="shrink-0 text-[11px] font-bold" style={{ color: accent }}>
+            Open
+          </span>
+        </button>
+      </div>
 
       {open ? (
         <div

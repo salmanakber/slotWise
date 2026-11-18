@@ -667,7 +667,7 @@ export function BookingWidget({
                         key={d}
                         type="button"
                         onClick={() => setDate(d)}
-                        className="grid h-[48px] w-[48px] shrink-0 gap-0 border text-center transition"
+                        className="flex h-[52px] w-[48px] shrink-0 flex-col items-center justify-center gap-0 border text-center transition"
                         style={{
                           borderRadius: Math.max(radius - 6, 10),
                           borderColor: on ? accent : line,
@@ -675,10 +675,25 @@ export function BookingWidget({
                           color: on ? onAccent : ink,
                         }}
                       >
-                        <span className="text-[9px] font-bold uppercase tracking-wide opacity-80">
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden
+                          style={{ opacity: on ? 0.9 : 0.55 }}
+                        >
+                          <rect x="3" y="4" width="18" height="18" rx="2" />
+                          <path d="M16 2v4M8 2v4M3 10h18" />
+                        </svg>
+                        <span className="text-[8.5px] font-bold uppercase leading-none tracking-wide opacity-80">
                           {weekday}
                         </span>
-                        <span className="text-[13px] font-extrabold leading-none">{dayNum}</span>
+                        <span className="text-[12.5px] font-extrabold leading-none">{dayNum}</span>
                       </button>
                     );
                   })}
@@ -709,7 +724,7 @@ export function BookingWidget({
                         type="button"
                         disabled={!s.available}
                         onClick={() => setSlotStart(s.start)}
-                        className="min-h-[32px] min-w-0 border px-1 py-1.5 text-[11.5px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
+                        className="flex min-h-[36px] min-w-0 flex-col items-center justify-center gap-0.5 border px-1 py-1.5 text-[11.5px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
                         style={{
                           borderRadius: Math.max(radius - 8, 8),
                           borderColor: on ? accent : line,
@@ -717,7 +732,22 @@ export function BookingWidget({
                           color: on ? onAccent : ink,
                         }}
                       >
-                        {s.label}
+                        <svg
+                          width="11"
+                          height="11"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden
+                          style={{ opacity: on ? 0.95 : 0.7 }}
+                        >
+                          <rect x="3" y="4" width="18" height="18" rx="2" />
+                          <path d="M16 2v4M8 2v4M3 10h18" />
+                        </svg>
+                        <span>{s.label}</span>
                       </button>
                     );
                   })

@@ -236,11 +236,23 @@ export async function fetchWebflowSites(accessToken: string) {
   }
 }
 
+/**
+ * Prefer Designer canvas embeds (no Custom Code). If Custom Code is required,
+ * register a hosted script with integrity — never an inline loader that injects
+ * <script> tags (Marketplace elevated-risk / past rejection pattern).
+ * @see https://developers.webflow.com/apps/docs/marketplace-guidelines
+ */
 export async function registerHostedWidgetScript(accessToken: string, siteId: string) {
   const appUrl = appOrigin();
-  const sourceCode = `(()=>{var s=document.createElement('script');s.src='${appUrl}/embed/widget.js';s.async=true;s.dataset.slotwise='1';document.body.appendChild(s);})();`;
+  const hostedLocation = `${appUrl}/embed/widget.js`;
 
-  const res = await fetch(`${WEBFLOW_API}/sites/${siteId}/registered_scripts/inline`, {
+  const fileRes = await fetch(hostedLocation);
+  if (!fileRes.ok) throw new Error("Could not fetch widget.js for integrity hash");
+  const body = Buffer.from(await fileRes.arrayBuffer());
+  const { createHash } = await import("crypto");
+  const integrityHash = `sha256-${createHash("sha256").update(body).digest("base64")}`;
+
+  const res = await fetch(`${WEBFLOW_API}/sites/${siteId}/registered_scripts/hosted`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -248,10 +260,11 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
       accept: "application/json",
     },
     body: JSON.stringify({
-      sourceCode,
-      version: "0.1.0",
-      displayName: "Slotwise Widget",
+      hostedLocation,
+      integrityHash,
       canCopy: false,
+      version: "0.2.0",
+      displayName: "Slotwise Widget",
     }),
   });
 
@@ -262,7 +275,8 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
   return res.json();
 }
 
+/** Manual snippet — avoid for Marketplace installs; use Designer “Add booking” instead. */
 export function widgetInstallSnippet(publicKey: string) {
   const appUrl = appOrigin();
-  return `<div data-slotwise-widget data-site="${publicKey}"></div>\n<script src="${appUrl}/embed/widget.js" async></script>`;
+  return `<!-- Prefer Designer canvas embed. Manual paste cannot be removed by the App on uninstall. -->\n<div data-slotwise-widget data-site="${publicKey}"></div>`;
 }

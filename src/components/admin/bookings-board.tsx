@@ -19,6 +19,8 @@ export type BookingRow = {
   depositCents: number;
   currency: string;
   stripePaymentId: string | null;
+  meetingUrl?: string | null;
+  meetingProvider?: string | null;
   cancelledAt: string | null;
   createdAt: string;
   service: { name: string; durationMinutes?: number };
@@ -209,7 +211,7 @@ export function BookingsBoard({
                 className="border-b border-[var(--ln)] text-[11.5px] font-bold uppercase tracking-[0.05em]"
                 style={{ color: "var(--mut)" }}
               >
-                {["When", "Customer", "Service", "Staff", "Amount", "Status", ""].map((h) => (
+                {["When", "Customer", "Service", "Staff", "Amount", "Status", "Meeting", ""].map((h) => (
                   <th key={h || "actions"} className="px-4 py-3 font-bold">
                     {h}
                   </th>
@@ -219,7 +221,7 @@ export function BookingsBoard({
             <tbody>
               {pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm" style={{ color: "var(--mut)" }}>
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm" style={{ color: "var(--mut)" }}>
                     No bookings match this view. Share your booking link to get appointments in.
                   </td>
                 </tr>
@@ -266,6 +268,24 @@ export function BookingsBoard({
                       </td>
                       <td className="px-4 py-3.5 align-middle">
                         <em className={`sw-tag ${statusClass(b.status)}`}>{b.status}</em>
+                      </td>
+                      <td className="px-4 py-3.5 align-middle">
+                        {b.meetingUrl ? (
+                          <a
+                            href={b.meetingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-lg border border-[var(--ln)] px-2 py-1 text-[11.5px] font-extrabold hover:brightness-[0.98]"
+                            style={{ color: "var(--ac)" }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {b.meetingProvider === "zoom" ? "Zoom" : "Meet"}
+                          </a>
+                        ) : (
+                          <span className="text-[12px]" style={{ color: "var(--mut)" }}>
+                            —
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 align-middle text-right">
                         <button
@@ -434,6 +454,24 @@ function BookingDrawer({
               <DetailRow label="Location" value={b.location?.name || "—"} />
             </DetailBlock>
 
+            <DetailBlock title="Meeting tools">
+              <DetailRow
+                label="Provider"
+                value={
+                  b.meetingProvider === "zoom"
+                    ? "Zoom"
+                    : b.meetingProvider === "meet"
+                      ? "Google Meet"
+                      : "Not added yet"
+                }
+              />
+              <DetailRow
+                label="Join link"
+                value={b.meetingUrl || "Customer can add Zoom or Meet after booking"}
+                href={b.meetingUrl || undefined}
+              />
+            </DetailBlock>
+
             <DetailBlock title="Payment">
               <DetailRow label="Amount" value={formatMoney(b.amountCents, b.currency)} />
               <DetailRow
@@ -455,8 +493,18 @@ function BookingDrawer({
         </div>
 
         <footer className="border-t border-[var(--ln)] px-5 py-4">
-          <div className="flex gap-2">
-            <a className="sw-btn sw-btn-primary flex-1 text-center" href={`mailto:${b.customerEmail}`}>
+          <div className="flex flex-wrap gap-2">
+            {b.meetingUrl ? (
+              <a
+                className="sw-btn sw-btn-primary flex-1 text-center"
+                href={b.meetingUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open {b.meetingProvider === "zoom" ? "Zoom" : "Meet"}
+              </a>
+            ) : null}
+            <a className="sw-btn flex-1 text-center" href={`mailto:${b.customerEmail}`}>
               Email customer
             </a>
             <button type="button" className="sw-btn flex-1" onClick={onClose}>

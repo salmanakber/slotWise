@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createMeetingLink, listMeetingTools } from "@/lib/meeting-tools";
+import { createOwnerNotification } from "@/lib/owner-notifications";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -82,7 +83,20 @@ export async function POST(
         meetingUrl: created.meetingUrl,
         meetingProvider: created.provider,
       },
-      select: { meetingUrl: true, meetingProvider: true },
+      select: { meetingUrl: true, meetingProvider: true, reference: true },
+    });
+
+    await createOwnerNotification({
+      siteId: booking.siteId,
+      type: "meeting",
+      title: `${created.provider === "zoom" ? "Zoom" : "Google Meet"} added`,
+      body: `${booking.customerName} added a meeting link to ${booking.reference}.`,
+      href: "/dashboard/bookings",
+      meta: {
+        bookingId: booking.id,
+        meetingProvider: created.provider,
+        meetingUrl: created.meetingUrl,
+      },
     });
 
     return NextResponse.json({

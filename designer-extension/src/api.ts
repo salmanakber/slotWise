@@ -4,6 +4,35 @@ const APP_URL =
 
 export { APP_URL };
 
+export type InboxItem = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  href: string | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export function getInbox(params: { webflowSiteId?: string | null; publicKey?: string | null }) {
+  const qs = new URLSearchParams();
+  if (params.webflowSiteId) qs.set("webflowSiteId", params.webflowSiteId);
+  if (params.publicKey) qs.set("publicKey", params.publicKey);
+  return req<{ unread: number; items: InboxItem[] }>(`/api/designer/inbox?${qs}`);
+}
+
+export function markInboxRead(body: {
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+  all?: boolean;
+  ids?: string[];
+}) {
+  return req<{ unread: number; items: InboxItem[] }>("/api/designer/inbox", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
 export type Bootstrap = {
   uninstalled?: boolean;
   reason?: string;
@@ -65,6 +94,8 @@ export type Bootstrap = {
     depositCents?: number;
     currency?: string;
     status: string;
+    meetingUrl?: string | null;
+    meetingProvider?: string | null;
   }>;
 };
 

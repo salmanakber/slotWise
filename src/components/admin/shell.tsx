@@ -20,6 +20,7 @@ export type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
+  badge?: number;
 };
 
 function navActive(pathname: string, href: string) {
@@ -207,6 +208,18 @@ export function AdminShell({
                   {item.icon}
                 </span>
                 <span className="sw-nav-label">{item.label}</span>
+                {item.badge && item.badge > 0 ? (
+                  <span
+                    className="ml-auto inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-black leading-none lg:ml-auto"
+                    style={{
+                      background: "color-mix(in srgb, var(--ac) 22%, transparent)",
+                      color: "var(--at, var(--ac))",
+                    }}
+                    aria-label={`${item.badge} unread`}
+                  >
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
