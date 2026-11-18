@@ -154,7 +154,7 @@ function rulesAnswer(input: {
     };
   }
 
-  let intro = weekendHint(input.question)
+  const intro = weekendHint(input.question)
     ? `This weekend, try:`
     : `Good matches:`;
 

@@ -163,7 +163,7 @@ export function BookingWidget({
         },
       };
     });
-  }, [brandingPreview, site?.publicKey]);
+  }, [brandingPreview, site]);
 
   useEffect(() => {
     if (!site || !serviceId || !date) return;
@@ -315,7 +315,6 @@ export function BookingWidget({
   const stepIndex = steps.findIndex((s) => s.key === step);
 
   const isFloating = branding?.layout === "FLOATING" && !embed;
-  const showPanel = !isFloating || floatingOpen;
 
   const panelNode = (
     <div

@@ -8,7 +8,6 @@ import {
   normalizeIntegrationProvider,
   platformKeysConfigured,
 } from "@/lib/integrations-oauth";
-import { prisma } from "@/lib/prisma";
 import { requireDemoSite } from "@/lib/site-admin";
 
 export const dynamic = "force-dynamic";

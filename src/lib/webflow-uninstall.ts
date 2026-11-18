@@ -59,7 +59,7 @@ export async function uninstallSlotwiseFromWebflowSite(opts: {
   });
   if (!site) return { ok: false as const, error: "Site not found" };
 
-  let access =
+  const access =
     opts.accessToken ||
     (site.webflowToken?.accessTokenEncrypted
       ? decryptSecret(site.webflowToken.accessTokenEncrypted)
@@ -135,10 +135,13 @@ export async function validateWebflowConnection(siteId: string, opts?: { force?:
     return { connected: true as const, reason: "cached" };
   }
 
-  let access: string;
+  let access: string | null = null;
   try {
     access = decryptSecret(site.webflowToken.accessTokenEncrypted);
   } catch {
+    access = null;
+  }
+  if (!access) {
     await uninstallSlotwiseFromWebflowSite({ siteId: site.id, reason: "bad_token" });
     return { connected: false as const, reason: "bad_token" };
   }
