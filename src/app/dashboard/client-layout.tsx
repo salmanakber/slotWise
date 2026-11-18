@@ -21,7 +21,7 @@ import { UsageQuota } from "@/components/admin/usage-quota";
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: <LayoutDashboard size={16} strokeWidth={2} /> },
   { href: "/dashboard/bookings", label: "Bookings", icon: <CalendarDays size={16} strokeWidth={2} /> },
-  { href: "/dashboard/services", label: "Services", icon: <ListChecks size={16} strokeWidth={2} /> },
+  { href: "/dashboard/services", label: "Events", icon: <ListChecks size={16} strokeWidth={2} /> },
   { href: "/dashboard/availability", label: "Availability", icon: <Clock3 size={16} strokeWidth={2} /> },
   { href: "/dashboard/notifications", label: "Notifications", icon: <Bell size={16} strokeWidth={2} /> },
   { href: "/dashboard/payments", label: "Payments", icon: <CreditCard size={16} strokeWidth={2} /> },
@@ -33,7 +33,7 @@ const NAV = [
 const TITLES: Record<string, [string, string]> = {
   "/dashboard": ["Overview", "Bookings, revenue and what’s coming up"],
   "/dashboard/bookings": ["Bookings", "Customer details, deposits and status"],
-  "/dashboard/services": ["Services and rules", "What customers can book, and how"],
+  "/dashboard/services": ["Events", "Edit events, pricing, and performance reports"],
   "/dashboard/availability": ["Availability", "Working hours and time off"],
   "/dashboard/notifications": ["Notifications", "Reminders by email, SMS and WhatsApp"],
   "/dashboard/payments": ["Payments", "Deposits, fees and refunds"],

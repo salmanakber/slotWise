@@ -35,9 +35,15 @@ export function formatMoney(amountMinor: number, currency = "USD") {
   }).format(value);
 }
 
-/** Price label for services/events — free offerings never show "$0". */
+/** Price label for admin / owner UIs — free offerings never show "$0". */
 export function formatPrice(cents: number, currency = "USD") {
   if (!cents || cents <= 0) return "Free";
+  return formatMoney(cents, currency);
+}
+
+/** Customer-facing price — returns null when free (caller should hide the label). */
+export function formatCustomerPrice(cents: number, currency = "USD"): string | null {
+  if (!cents || cents <= 0) return null;
   return formatMoney(cents, currency);
 }
 

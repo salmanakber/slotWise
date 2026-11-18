@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+const REVENUE = ["PAID", "DEPOSIT", "CONFIRMED", "COMPLETED"] as const;
+
 async function requireUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
@@ -17,7 +19,67 @@ export async function GET() {
   if (!(await requireUser())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const site = await requireDemoSite();
-    return NextResponse.json({ services: site.services });
+    const services = await prisma.service.findMany({
+      where: { siteId: site.id },
+      orderBy: { sortOrder: "asc" },
+    });
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const withStats = await Promise.all(
+      services.map(async (s) => {
+        const [bookingsAll, bookingsMonth, revenueAll, revenueMonth, upcoming] = await Promise.all([
+          prisma.booking.count({
+            where: { siteId: site.id, serviceId: s.id, status: { not: "CANCELLED" } },
+          }),
+          prisma.booking.count({
+            where: {
+              siteId: site.id,
+              serviceId: s.id,
+              createdAt: { gte: monthStart },
+              status: { not: "CANCELLED" },
+            },
+          }),
+          prisma.booking.aggregate({
+            where: { siteId: site.id, serviceId: s.id, status: { in: [...REVENUE] } },
+            _sum: { amountCents: true, depositCents: true },
+          }),
+          prisma.booking.aggregate({
+            where: {
+              siteId: site.id,
+              serviceId: s.id,
+              status: { in: [...REVENUE] },
+              createdAt: { gte: monthStart },
+            },
+            _sum: { amountCents: true },
+          }),
+          prisma.booking.count({
+            where: {
+              siteId: site.id,
+              serviceId: s.id,
+              startsAt: { gte: now },
+              status: { in: ["PENDING", "CONFIRMED", "DEPOSIT", "PAID"] },
+            },
+          }),
+        ]);
+        return {
+          ...s,
+          stats: {
+            bookingsAll,
+            bookingsMonth,
+            upcoming,
+            revenueCents: revenueAll._sum.amountCents ?? 0,
+            depositCents: revenueAll._sum.depositCents ?? 0,
+            revenueMonthCents: revenueMonth._sum.amountCents ?? 0,
+          },
+        };
+      }),
+    );
+
+    return NextResponse.json({
+      currency: site.currency,
+      services: withStats,
+    });
   } catch {
     return NextResponse.json({ error: "Site unavailable" }, { status: 503 });
   }

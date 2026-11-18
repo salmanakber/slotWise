@@ -448,7 +448,7 @@ export async function boot(root: HTMLElement) {
             (s) => `<article class="home-tile">
             <i class="dot" style="background:${s.color || "var(--ac)"}"></i>
             <b>${escapeHtml(s.name)}</b>
-            <small>${s.durationMin} min · ${money(s.priceCents, state.bootstrap?.site.currency)}</small>
+            <small>${s.durationMin} min${s.priceCents > 0 ? ` · ${money(s.priceCents, state.bootstrap?.site.currency)}` : ""}</small>
           </article>`,
           )
           .join("")}
@@ -579,8 +579,11 @@ export async function boot(root: HTMLElement) {
       </section>`;
     }
     return `<section class="card">
-      ${cardTitle(icons.calendar, "Events")}
-      <p class="lead">Live in your booking widget.</p>
+      <div class="card-h-row">
+        ${cardTitle(icons.calendar, "Events")}
+        <a class="btn btn-sm btn-soft" href="${api.APP_URL}/dashboard/services" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Full report")}</a>
+      </div>
+      <p class="lead">Edit events & revenue reports live in the dashboard.</p>
       <div class="list">
         ${state.services
           .map(
@@ -590,12 +593,14 @@ export async function boot(root: HTMLElement) {
               <b>${escapeHtml(s.name)}${s.featured ? '<span class="pill">Featured</span>' : ""}${!s.active ? '<span class="pill">Off</span>' : ""}</b>
               <small>${s.durationMin} min · ${escapeHtml(s.category || s.locationType)}</small>
             </div>
-            <div class="price">${money(s.priceCents, state.bootstrap?.site.currency)}</div>
+            <div class="price">${s.priceCents > 0 ? money(s.priceCents, state.bootstrap?.site.currency) : ""}</div>
+            <a class="btn btn-sm" href="${api.APP_URL}/dashboard/services" target="_blank" rel="noreferrer" title="Edit & report">Report</a>
             <button type="button" class="btn btn-icon btn-ghost" data-del="${s.id}" title="Delete"><span class="ico">${icons.trash}</span></button>
           </div>`,
           )
           .join("")}
       </div>
+      <a class="btn btn-primary btn-block" style="margin-top:8px" href="${api.APP_URL}/dashboard/services" target="_blank" rel="noreferrer">${iconLabel(icons.grid, "Open dashboard events & reports")}</a>
     </section>`;
   }
 

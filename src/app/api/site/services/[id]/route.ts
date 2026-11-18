@@ -10,8 +10,13 @@ const patchSchema = z.object({
   description: z.string().max(500).nullable().optional(),
   durationMin: z.number().int().min(5).max(24 * 60).optional(),
   priceCents: z.number().int().min(0).optional(),
+  bufferBeforeMin: z.number().int().min(0).max(240).optional(),
   bufferAfterMin: z.number().int().min(0).max(240).optional(),
   minNoticeMin: z.number().int().min(0).max(10080).optional(),
+  capacity: z.number().int().min(1).max(500).optional(),
+  category: z.string().max(80).nullable().optional(),
+  color: z.string().max(20).nullable().optional(),
+  featured: z.boolean().optional(),
   active: z.boolean().optional(),
 });
 
