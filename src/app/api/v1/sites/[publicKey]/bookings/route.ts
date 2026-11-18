@@ -48,6 +48,8 @@ export async function POST(
         currency: booking.currency,
         service: booking.service.name,
         checkoutUrl: booking.checkoutUrl ?? null,
+        requiresPayment: Boolean(booking.requiresPayment),
+        chargeCents: booking.chargeCents ?? booking.depositCents ?? 0,
         meetingUrl: booking.meetingUrl ?? null,
         meetingProvider: booking.meetingProvider ?? null,
         meetingTools: booking.meetingTools ?? [],

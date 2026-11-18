@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyBookingPaid } from "@/lib/booking/notify-paid";
 import { prisma } from "@/lib/prisma";
 import { getStripe, getStripeWebhookSecret } from "@/lib/stripe";
 
@@ -26,6 +27,10 @@ export async function POST(request: Request) {
       const pi = event.data.object;
       const bookingId = pi.metadata?.bookingId;
       if (bookingId) {
+        const before = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          select: { status: true },
+        });
         await prisma.booking.update({
           where: { id: bookingId },
           data: {
@@ -40,6 +45,11 @@ export async function POST(request: Request) {
             meta: { bookingId, paymentIntent: pi.id },
           },
         });
+        if (before?.status !== "PAID") {
+          await notifyBookingPaid(bookingId).catch((e) =>
+            console.error("notifyBookingPaid", e),
+          );
+        }
       }
     }
 
@@ -83,12 +93,17 @@ export async function POST(request: Request) {
         });
       }
       if (session.mode === "payment" && session.metadata?.bookingId) {
+        const bookingId = session.metadata.bookingId;
         const pi =
           typeof session.payment_intent === "string"
             ? session.payment_intent
             : session.payment_intent?.id || null;
+        const before = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          select: { status: true },
+        });
         await prisma.booking.update({
-          where: { id: session.metadata.bookingId },
+          where: { id: bookingId },
           data: {
             status: "PAID",
             ...(pi ? { stripePaymentId: pi } : {}),
@@ -98,8 +113,29 @@ export async function POST(request: Request) {
           data: {
             scope: "SITE",
             action: "booking.paid",
-            meta: { bookingId: session.metadata.bookingId, checkout: true },
+            meta: { bookingId, checkout: true },
           },
+        });
+        if (before?.status !== "PAID") {
+          await notifyBookingPaid(bookingId).catch((e) =>
+            console.error("notifyBookingPaid", e),
+          );
+        }
+      }
+    }
+
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object as {
+        metadata?: { bookingId?: string };
+        mode?: string;
+      };
+      if (session.mode === "payment" && session.metadata?.bookingId) {
+        await prisma.booking.updateMany({
+          where: {
+            id: session.metadata.bookingId,
+            status: "PENDING",
+          },
+          data: { status: "CANCELLED" },
         });
       }
     }

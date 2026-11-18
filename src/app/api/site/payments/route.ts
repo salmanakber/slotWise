@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { requireDemoSite } from "@/lib/site-admin";
 import { prisma } from "@/lib/prisma";
 import { isSupportedCurrency } from "@/lib/currencies";
+import { getStripe } from "@/lib/stripe";
 
 const bodySchema = z.object({
   paymentMode: z.enum(["FULL", "DEPOSIT", "PAY_ON_SITE"]).optional(),
@@ -25,7 +26,32 @@ export async function GET() {
       const created = await prisma.stripeAccount.create({ data: { siteId: site.id } });
       return NextResponse.json({ ...created, currency: site.currency });
     }
-    return NextResponse.json({ ...site.stripeAccount, currency: site.currency });
+
+    // Refresh Connect readiness so bookings aren't blocked by a stale chargesEnabled flag
+    let account = site.stripeAccount;
+    if (account.stripeAccountId) {
+      try {
+        const stripe = await getStripe();
+        if (stripe) {
+          const remote = await stripe.accounts.retrieve(account.stripeAccountId);
+          const chargesEnabled = Boolean(remote.charges_enabled);
+          const payoutsEnabled = Boolean(remote.payouts_enabled);
+          if (
+            chargesEnabled !== account.chargesEnabled ||
+            payoutsEnabled !== account.payoutsEnabled
+          ) {
+            account = await prisma.stripeAccount.update({
+              where: { id: account.id },
+              data: { chargesEnabled, payoutsEnabled },
+            });
+          }
+        }
+      } catch (e) {
+        console.error("[payments:stripe-refresh]", e);
+      }
+    }
+
+    return NextResponse.json({ ...account, currency: site.currency });
   } catch {
     return NextResponse.json({ error: "Unavailable" }, { status: 503 });
   }

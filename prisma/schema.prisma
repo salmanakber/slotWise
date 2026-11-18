@@ -253,7 +253,8 @@ model StripeAccount {
   stripeAccountId    String?  @unique
   chargesEnabled     Boolean  @default(false)
   payoutsEnabled     Boolean  @default(false)
-  paymentMode        PaymentMode @default(DEPOSIT)
+  /** FULL = charge event price online; DEPOSIT = percent online; PAY_ON_SITE = no card online. */
+  paymentMode        PaymentMode @default(FULL)
   depositPercent     Int      @default(30)
   cancelFreeHours    Int      @default(24)
   noShowFeePercent   Int      @default(25)

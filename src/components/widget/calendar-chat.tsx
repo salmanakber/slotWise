@@ -10,6 +10,7 @@ type SuggestedSlot = {
   start: string;
   end: string;
   label: string;
+  priceCents?: number;
 };
 
 type ChatMsg = {
@@ -222,6 +223,18 @@ export function CalendarChat({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Booking failed");
+      if (typeof data.checkoutUrl === "string" && data.checkoutUrl) {
+        const target = typeof window !== "undefined" ? window.top || window : window;
+        try {
+          target.location.assign(data.checkoutUrl);
+        } catch {
+          window.location.assign(data.checkoutUrl);
+        }
+        return;
+      }
+      if (data.requiresPayment) {
+        throw new Error("Payment could not be started. Please try again.");
+      }
       setMsgs((m) => [
         ...m,
         {
@@ -531,7 +544,9 @@ export function CalendarChat({
                     className="flex-1 px-3 py-2 text-[12.5px] font-extrabold disabled:opacity-45"
                     style={{ borderRadius: r, background: accent, color: onAccent }}
                   >
-                    Confirm booking
+                    {pendingSlot.priceCents && pendingSlot.priceCents > 0
+                      ? `Pay ${formatCustomerPrice(pendingSlot.priceCents, currency) || ""}`
+                      : "Confirm booking"}
                   </button>
                 </div>
                 <button

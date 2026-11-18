@@ -63,9 +63,13 @@ export async function POST(
         reference: booking.reference,
         manageToken: booking.manageToken,
         startsAt: booking.startsAt.toISOString(),
+        checkoutUrl: booking.checkoutUrl ?? null,
+        requiresPayment: Boolean(booking.requiresPayment),
         meetingUrl: booking.meetingUrl ?? null,
         meetingProvider: booking.meetingProvider ?? null,
-        reply: `You’re booked — reference ${booking.reference}. Check your email for details.`,
+        reply: booking.checkoutUrl
+          ? `Almost done — complete payment to confirm ${booking.reference}.`
+          : `You’re booked — reference ${booking.reference}. Check your email for details.`,
       });
     }
 

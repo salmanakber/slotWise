@@ -191,11 +191,16 @@ function PaymentsClient() {
               setForm({ ...form, paymentMode: e.target.value as Payments["paymentMode"] })
             }
           >
-            <option value="FULL">Full amount</option>
-            <option value="DEPOSIT">Deposit</option>
-            <option value="PAY_ON_SITE">Pay on site</option>
+            <option value="FULL">Full amount — charge event price</option>
+            <option value="DEPOSIT">Deposit % only</option>
+            <option value="PAY_ON_SITE">Pay on site (no online card)</option>
           </select>
         </Row>
+        <p className="mb-2 text-[12px]" style={{ color: "var(--mut)" }}>
+          Paid events open Stripe Checkout before the booking is confirmed. Use{" "}
+          <strong>Full amount</strong> to charge the event price; Deposit only if you want a partial
+          prepayment.
+        </p>
         <Row label="Deposit amount">
           <div className="flex items-center gap-2">
             <input

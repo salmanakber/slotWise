@@ -45,8 +45,11 @@ export async function GET(
       })),
       staff: site.staff.map((s) => ({ id: s.id, name: s.name })),
       payment: {
-        mode: site.stripeAccount?.paymentMode ?? "DEPOSIT",
+        mode: site.stripeAccount?.paymentMode ?? "FULL",
         depositPercent: site.stripeAccount?.depositPercent ?? 30,
+        chargesEnabled: Boolean(
+          site.stripeAccount?.stripeAccountId && site.stripeAccount?.chargesEnabled,
+        ),
       },
     });
   } catch (e) {

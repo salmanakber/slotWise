@@ -9,10 +9,13 @@ export const dynamic = "force-dynamic";
 
 export default async function ManageBookingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ paid?: string; pay?: string }>;
 }) {
   const { token } = await params;
+  const qs = await searchParams;
   let booking = null;
   try {
     booking = await prisma.booking.findUnique({
@@ -24,7 +27,18 @@ export default async function ManageBookingPage({
   }
   if (!booking) notFound();
 
+  // Customer abandoned Stripe Checkout — free the slot
+  if (qs.pay === "canceled" && booking.status === "PENDING") {
+    booking = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: "CANCELLED" },
+      include: { service: true, site: true, staff: { include: { staff: true } } },
+    });
+  }
+
   const cancelled = booking.status === "CANCELLED";
+  const paidBanner = qs.paid === "1" || booking.status === "PAID";
+  const awaitingPay = booking.status === "PENDING";
 
   return (
     <main className="mx-auto min-h-screen max-w-lg px-4 py-12">
@@ -33,8 +47,24 @@ export default async function ManageBookingPage({
           {booking.site.name}
         </p>
         <h1 className="m-0 text-2xl font-extrabold">
-          {cancelled ? "Booking cancelled" : "Your booking"}
+          {cancelled
+            ? "Booking cancelled"
+            : paidBanner
+              ? "You’re booked"
+              : awaitingPay
+                ? "Payment required"
+                : "Your booking"}
         </h1>
+        {paidBanner && !cancelled ? (
+          <p className="mt-2 text-[13px] font-semibold" style={{ color: "var(--ok, #178a58)" }}>
+            Payment received — you’re all set.
+          </p>
+        ) : null}
+        {awaitingPay && !cancelled ? (
+          <p className="mt-2 text-[13px]" style={{ color: "var(--mut)" }}>
+            This booking is held until payment completes. If you closed Stripe, book again to pay.
+          </p>
+        ) : null}
         <div className="mt-4 grid gap-2 text-sm">
           <Row label="Reference" value={booking.reference} />
           <Row label="Service" value={booking.service.name} />

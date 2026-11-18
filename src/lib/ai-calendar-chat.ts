@@ -12,6 +12,7 @@ export type SuggestedSlot = {
   start: string;
   end: string;
   label: string;
+  priceCents?: number;
 };
 
 export type CalendarChatAnswer = {
@@ -239,6 +240,7 @@ async function lookupConcreteSlots(opts: {
           start: s.start.toISOString(),
           end: s.end.toISOString(),
           label: s.label,
+          priceCents: ev.priceCents,
         });
       }
     }

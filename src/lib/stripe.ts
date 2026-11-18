@@ -196,11 +196,10 @@ export async function createBookingCheckoutSession(input: {
   const applicationFeeAmount = feePercent > 0 ? Math.round((input.amountCents * feePercent) / 100) : 0;
   const currency = input.currency.toLowerCase();
 
-  return client.checkout.sessions.create(
+  const session = await client.checkout.sessions.create(
     {
       mode: "payment",
       customer_email: input.customerEmail,
-      managed_payments: { enabled: false },
       line_items: [
         {
           quantity: 1,
@@ -210,7 +209,6 @@ export async function createBookingCheckoutSession(input: {
             product_data: {
               name: input.serviceName,
               description: `Booking ${input.bookingReference}`,
-              tax_code: "txcd_00000000",
             },
           },
         },
@@ -228,10 +226,15 @@ export async function createBookingCheckoutSession(input: {
         },
         ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
       },
-    } as Stripe.Checkout.SessionCreateParams,
+    },
     {
       stripeAccount: input.connectedAccountId,
       idempotencyKey: `booking_checkout_${input.bookingId}`,
     },
   );
+
+  if (!session.url) {
+    throw new Error("Stripe Checkout did not return a payment URL");
+  }
+  return session;
 }

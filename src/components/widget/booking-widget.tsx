@@ -39,7 +39,7 @@ type SitePayload = {
   };
   services: Service[];
   staff: Staff[];
-  payment: { mode: string; depositPercent: number };
+  payment: { mode: string; depositPercent: number; chargesEnabled?: boolean };
 };
 
 type Slot = {
@@ -237,10 +237,25 @@ export function BookingWidget({
   const mut = `color-mix(in srgb, ${ink} 58%, transparent)`;
   const business = branding?.businessName || site?.name || "Book";
 
+  const payCents = useMemo(() => {
+    if (!service || !site || service.priceCents <= 0) return 0;
+    const mode = site.payment.mode || "FULL";
+    if (mode === "PAY_ON_SITE") return 0;
+    if (mode === "FULL") return service.priceCents;
+    const pct = site.payment.depositPercent ?? 30;
+    return Math.max(1, Math.round((service.priceCents * pct) / 100));
+  }, [service, site]);
+
+  const payLabel = useMemo(() => {
+    if (!site || payCents <= 0) return null;
+    return formatCustomerPrice(payCents, site.currency);
+  }, [payCents, site]);
+
   async function confirm() {
     if (!service || !slotStart) return;
     setSubmitting(true);
     setError(null);
+    let redirecting = false;
     try {
       const res = await fetch(`/api/v1/sites/${publicKey}/bookings`, {
         method: "POST",
@@ -256,10 +271,24 @@ export function BookingWidget({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Booking failed");
-      if (typeof data.checkoutUrl === "string" && data.checkoutUrl) {
-        window.location.assign(data.checkoutUrl);
+
+      const checkoutUrl =
+        typeof data.checkoutUrl === "string" && data.checkoutUrl ? data.checkoutUrl : null;
+      if (checkoutUrl) {
+        redirecting = true;
+        // Break out of Webflow / embed iframes so Stripe Checkout loads full-page
+        const target = typeof window !== "undefined" ? window.top || window : window;
+        try {
+          target.location.assign(checkoutUrl);
+        } catch {
+          window.location.assign(checkoutUrl);
+        }
         return;
       }
+      if (data.requiresPayment) {
+        throw new Error("Payment could not be started. Please try again.");
+      }
+
       setMeetingSkipped(false);
       setMeetingError(null);
       setConfirmation({
@@ -274,7 +303,7 @@ export function BookingWidget({
     } catch (e) {
       setError(e instanceof Error ? e.message : "Booking failed");
     } finally {
-      setSubmitting(false);
+      if (!redirecting) setSubmitting(false);
     }
   }
 
@@ -446,7 +475,13 @@ export function BookingWidget({
             <BrandLoader
               style={branding?.loaderStyle ?? "PULSE"}
               accent={accent}
-              label={submitting ? "Confirming booking…" : "Finding open slots…"}
+              label={
+                submitting
+                  ? payCents > 0
+                    ? "Opening secure payment…"
+                    : "Confirming booking…"
+                  : "Finding open slots…"
+              }
             />
           </div>
         ) : null}
@@ -831,11 +866,13 @@ export function BookingWidget({
                     })
                   : ""}
                 {service && service.priceCents > 0
-                  ? site.payment.mode === "DEPOSIT"
-                    ? ` · ${site.payment.depositPercent}% deposit`
-                    : site.payment.mode === "FULL"
-                      ? " · Pay in full"
-                      : " · Pay on site"
+                  ? site.payment.mode === "PAY_ON_SITE"
+                    ? " · Pay on site"
+                    : payLabel
+                      ? site.payment.mode === "DEPOSIT"
+                        ? ` · Pay ${payLabel} deposit now`
+                        : ` · Pay ${payLabel} now`
+                      : ""
                   : ""}
               </div>
             </div>
@@ -1005,7 +1042,7 @@ export function BookingWidget({
                 disabled={!name || !email || submitting}
                 onClick={confirm}
               >
-                Confirm
+                {payLabel ? `Pay ${payLabel}` : "Confirm booking"}
               </button>
             </div>
           )}
