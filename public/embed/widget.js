@@ -11,7 +11,7 @@
     css.textContent =
       ".slotwise-host{position:relative;display:block;width:100%;max-width:100%;min-width:0;" +
       "box-sizing:border-box;isolation:isolate;overflow:hidden}" +
-      ".slotwise-frame{display:block;width:100%;max-width:26.5rem;margin:0 auto;border:0;border-radius:16px;" +
+      ".slotwise-frame{display:block;width:100%;max-width:29.2rem;margin:0 auto;border:0;border-radius:16px;" +
       "background:transparent;min-height:0;height:0;overflow:hidden;" +
       "box-shadow:0 14px 40px rgba(15,27,45,.1);transition:min-height .25s ease,height .25s ease}" +
       ".slotwise-skel{position:absolute;inset:0;border-radius:16px;overflow:hidden;" +

@@ -50,10 +50,10 @@ export default async function BookPage({
 
   if (isEmbed) {
     return (
-      <main className="sw-embed-shell box-border w-full max-w-full overflow-x-hidden bg-transparent p-0">
+      <main className="sw-embed-shell box-border w-full max-w-full overflow-x-hidden bg-transparent px-0 pb-0 pt-2.5">
         <style>{`
           html, body { margin: 0; padding: 0; overflow-x: hidden; background: transparent; }
-          .sw-embed-shell { width: 100%; max-width: 100%; min-width: 0; }
+          .sw-embed-shell { width: 100%; max-width: 100%; min-width: 0; padding-top: 10px; box-sizing: border-box; }
         `}</style>
         <BookingWidget publicKey={publicKey} embed />
       </main>
@@ -79,7 +79,7 @@ export default async function BookPage({
             "radial-gradient(70% 50% at 50% 0%, rgba(245,160,0,.12), transparent 60%), linear-gradient(180deg, #f7f8fb 0%, #eef1f6 100%)",
         }}
       />
-      <div className="mx-auto w-full max-w-[520px]">
+      <div className="mx-auto w-full max-w-[572px]">
         <BookingWidget publicKey={publicKey} />
         <p className="mt-8 text-center text-[11px]" style={{ color: "var(--mut)" }}>
           Powered by{" "}

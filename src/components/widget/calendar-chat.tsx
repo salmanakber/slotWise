@@ -188,52 +188,49 @@ export function CalendarChat({
         }
       `}</style>
 
-      {/* Compact strip directly above Continue — CTA stays fully visible below */}
+      {/* Compact bubble above Continue, right-aligned — CTA stays clear below */}
       <div
-        className="sw-chat-dock shrink-0 px-3 pb-1 pt-0.5"
-        style={{
-          borderTop: `1px solid ${line}`,
-          background: panel,
-        }}
+        className="sw-chat-dock flex shrink-0 justify-end px-3 pb-1.5 pt-1"
+        style={{ background: panel }}
       >
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="sw-chat-fab flex w-full items-center gap-2 px-2 py-1.5 text-left"
+          className="sw-chat-fab inline-flex max-w-[12rem] items-center gap-2 px-2.5 py-2 text-left"
           style={{
-            borderRadius: Math.max(radius - 6, 10),
-            background: `color-mix(in srgb, ${accent} 8%, ${panel})`,
+            borderRadius: 999,
+            background: panel,
             color: ink,
-            border: `1px solid color-mix(in srgb, ${accent} 28%, ${line})`,
+            border: `1px solid ${line}`,
+            boxShadow: `0 6px 18px color-mix(in srgb, ${ink} 12%, transparent)`,
           }}
           aria-haspopup="dialog"
           aria-expanded={open}
         >
           <span
-            className="grid h-7 w-7 shrink-0 place-items-center text-[12px] font-black"
+            className="grid h-8 w-8 shrink-0 place-items-center text-[13px] font-black"
             style={{
               borderRadius: "50%",
-              background: accent,
+              background: `linear-gradient(145deg, ${accent}, color-mix(in srgb, ${accent} 55%, ${ink}))`,
               color: onAccent,
             }}
             aria-hidden
           >
             ✦
           </span>
-          <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold tracking-tight">
-            Ask Chat
-            <em
-              className="ml-1.5 rounded px-1 py-px text-[8px] font-black uppercase tracking-[0.08em] not-italic"
-              style={{
-                background: `color-mix(in srgb, ${accent} 16%, transparent)`,
-                color: accent,
-              }}
-            >
-              Beta
-            </em>
-          </span>
-          <span className="shrink-0 text-[11px] font-bold" style={{ color: accent }}>
-            Open
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5">
+              <span className="truncate text-[12.5px] font-extrabold tracking-tight">Ask Chat</span>
+              <em
+                className="rounded px-1 py-px text-[8px] font-black uppercase tracking-[0.08em] not-italic"
+                style={{
+                  background: `color-mix(in srgb, ${accent} 16%, transparent)`,
+                  color: accent,
+                }}
+              >
+                Beta
+              </em>
+            </span>
           </span>
         </button>
       </div>

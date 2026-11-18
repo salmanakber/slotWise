@@ -326,8 +326,9 @@ export function BookingWidget({
         border: `1px solid ${line}`,
         borderRadius: embed ? Math.min(radius, 18) : radius,
         width: "100%",
-        maxWidth: "min(100%, 30rem)",
+        maxWidth: "min(100%, 33rem)",
         maxHeight: embed ? "min(92vh, 640px)" : "min(92vh, 720px)",
+        paddingTop: embed ? 10 : 0,
         marginInline: "auto",
         display: "flex",
         flexDirection: "column",
@@ -373,7 +374,7 @@ export function BookingWidget({
       `}</style>
 
       <header
-        className="relative shrink-0 min-w-0 px-4 pb-3 pt-4"
+        className="relative shrink-0 min-w-0 px-4 pb-3 pt-5"
         style={{
           borderBottom: `1px solid ${line}`,
           background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, ${panel}), ${panel} 62%)`,
@@ -434,7 +435,7 @@ export function BookingWidget({
         </div>
       </header>
 
-      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 py-4">
+      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 pb-4 pt-5">
         {(loadingSlots || submitting) && branding?.showLoader !== false ? (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[3px]"

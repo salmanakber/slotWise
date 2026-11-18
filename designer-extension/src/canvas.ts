@@ -117,7 +117,7 @@ export async function insertBookingIframe(publicKey: string) {
   // Start short; widget.js / postMessage grows height. Avoids a tall empty box after uninstall.
   const frameStyle = wide
     ? "display:block;width:100%;max-width:100%;margin:0;height:720px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
-    : "display:block;width:100%;max-width:26.5rem;margin-left:auto;margin-right:auto;height:640px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
+    : "display:block;width:100%;max-width:29.2rem;margin-left:auto;margin-right:auto;height:640px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
 
   try {
     if (typeof api.elementBuilder === "function") {
