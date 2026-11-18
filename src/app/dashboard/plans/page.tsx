@@ -43,6 +43,7 @@ function PlansInner() {
   const search = useSearchParams();
   const [plans, setPlans] = useState<PlanCard[]>([]);
   const [currentTier, setCurrentTier] = useState("FREE");
+  const [siteName, setSiteName] = useState("");
   const [stripeReady, setStripeReady] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -56,6 +57,7 @@ function PlansInner() {
     }
     setPlans(json.plans || []);
     setCurrentTier(json.currentTier || "FREE");
+    setSiteName(json.siteName || "");
     setStripeReady(json.stripeReady !== false);
   }, []);
 
@@ -176,6 +178,12 @@ function PlansInner() {
 
   return (
     <div className="grid gap-3.5">
+      {siteName ? (
+        <p className="m-0 text-[13px] font-semibold" style={{ color: "var(--mut)" }}>
+          Plan for <span style={{ color: "var(--ink)" }}>{siteName}</span> — this is the same site
+          as Webflow Designer.
+        </p>
+      ) : null}
       {!stripeReady ? (
         <div className="rounded-xl border border-[var(--ln)] bg-[var(--bg)] px-3.5 py-3 text-[13px] font-semibold text-[var(--bad)]">
           Stripe keys are missing. Paid upgrades cannot start until Platform → Stripe has a secret

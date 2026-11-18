@@ -1,4 +1,5 @@
 import { DEMO_PUBLIC_KEY } from "@/lib/constants";
+import { getOwnerSiteOrNull } from "@/lib/site-admin";
 import { prisma } from "@/lib/prisma";
 import type { BookingStatus } from "@prisma/client";
 
@@ -15,10 +16,13 @@ function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
+/** Owner workspace site (Webflow-linked preferred) — same resolution as APIs / Designer. */
 export async function getDemoSite() {
   try {
+    const base = await getOwnerSiteOrNull();
+    if (!base) return null;
     return await prisma.site.findUnique({
-      where: { publicKey: DEMO_PUBLIC_KEY },
+      where: { id: base.id },
       include: {
         branding: true,
         plan: true,

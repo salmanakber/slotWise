@@ -78,23 +78,37 @@ export function siteThemeSignature(tokens: Pick<SiteThemeTokens, "themeKey" | "a
 export const SITE_THEME_EVENT = "slotwise:branding";
 export const SITE_THEME_CHANNEL = "slotwise-branding";
 
-export function broadcastSiteTheme(tokens?: SiteThemeTokens) {
+export type SiteThemeBroadcast = {
+  tokens?: SiteThemeTokens | null;
+  /** Local unsaved preview — shell must not overwrite from API until commit/leave. */
+  preview?: boolean;
+  committed?: boolean;
+};
+
+export function broadcastSiteTheme(
+  tokens?: SiteThemeTokens | null,
+  opts?: { preview?: boolean; committed?: boolean },
+) {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(SITE_THEME_EVENT, { detail: tokens ?? null }));
+  const detail: SiteThemeBroadcast = {
+    tokens: tokens ?? null,
+    preview: opts?.preview === true,
+    committed: opts?.committed === true,
+  };
+  window.dispatchEvent(new CustomEvent(SITE_THEME_EVENT, { detail }));
   try {
     const bc = new BroadcastChannel(SITE_THEME_CHANNEL);
-    bc.postMessage(tokens ?? { ping: true });
+    bc.postMessage(detail);
     bc.close();
   } catch {
     // BroadcastChannel may be unavailable
   }
-  try {
-    window.localStorage.setItem(
-      "sw-site-theme-bump",
-      String(Date.now()),
-    );
-  } catch {
-    // ignore
+  if (opts?.committed || !opts?.preview) {
+    try {
+      window.localStorage.setItem("sw-site-theme-bump", String(Date.now()));
+    } catch {
+      // ignore
+    }
   }
 }
 

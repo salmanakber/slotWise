@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { BrandLoader } from "@/components/brand/loader";
+import { BookingWidget, type BrandingPreview } from "@/components/widget/booking-widget";
 import { LOADER_STYLES, THEMES } from "@/lib/themes";
 import {
   applySiteThemeToDocument,
@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function BrandingPage() {
-  const [publicKey, setPublicKey] = useState("sw_demo_studio_nine");
+  const [publicKey, setPublicKey] = useState("");
   const [themeKey, setThemeKey] = useState("amber-light");
   const [accent, setAccent] = useState("#f5a000");
   const [inkColor, setInkColor] = useState("#0f1b2d");
@@ -22,15 +22,55 @@ export default function BrandingPage() {
   const [name, setName] = useState("Your business");
   const [showLoader, setShowLoader] = useState(true);
   const [loaderStyle, setLoaderStyle] = useState("PULSE");
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [showPrice, setShowPrice] = useState(true);
   const [showDuration, setShowDuration] = useState(true);
   const [showStaff, setShowStaff] = useState(true);
   const [showBadge, setShowBadge] = useState(true);
+  const [widgetKey, setWidgetKey] = useState(0);
 
   const theme = useMemo(() => THEMES.find((t) => t.key === themeKey) ?? THEMES[0], [themeKey]);
+
+  const brandingPreview = useMemo<BrandingPreview>(
+    () => ({
+      themeKey,
+      accent,
+      inkColor,
+      radius,
+      font,
+      layout,
+      businessName: name,
+      showStaff,
+      showPrice,
+      showDuration,
+      showBadge,
+      showLoader,
+      loaderStyle,
+      theme: {
+        bg: theme.bg,
+        panel: theme.panel,
+        ink: inkColor || theme.ink,
+        line: theme.line,
+      },
+    }),
+    [
+      themeKey,
+      accent,
+      inkColor,
+      radius,
+      font,
+      layout,
+      name,
+      showStaff,
+      showPrice,
+      showDuration,
+      showBadge,
+      showLoader,
+      loaderStyle,
+      theme,
+    ],
+  );
 
   function pushWorkspaceTheme(next?: {
     themeKey?: string;
@@ -47,7 +87,7 @@ export default function BrandingPage() {
       radius: next?.radius ?? radius,
     });
     applySiteThemeToDocument(tokens);
-    broadcastSiteTheme(tokens);
+    broadcastSiteTheme(tokens, { preview: true });
   }
 
   useEffect(() => {
@@ -74,6 +114,7 @@ export default function BrandingPage() {
         if (typeof data.showBadge === "boolean") setShowBadge(data.showBadge);
         const tokens = resolveSiteTheme(data);
         applySiteThemeToDocument(tokens);
+        broadcastSiteTheme(tokens, { preview: true });
       })
       .catch(() => undefined);
     return () => {
@@ -96,12 +137,6 @@ export default function BrandingPage() {
       font: t.font,
       radius: t.radius,
     });
-  }
-
-  function playLoader() {
-    if (!showLoader) return;
-    setLoading(true);
-    window.setTimeout(() => setLoading(false), 2000);
   }
 
   async function saveBranding() {
@@ -131,7 +166,8 @@ export default function BrandingPage() {
       const data = await res.json();
       const tokens = resolveSiteTheme(data);
       applySiteThemeToDocument(tokens);
-      broadcastSiteTheme(tokens);
+      broadcastSiteTheme(tokens, { committed: true });
+      setWidgetKey((k) => k + 1);
       setSavedMsg("Saved. Workspace and booking page now use this theme.");
     } catch (e) {
       setSavedMsg(e instanceof Error ? e.message : "Save failed");
@@ -141,12 +177,12 @@ export default function BrandingPage() {
   }
 
   return (
-    <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+    <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       <div className="grid gap-3.5 content-start">
         <section className="sw-card">
           <h2 className="mb-1 text-[15px] font-extrabold">Theme and color</h2>
           <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            Themes update this workspace and the public booking widget together.
+            Preview updates the workspace instantly. Click Save to keep it.
           </p>
           <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {THEMES.map((t) => (
@@ -156,7 +192,9 @@ export default function BrandingPage() {
                 onClick={() => pickTheme(t.key)}
                 className={cn(
                   "grid gap-2 rounded-xl border p-2 text-left text-[13px] font-semibold",
-                  themeKey === t.key ? "border-[var(--ac)] shadow-[0_0_0_2px_var(--ac)]" : "border-[var(--ln)]",
+                  themeKey === t.key
+                    ? "border-[var(--ac)] shadow-[0_0_0_2px_var(--ac)]"
+                    : "border-[var(--ln)]",
                 )}
               >
                 <i
@@ -290,61 +328,38 @@ export default function BrandingPage() {
       </div>
 
       <div className="grid gap-3.5 content-start">
-        <section className="sw-card">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="m-0 text-[15px] font-extrabold">Live preview</h2>
-            <button type="button" className="sw-btn" onClick={playLoader}>
-              Preview loader
-            </button>
+        <section className="sw-card !p-3 sm:!p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+            <div>
+              <h2 className="m-0 text-[15px] font-extrabold">Live booking preview</h2>
+              <p className="m-0 mt-0.5 text-[12px]" style={{ color: "var(--mut)" }}>
+                Real calendar widget — same as your public booking page
+              </p>
+            </div>
+            {publicKey ? (
+              <Link href={`/book/${publicKey}`} className="sw-btn" target="_blank">
+                Open full page
+              </Link>
+            ) : null}
           </div>
           <div
-            className="overflow-hidden rounded-2xl border p-4"
+            className="overflow-hidden rounded-2xl border"
             style={{
               borderColor: theme.line,
               background: theme.bg,
-              color: inkColor || theme.ink,
-              ["--pbg" as string]: theme.bg,
-              ["--ppn" as string]: theme.panel,
-              ["--pink" as string]: inkColor || theme.ink,
-              ["--pln" as string]: theme.line,
-              ["--pac" as string]: accent,
-              borderRadius: radius,
-              fontFamily: font === "Match my site" ? "inherit" : font,
+              minHeight: 420,
             }}
           >
-            {loading && showLoader ? (
-              <div className="flex min-h-[220px] items-center justify-center">
-                <BrandLoader style={loaderStyle} accent={accent} />
-              </div>
+            {publicKey ? (
+              <BookingWidget
+                key={`${publicKey}-${widgetKey}`}
+                publicKey={publicKey}
+                embed
+                brandingPreview={brandingPreview}
+              />
             ) : (
-              <div className="grid gap-3">
-                <div className="text-[13px] font-semibold" style={{ color: "var(--mut)" }}>
-                  {name || "Your business"}
-                </div>
-                <div
-                  className="rounded-xl border px-3 py-3"
-                  style={{ borderColor: theme.line, background: theme.panel }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <b>Consultation</b>
-                    {showDuration ? <span className="text-[12px]">45 min</span> : null}
-                  </div>
-                  {showPrice ? (
-                    <div className="mt-1 text-[13px] font-bold" style={{ color: accent }}>
-                      $80
-                    </div>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  className="rounded-xl px-3 py-2.5 text-[13px] font-extrabold"
-                  style={{ background: accent, borderColor: accent, color: "#1a1203" }}
-                >
-                  Book now
-                </button>
-                {showBadge ? (
-                  <div className="text-center text-[11px] font-semibold opacity-60">Powered by Slotwise</div>
-                ) : null}
+              <div className="flex min-h-[280px] items-center justify-center text-[13px]" style={{ color: "var(--mut)" }}>
+                Loading widget…
               </div>
             )}
           </div>
@@ -357,9 +372,11 @@ export default function BrandingPage() {
             here automatically.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href={`/book/${publicKey}`} className="sw-btn sw-btn-primary">
-              Open live preview
-            </Link>
+            {publicKey ? (
+              <Link href={`/book/${publicKey}`} className="sw-btn sw-btn-primary">
+                Open live preview
+              </Link>
+            ) : null}
           </div>
         </section>
       </div>

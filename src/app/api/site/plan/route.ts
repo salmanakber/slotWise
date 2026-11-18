@@ -47,6 +47,8 @@ export async function GET() {
     return NextResponse.json({
       currentTier,
       planLabel: entitlements.label,
+      siteName: site.branding?.businessName || site.name,
+      sitePublicKey: site.publicKey,
       stripeReady: Boolean(stripe),
       plans: plans.map((p) => {
         const amount = paidAmountCents(p);
@@ -92,6 +94,8 @@ async function createSubscriptionCheckout(input: {
     cancel_url: cancelUrl,
     customer_email: input.customerEmail,
     client_reference_id: input.siteId,
+    // Disable Managed Payments (requires product tax codes by default on newer Stripe accounts)
+    managed_payments: { enabled: false },
     metadata: {
       siteId: input.siteId,
       planId: input.planId,
@@ -112,7 +116,7 @@ async function createSubscriptionCheckout(input: {
       return await input.stripe.checkout.sessions.create({
         ...base,
         line_items: [{ price: input.stripePriceMoId, quantity: 1 }],
-      });
+      } as Stripe.Checkout.SessionCreateParams);
     } catch (err) {
       console.warn("[site.plan] stripePriceMoId failed, using price_data", err);
     }
@@ -130,11 +134,12 @@ async function createSubscriptionCheckout(input: {
           product_data: {
             name: `Slotwise ${input.planName}`,
             description: `${input.planName} plan · ${input.siteName}`,
+            tax_code: "txcd_10103001",
           },
         },
       },
     ],
-  });
+  } as Stripe.Checkout.SessionCreateParams);
 }
 
 /**

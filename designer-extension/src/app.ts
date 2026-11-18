@@ -48,10 +48,41 @@ export async function boot(root: HTMLElement) {
     loading: true,
   };
 
+  function contrastOn(accent: string) {
+    const hex = accent.replace("#", "");
+    if (hex.length < 6) return "#1a1203";
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.62 ? "#1a1203" : "#ffffff";
+  }
+
+  /** Widget branding colors drive Designer chrome + live preview in real time. */
+  function applyBrandColors(accent?: string | null, ink?: string | null) {
+    const root = document.documentElement;
+    const ac = accent || state.branding?.accent || state.bootstrap?.site.accent || "#f5a000";
+    const inkColor =
+      ink ||
+      state.branding?.inkColor ||
+      state.themes.find((t) => t.key === (state.branding?.themeKey || state.bootstrap?.site.themeKey))
+        ?.ink ||
+      null;
+    root.style.setProperty("--ac", ac);
+    root.style.setProperty("--on", contrastOn(ac));
+    if (inkColor) {
+      root.style.setProperty("--ink", inkColor);
+      root.style.setProperty("--brand-ink", inkColor);
+      root.style.setProperty("--mut", `color-mix(in srgb, ${inkColor} 55%, #8a95a8)`);
+    }
+  }
+
   function setTheme(theme: "light" | "dark") {
     state.theme = theme;
     localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
+    // Re-apply branding ink/accent after chrome theme swap
+    applyBrandColors();
   }
   setTheme(state.theme);
 
@@ -136,12 +167,14 @@ export async function boot(root: HTMLElement) {
     const tabs = (Object.keys(TAB_META) as Tab[]).map(tabButton).join("");
     const actions = `
       <a class="link-upgrade" href="${upgradeUrl()}" target="_blank" rel="noreferrer">Upgrade</a>
-      <a class="btn btn-icon btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">
-        <span class="ico">${icons.grid}</span>
-      </a>
-      <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle theme">
-        ${state.theme === "light" ? icons.moon : icons.sun}
-      </button>
+      <div class="side-tools">
+        <a class="btn btn-icon btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">
+          <span class="ico">${icons.grid}</span>
+        </a>
+        <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle panel theme">
+          ${state.theme === "light" ? icons.moon : icons.sun}
+        </button>
+      </div>
       <button type="button" class="btn btn-primary btn-publish" id="publishBtn" title="Publish">
         <span class="ico">${icons.rocket}</span>
         <span>Publish</span>
@@ -246,7 +279,9 @@ export async function boot(root: HTMLElement) {
         radius: 14,
         font: "Manrope",
       };
-      setStatus("Connected · " + state.bootstrap.site.name);
+      applyBrandColors(state.branding.accent, state.branding.inkColor);
+      const planLabel = state.bootstrap.entitlements?.label || state.bootstrap.plan.tier;
+      setStatus(`Connected · ${state.bootstrap.site.name} · ${planLabel}`);
     } catch (e) {
       state.bootstrap = null;
       setStatus(e instanceof Error ? e.message : "Not connected", false);
@@ -868,16 +903,24 @@ export async function boot(root: HTMLElement) {
           state.branding = res.branding;
           state.bootstrap.site.themeKey = res.branding.themeKey;
           state.bootstrap.site.accent = res.branding.accent;
-          document.documentElement.style.setProperty("--ac", res.branding.accent);
-          if (res.branding.inkColor) {
-            document.documentElement.style.setProperty("--brand-ink", res.branding.inkColor);
-          }
+          applyBrandColors(res.branding.accent, res.branding.inkColor);
           setStatus("Theme saved · " + (picked?.name || themeKey));
           void render();
         } catch (e) {
           setStatus(e instanceof Error ? e.message : "Theme save failed", false);
         }
       });
+    });
+
+    const accentElLive2 = root.querySelector("#brandAccent") as HTMLInputElement | null;
+    const inkElLive2 = root.querySelector("#brandInk") as HTMLInputElement | null;
+    accentElLive2?.addEventListener("input", () => {
+      applyBrandColors(accentElLive2.value, inkElLive2?.value);
+      syncThemeLive();
+    });
+    inkElLive2?.addEventListener("input", () => {
+      applyBrandColors(accentElLive2?.value, inkElLive2.value);
+      syncThemeLive();
     });
 
     root.querySelector("#saveBranding")?.addEventListener("click", async () => {
@@ -899,10 +942,7 @@ export async function boot(root: HTMLElement) {
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;
-        document.documentElement.style.setProperty("--ac", res.branding.accent);
-        if (res.branding.inkColor) {
-          document.documentElement.style.setProperty("--brand-ink", res.branding.inkColor);
-        }
+        applyBrandColors(res.branding.accent, res.branding.inkColor);
         setStatus("Branding saved");
         void render();
       } catch (e) {
@@ -1052,4 +1092,29 @@ export async function boot(root: HTMLElement) {
   });
   await refresh();
   await render();
+
+  // Keep plan entitlements + branding in sync with Dashboard (Pro unlocks, theme ink, etc.)
+  window.setInterval(() => {
+    if (!state.bootstrap) return;
+    void (async () => {
+      try {
+        const prevTier = state.bootstrap?.plan.tier;
+        const prevInk = state.branding?.inkColor;
+        const prevAccent = state.branding?.accent;
+        await refresh();
+        const tierChanged = prevTier && prevTier !== state.bootstrap?.plan.tier;
+        const brandChanged =
+          prevInk !== state.branding?.inkColor || prevAccent !== state.branding?.accent;
+        if (tierChanged || brandChanged) await render();
+      } catch {
+        // ignore background refresh errors
+      }
+    })();
+  }, 8000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      void refresh().then(() => render());
+    }
+  });
 }

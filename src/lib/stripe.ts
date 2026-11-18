@@ -200,6 +200,7 @@ export async function createBookingCheckoutSession(input: {
     {
       mode: "payment",
       customer_email: input.customerEmail,
+      managed_payments: { enabled: false },
       line_items: [
         {
           quantity: 1,
@@ -209,6 +210,7 @@ export async function createBookingCheckoutSession(input: {
             product_data: {
               name: input.serviceName,
               description: `Booking ${input.bookingReference}`,
+              tax_code: "txcd_00000000",
             },
           },
         },
@@ -226,7 +228,7 @@ export async function createBookingCheckoutSession(input: {
         },
         ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
       },
-    },
+    } as Stripe.Checkout.SessionCreateParams,
     {
       stripeAccount: input.connectedAccountId,
       idempotencyKey: `booking_checkout_${input.bookingId}`,

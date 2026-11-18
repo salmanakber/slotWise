@@ -77,14 +77,34 @@ function initials(label: string) {
     .join("");
 }
 
+export type BrandingPreview = {
+  themeKey?: string;
+  accent?: string;
+  inkColor?: string | null;
+  radius?: number;
+  font?: string;
+  layout?: string;
+  businessName?: string | null;
+  showStaff?: boolean;
+  showPrice?: boolean;
+  showDuration?: boolean;
+  showBadge?: boolean;
+  showLoader?: boolean;
+  loaderStyle?: string;
+  theme?: { bg: string; ink: string; line: string; panel: string };
+};
+
 export function BookingWidget({
   publicKey,
   initial,
   embed = false,
+  brandingPreview,
 }: {
   publicKey: string;
   initial?: SitePayload;
   embed?: boolean;
+  /** Live unsaved branding overrides (dashboard Branding page preview). */
+  brandingPreview?: BrandingPreview | null;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [site, setSite] = useState<SitePayload | null>(initial ?? null);
@@ -120,6 +140,23 @@ export function BookingWidget({
       })
       .catch((e) => setError(e.message));
   }, [publicKey, site]);
+
+  useEffect(() => {
+    if (!site || !brandingPreview) return;
+    setSite((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        branding: {
+          ...prev.branding,
+          ...brandingPreview,
+          theme: brandingPreview.theme
+            ? { ...prev.branding.theme, ...brandingPreview.theme }
+            : prev.branding.theme,
+        },
+      };
+    });
+  }, [brandingPreview, site?.publicKey]);
 
   useEffect(() => {
     if (!site || !serviceId || !date) return;

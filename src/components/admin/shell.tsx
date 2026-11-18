@@ -14,6 +14,7 @@ import {
   siteThemeSignature,
   type SiteThemeTokens,
 } from "@/lib/site-theme";
+// SiteThemeBroadcast shape handled inline in event listener
 
 export type NavItem = {
   href: string;
@@ -49,6 +50,7 @@ export function AdminShell({
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [brand, setBrand] = useState<SiteThemeTokens | null>(null);
   const sigRef = useRef("");
+  const previewingRef = useRef(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("sw-theme");
@@ -57,6 +59,9 @@ export function AdminShell({
 
   useEffect(() => {
     let cancelled = false;
+    // Branding page owns live preview — don't let API poll snap chrome back to saved theme
+    const onBrandingPage = pathname.startsWith("/dashboard/branding");
+    if (!onBrandingPage) previewingRef.current = false;
 
     const applyPayload = (d: Partial<SiteThemeTokens> & { accent?: string }) => {
       if (!d?.accent || !d.bg || !d.panel || !d.inkColor || !d.line) return;
@@ -72,7 +77,6 @@ export function AdminShell({
       };
       const sig = siteThemeSignature(tokens);
       if (sig === sigRef.current) {
-        // Still re-apply DOM in case Night toggle wiped vars
         applySiteThemeToDocument(tokens);
         return;
       }
@@ -82,6 +86,7 @@ export function AdminShell({
     };
 
     const loadBrand = () => {
+      if (previewingRef.current || onBrandingPage) return;
       void fetch("/api/site/branding", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
@@ -91,13 +96,29 @@ export function AdminShell({
         .catch(() => undefined);
     };
 
-    loadBrand();
+    if (!onBrandingPage) loadBrand();
     const poll = window.setInterval(loadBrand, 5000);
     const onFocus = () => loadBrand();
     const onBrand = (e: Event) => {
-      const detail = (e as CustomEvent).detail as SiteThemeTokens | null;
-      if (detail?.accent) applyPayload(detail);
-      else loadBrand();
+      const raw = (e as CustomEvent).detail as
+        | SiteThemeTokens
+        | { tokens?: SiteThemeTokens | null; preview?: boolean; committed?: boolean }
+        | null;
+      if (!raw) {
+        previewingRef.current = false;
+        loadBrand();
+        return;
+      }
+      // Legacy: detail was tokens directly
+      if ("accent" in raw && "bg" in raw) {
+        if (onBrandingPage) previewingRef.current = true;
+        applyPayload(raw as SiteThemeTokens);
+        return;
+      }
+      if (raw.committed) previewingRef.current = false;
+      if (raw.preview) previewingRef.current = true;
+      if (raw.tokens?.accent) applyPayload(raw.tokens);
+      else if (raw.committed) loadBrand();
     };
     const onVis = () => {
       if (document.visibilityState === "visible") loadBrand();
@@ -109,7 +130,20 @@ export function AdminShell({
     let bc: BroadcastChannel | null = null;
     try {
       bc = new BroadcastChannel(SITE_THEME_CHANNEL);
-      bc.onmessage = () => loadBrand();
+      bc.onmessage = (ev) => {
+        const raw = ev.data as {
+          tokens?: SiteThemeTokens | null;
+          preview?: boolean;
+          committed?: boolean;
+        } | null;
+        if (raw?.preview && raw.tokens) {
+          previewingRef.current = true;
+          applyPayload(raw.tokens);
+          return;
+        }
+        if (raw?.committed) previewingRef.current = false;
+        loadBrand();
+      };
     } catch {
       bc = null;
     }
