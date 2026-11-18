@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { paidEventRequiresStripe, siteCanCollectPayments } from "@/lib/payments-gate";
 import { requireDemoSite } from "@/lib/site-admin";
 import { prisma } from "@/lib/prisma";
 
@@ -36,6 +37,22 @@ export async function PATCH(
     const site = await requireDemoSite();
     const existing = await prisma.service.findFirst({ where: { id, siteId: site.id } });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const nextPrice =
+      parsed.data.priceCents !== undefined ? parsed.data.priceCents : existing.priceCents;
+    if (paidEventRequiresStripe(nextPrice)) {
+      const payments = await siteCanCollectPayments(site.id);
+      if (!payments.canChargePaidEvents) {
+        return NextResponse.json(
+          {
+            error: payments.message,
+            code: "STRIPE_REQUIRED",
+            setupUrl: payments.setupUrl,
+          },
+          { status: 402 },
+        );
+      }
+    }
 
     const service = await prisma.service.update({
       where: { id },

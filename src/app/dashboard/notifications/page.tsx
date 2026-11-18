@@ -5,6 +5,7 @@ import Link from "next/link";
 
 type Settings = {
   emailConfirm: boolean;
+  ownerEmailAlert: boolean;
   emailReminderHours: number;
   emailFollowUp: boolean;
   fromEmail: string | null;
@@ -72,6 +73,7 @@ export default function NotificationsPage() {
         if (d.id || d.emailConfirm !== undefined) {
           setForm({
             ...d,
+            ownerEmailAlert: d.ownerEmailAlert !== false,
             fromEmail: d.fromEmail ?? null,
             replyToEmail: d.replyToEmail ?? null,
           });
@@ -261,6 +263,11 @@ export default function NotificationsPage() {
               onChange={(v) => setForm({ ...form, emailConfirm: v })}
             />
             <Toggle
+              label="Email me on new bookings"
+              checked={form.ownerEmailAlert}
+              onChange={(v) => setForm({ ...form, ownerEmailAlert: v })}
+            />
+            <Toggle
               label="Follow-up emails"
               checked={form.emailFollowUp}
               onChange={(v) => setForm({ ...form, emailFollowUp: v })}
@@ -281,13 +288,18 @@ export default function NotificationsPage() {
 
           <section className="sw-card">
             <h2 className="mb-1 text-[15px] font-extrabold">SMS & WhatsApp</h2>
+            <p className="mb-3 mt-0 text-[12.5px]" style={{ color: "var(--mut)" }}>
+              Sent right after a booking when the customer left a phone number. SMS uses Twilio; WhatsApp
+              uses the platform provider (Twilio, Meta Cloud API, or OpenWA) under Platform → Providers.
+              Plan must allow SMS.
+            </p>
             <Toggle
-              label="SMS reminders"
+              label="SMS confirmation"
               checked={form.smsEnabled}
               onChange={(v) => setForm({ ...form, smsEnabled: v })}
             />
             <Toggle
-              label="WhatsApp"
+              label="WhatsApp confirmation"
               checked={form.whatsappEnabled}
               onChange={(v) => setForm({ ...form, whatsappEnabled: v })}
             />

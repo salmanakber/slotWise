@@ -877,10 +877,20 @@ export async function boot(root: HTMLElement) {
     const lim = state.bootstrap?.entitlements.eventsLimit;
     const atLimit = lim != null && state.services.length >= lim;
     const aiOk = Boolean(gate("ai_descriptions")?.allowed) && !atLimit;
+    const pay = state.bootstrap?.payments;
+    const stripeReady = Boolean(pay?.canChargePaidEvents ?? (pay?.connected && pay?.chargesEnabled));
+    const paySetup = pay?.setupUrl || `${api.APP_URL}/dashboard/payments`;
     return `<section class="card">
       ${cardTitle(icons.plus, "Create event")}
       <p class="lead">Title, AI copy, and booking rules.</p>
       ${atLimit ? upgradeLock("events", "Event limit") : ""}
+      ${
+        !stripeReady
+          ? `<div class="notice notice-warn">
+          <b>Paid events need Stripe.</b> Free events (price 0) are fine. To charge customers, <a href="${escapeHtml(paySetup)}" target="_blank" rel="noreferrer">connect Stripe first</a>.
+        </div>`
+          : ""
+      }
       <form id="eventForm">
         <label class="field"><span>Title</span><input name="name" required maxlength="120" placeholder="30-minute consultation" ${atLimit ? "disabled" : ""} /></label>
         <label class="field"><span>Description</span>
@@ -906,8 +916,9 @@ export async function boot(root: HTMLElement) {
         </div>
         ${upgradeLock("categories", "Categories")}
         <div class="field-row">
-          <label class="field"><span>Price</span>
+          <label class="field"><span>Price ${stripeReady ? "" : "(0 = free)"}</span>
             <input name="price" type="number" min="0" step="1" value="0" ${atLimit ? "disabled" : ""} />
+            ${stripeReady ? "" : `<small class="hint">Paid prices are locked until Stripe is connected.</small>`}
           </label>
           <label class="field"><span>Location</span>
             <select name="locationType" ${!gate("online_location")?.allowed || atLimit ? "disabled" : ""}>
@@ -1611,6 +1622,12 @@ export async function boot(root: HTMLElement) {
       const form = ev.target as HTMLFormElement;
       const fd = new FormData(form);
       const price = Number(fd.get("price") || 0);
+      const pay = state.bootstrap.payments;
+      const stripeReady = Boolean(pay?.canChargePaidEvents ?? (pay?.connected && pay?.chargesEnabled));
+      if (price > 0 && !stripeReady) {
+        setStatus("Connect Stripe before setting a paid price — free events (0) are OK", false);
+        return;
+      }
       try {
         setStatus("Saving…");
         await api.createService({

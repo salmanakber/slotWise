@@ -39,6 +39,18 @@ const bodySchema = z.object({
   twilioAuthToken: z.string().optional(),
   twilioFromNumber: z.string().nullable().optional(),
   twilioWhatsappFrom: z.string().nullable().optional(),
+  whatsappProvider: z
+    .union([z.enum(["twilio", "meta", "openwa"]), z.string()])
+    .optional()
+    .transform((v) =>
+      v === "twilio" || v === "meta" || v === "openwa" ? v : undefined,
+    ),
+  metaWhatsappPhoneNumberId: z.string().nullable().optional(),
+  metaWhatsappAccessToken: z.string().optional(),
+  metaWhatsappApiVersion: z.string().nullable().optional(),
+  openwaBaseUrl: z.string().nullable().optional(),
+  openwaApiKey: z.string().optional(),
+  openwaSessionId: z.string().nullable().optional(),
   webflowClientId: z.string().nullable().optional(),
   webflowClientSecret: z.string().optional(),
   googleClientId: z.string().nullable().optional(),

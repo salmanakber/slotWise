@@ -61,6 +61,7 @@ export type Bootstrap = {
     connected: boolean;
     chargesEnabled: boolean;
     payoutsEnabled: boolean;
+    canChargePaidEvents?: boolean;
     paymentMode: string;
     depositPercent: number;
     setupUrl: string;

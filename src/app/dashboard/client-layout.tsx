@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { AccessBanner } from "@/components/admin/access-banner";
 import { useInboxUnread } from "@/components/admin/nav-unread-badge";
+import { NotificationBell } from "@/components/admin/notification-bell";
 import { AdminShell } from "@/components/admin/shell";
 import { UsageQuota } from "@/components/admin/usage-quota";
 
@@ -66,7 +67,12 @@ export function DashboardClientLayout({ children }: { children: React.ReactNode 
       nav={nav}
       brandLabel="Site admin"
       brandMeta="Your workspace"
-      headerAside={<UsageQuota />}
+      headerAside={
+        <>
+          <NotificationBell />
+          <UsageQuota />
+        </>
+      }
     >
       <Suspense fallback={null}>
         <AccessBanner />

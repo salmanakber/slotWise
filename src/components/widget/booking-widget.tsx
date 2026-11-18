@@ -837,6 +837,23 @@ export function BookingWidget({
           enabled={site.calendarChatEnabled !== false}
           source={embed ? "widget" : "book_page"}
           onPickEvent={(id) => setServiceId(id)}
+          onPickSlot={({ serviceId: sid, dateIso, start }) => {
+            setServiceId(sid);
+            setDate(dateIso);
+            setSlotStart(start);
+            setStep("details");
+          }}
+          onBooked={(info) => {
+            setConfirmation({
+              reference: info.reference,
+              manageToken: info.manageToken,
+              startsAt: info.startsAt,
+              meetingUrl: info.meetingUrl,
+              meetingProvider: info.meetingProvider,
+              meetingTools: [],
+            });
+            setStep("done");
+          }}
         />
       ) : null}
 

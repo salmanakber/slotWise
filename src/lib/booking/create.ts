@@ -2,13 +2,13 @@ import { BookingStatus, Prisma, Role } from "@prisma/client";
 import { addMinutes } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { getDaySlots, rankSlots } from "@/lib/booking/availability";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendOwnerBookingAlert } from "@/lib/email";
 import { syncBookingIntegrations } from "@/lib/integrations-sync";
 import { canUse, entitlementsForTier } from "@/lib/plan-entitlements";
 import { notifyZapierBooking } from "@/lib/zapier";
 import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
-import { sendSms } from "@/lib/sms";
+import { sendSms, sendWhatsApp } from "@/lib/sms";
 import { listMeetingTools } from "@/lib/meeting-tools";
 import { createOwnerNotification } from "@/lib/owner-notifications";
 import { createBookingCheckoutSession } from "@/lib/stripe";
@@ -275,32 +275,6 @@ export async function createBooking(input: {
   );
   const businessName = site.branding?.businessName || site.name;
 
-  if (site.notificationSettings?.emailConfirm !== false) {
-    await sendBookingConfirmation({
-      to: booking.customerEmail,
-      reference: booking.reference,
-      serviceName: booking.service.name,
-      whenLabel,
-      manageUrl,
-      businessName,
-      fromEmail: site.notificationSettings?.fromEmail || null,
-      replyToEmail: ownerEmail,
-    }).catch((err) => console.error("confirmation email failed", err));
-  }
-
-  await createOwnerNotification({
-    siteId: site.id,
-    type: "booking.created",
-    title: `New booking · ${booking.reference}`,
-    body: `${booking.customerName} booked ${booking.service.name} for ${whenLabel}.`,
-    href: "/dashboard/bookings",
-    meta: {
-      bookingId: booking.id,
-      reference: booking.reference,
-      customerEmail: booking.customerEmail,
-    },
-  });
-
   const sync = await syncBookingIntegrations({
     siteId: site.id,
     reference: booking.reference,
@@ -317,20 +291,85 @@ export async function createBooking(input: {
     return { providers: [] as string[], meetingUrl: null as string | null };
   });
 
+  if (site.notificationSettings?.emailConfirm !== false) {
+    await sendBookingConfirmation({
+      to: booking.customerEmail,
+      reference: booking.reference,
+      serviceName: booking.service.name,
+      whenLabel,
+      manageUrl,
+      businessName,
+      fromEmail: site.notificationSettings?.fromEmail || null,
+      replyToEmail: ownerEmail,
+      customerName: booking.customerName,
+      meetingUrl: sync.meetingUrl || booking.meetingUrl || null,
+      meetingProvider: booking.meetingProvider || null,
+    }).catch((err) => console.error("confirmation email failed", err));
+  }
+
+  if (ownerEmail && site.notificationSettings?.ownerEmailAlert !== false) {
+    const amountLabel =
+      booking.amountCents > 0
+        ? new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: (booking.currency || "USD").toUpperCase(),
+          }).format(booking.amountCents / 100)
+        : null;
+    await sendOwnerBookingAlert({
+      to: ownerEmail,
+      reference: booking.reference,
+      serviceName: booking.service.name,
+      whenLabel,
+      dashboardUrl: `${appUrl}/dashboard/bookings`,
+      businessName,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      customerPhone: booking.customerPhone,
+      amountLabel,
+      fromEmail: site.notificationSettings?.fromEmail || null,
+      meetingUrl: sync.meetingUrl || booking.meetingUrl || null,
+      meetingProvider: booking.meetingProvider || null,
+    }).catch((err) => console.error("owner booking alert email failed", err));
+  }
+
+  await createOwnerNotification({
+    siteId: site.id,
+    type: "booking.created",
+    title: `New booking · ${booking.reference}`,
+    body: `${booking.customerName} booked ${booking.service.name} for ${whenLabel}.`,
+    href: "/dashboard/bookings",
+    meta: {
+      bookingId: booking.id,
+      reference: booking.reference,
+      customerEmail: booking.customerEmail,
+    },
+  });
+
+  const smsBody = [
+    `${businessName}: booking ${booking.reference} confirmed for ${whenLabel}.`,
+    sync.meetingUrl ? `Join: ${sync.meetingUrl}` : null,
+    `Manage: ${manageUrl}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   if (
     booking.customerPhone &&
     site.notificationSettings?.smsEnabled &&
     canUse(site.plan?.tier, "sms")
   ) {
-    const smsBody = [
-      `${businessName}: booking ${booking.reference} confirmed for ${whenLabel}.`,
-      sync.meetingUrl ? `Join: ${sync.meetingUrl}` : null,
-      `Manage: ${manageUrl}`,
-    ]
-      .filter(Boolean)
-      .join(" ");
     await sendSms({ to: booking.customerPhone, body: smsBody }).catch((err) =>
       console.error("sms failed", err),
+    );
+  }
+
+  if (
+    booking.customerPhone &&
+    site.notificationSettings?.whatsappEnabled &&
+    canUse(site.plan?.tier, "sms")
+  ) {
+    await sendWhatsApp({ to: booking.customerPhone, body: smsBody }).catch((err) =>
+      console.error("whatsapp failed", err),
     );
   }
 

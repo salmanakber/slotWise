@@ -1,17 +1,27 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { answerCalendarQuestion } from "@/lib/ai-calendar-chat";
-import { BookingError, loadSiteBundle } from "@/lib/booking/create";
+import { BookingError, createBooking, loadSiteBundle } from "@/lib/booking/create";
 import { canUse } from "@/lib/plan-entitlements";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  message: z.string().trim().min(1).max(500),
+  message: z.string().trim().min(1).max(500).optional(),
   sessionId: z.string().cuid().optional().nullable(),
   visitorKey: z.string().min(8).max(80),
   source: z.enum(["widget", "book_page", "designer_preview"]).optional(),
+  /** Complete a booking from chat after the visitor picked a slot + entered details */
+  book: z
+    .object({
+      serviceId: z.string().min(1),
+      startsAt: z.string().datetime(),
+      customerName: z.string().trim().min(1).max(120),
+      customerEmail: z.string().trim().email().max(200),
+      customerPhone: z.string().trim().max(40).optional().nullable(),
+    })
+    .optional(),
 });
 
 export async function POST(
@@ -35,6 +45,32 @@ export async function POST(
         { error: "Calendar chat is available on Business and Agency plans" },
         { status: 403 },
       );
+    }
+
+    // In-chat booking (after visitor picked a suggested slot)
+    if (parsed.data.book) {
+      const booking = await createBooking({
+        publicKey,
+        serviceId: parsed.data.book.serviceId,
+        startsAtIso: parsed.data.book.startsAt,
+        customerName: parsed.data.book.customerName,
+        customerEmail: parsed.data.book.customerEmail,
+        customerPhone: parsed.data.book.customerPhone || undefined,
+        notes: "Booked via calendar chat",
+      });
+      return NextResponse.json({
+        booked: true,
+        reference: booking.reference,
+        manageToken: booking.manageToken,
+        startsAt: booking.startsAt.toISOString(),
+        meetingUrl: booking.meetingUrl ?? null,
+        meetingProvider: booking.meetingProvider ?? null,
+        reply: `You’re booked — reference ${booking.reference}. Check your email for details.`,
+      });
+    }
+
+    if (!parsed.data.message?.trim()) {
+      return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
     let session =
@@ -92,6 +128,7 @@ export async function POST(
           meta: {
             source: answer.source,
             suggestedEventIds: answer.suggestedEventIds,
+            suggestedSlots: answer.suggestedSlots,
           },
         },
       }),
@@ -119,6 +156,7 @@ export async function POST(
       source: answer.source,
       suggestedQuestions: answer.suggestedQuestions,
       suggestedEvents: services,
+      suggestedSlots: answer.suggestedSlots,
       calendarChatEnabled: true,
     });
   } catch (e) {
@@ -143,9 +181,9 @@ export async function GET(
     return NextResponse.json({
       enabled: Boolean(site.calendarChatEnabled && canUse(site.plan?.tier, "ai_calendar_chat")),
       prompts: [
-        "What’s happening this weekend?",
-        "Are there any free workshops?",
-        "What’s the shortest session?",
+        "What’s available today?",
+        "What’s available tomorrow?",
+        "Show weekend openings",
         "How do I book?",
       ],
     });

@@ -433,6 +433,8 @@ model NotificationSettings {
   siteId             String  @unique
   site               Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
   emailConfirm       Boolean @default(true)
+  /** Email the site owner when a new booking is created. */
+  ownerEmailAlert    Boolean @default(true)
   emailReminderHours Int     @default(24)
   emailFollowUp      Boolean @default(true)
   /** Resend "from" — must be on a domain verified in Resend (e.g. bookings@yourdomain.com). */
@@ -475,12 +477,19 @@ model PlatformConfig {
   emailFrom                        String?
   postmarkTokenEncrypted           String? // stores Resend API key (legacy column name)
 
-  // SMS / WhatsApp (Twilio)
+  // SMS (Twilio) + WhatsApp providers (twilio | meta | openwa)
   smsProvider                      String  @default("twilio")
   twilioAccountSid                 String?
   twilioAuthTokenEncrypted         String?
   twilioFromNumber                 String?
   twilioWhatsappFrom               String?
+  whatsappProvider                 String  @default("twilio") // twilio | meta | openwa
+  metaWhatsappPhoneNumberId        String?
+  metaWhatsappAccessTokenEncrypted String?
+  metaWhatsappApiVersion           String? @default("v21.0")
+  openwaBaseUrl                    String?
+  openwaApiKeyEncrypted            String?
+  openwaSessionId                  String?
 
   // Webflow app credentials (optional override of env)
   webflowClientId                  String?

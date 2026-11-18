@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { paidEventRequiresStripe, siteCanCollectPayments } from "@/lib/payments-gate";
 import { canUse, entitlementsForTier } from "@/lib/plan-entitlements";
 import { findSiteForDesigner } from "@/lib/designer/site";
 
@@ -113,6 +114,20 @@ export async function POST(request: Request) {
       );
     }
 
+    if (paidEventRequiresStripe(body.priceCents ?? 0)) {
+      const payments = await siteCanCollectPayments(site.id);
+      if (!payments.canChargePaidEvents) {
+        return NextResponse.json(
+          {
+            error: payments.message,
+            code: "STRIPE_REQUIRED",
+            setupUrl: payments.setupUrl,
+          },
+          { status: 402, headers: cors },
+        );
+      }
+    }
+
     const service = await prisma.service.create({
       data: {
         siteId: site.id,
@@ -155,6 +170,20 @@ export async function PATCH(request: Request) {
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404, headers: cors });
 
     const tier = existing.site.plan?.tier ?? "FREE";
+    const nextPrice = body.priceCents !== undefined ? body.priceCents : existing.priceCents;
+    if (paidEventRequiresStripe(nextPrice)) {
+      const payments = await siteCanCollectPayments(existing.siteId);
+      if (!payments.canChargePaidEvents) {
+        return NextResponse.json(
+          {
+            error: payments.message,
+            code: "STRIPE_REQUIRED",
+            setupUrl: payments.setupUrl,
+          },
+          { status: 402, headers: cors },
+        );
+      }
+    }
     const service = await prisma.service.update({
       where: { id },
       data: {

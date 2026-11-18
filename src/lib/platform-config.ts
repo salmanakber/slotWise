@@ -30,6 +30,15 @@ export type PlatformPublicSettings = {
   twilioAuthTokenHint: string | null;
   twilioFromNumber: string | null;
   twilioWhatsappFrom: string | null;
+  whatsappProvider: string;
+  metaWhatsappPhoneNumberId: string | null;
+  metaWhatsappAccessTokenSet: boolean;
+  metaWhatsappAccessTokenHint: string | null;
+  metaWhatsappApiVersion: string | null;
+  openwaBaseUrl: string | null;
+  openwaApiKeySet: boolean;
+  openwaApiKeyHint: string | null;
+  openwaSessionId: string | null;
   webflowClientId: string | null;
   webflowClientSecretSet: boolean;
   googleClientId: string | null;
@@ -87,6 +96,8 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
     const webhook = safeDecrypt(row.stripeWebhookSecretEncrypted);
     const postmark = safeDecrypt(row.postmarkTokenEncrypted);
     const twilio = safeDecrypt(row.twilioAuthTokenEncrypted);
+    const metaToken = safeDecrypt(row.metaWhatsappAccessTokenEncrypted);
+    const openwaKey = safeDecrypt(row.openwaApiKeyEncrypted);
 
     return {
       stripeMode: row.stripeMode,
@@ -121,6 +132,18 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       twilioAuthTokenHint: maskSecret(twilio || process.env.TWILIO_AUTH_TOKEN),
       twilioFromNumber: row.twilioFromNumber || process.env.TWILIO_FROM_NUMBER || null,
       twilioWhatsappFrom: row.twilioWhatsappFrom,
+      whatsappProvider: row.whatsappProvider || "twilio",
+      metaWhatsappPhoneNumberId:
+        row.metaWhatsappPhoneNumberId || process.env.META_WHATSAPP_PHONE_NUMBER_ID || null,
+      metaWhatsappAccessTokenSet: Boolean(metaToken || process.env.META_WHATSAPP_ACCESS_TOKEN),
+      metaWhatsappAccessTokenHint: maskSecret(
+        metaToken || process.env.META_WHATSAPP_ACCESS_TOKEN,
+      ),
+      metaWhatsappApiVersion: row.metaWhatsappApiVersion || "v21.0",
+      openwaBaseUrl: row.openwaBaseUrl || process.env.OPENWA_BASE_URL || null,
+      openwaApiKeySet: Boolean(openwaKey || process.env.OPENWA_API_KEY),
+      openwaApiKeyHint: maskSecret(openwaKey || process.env.OPENWA_API_KEY),
+      openwaSessionId: row.openwaSessionId || process.env.OPENWA_SESSION_ID || "default",
       webflowClientId: row.webflowClientId || process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecretSet: Boolean(
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET,
@@ -195,6 +218,15 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       twilioAuthTokenHint: maskSecret(process.env.TWILIO_AUTH_TOKEN),
       twilioFromNumber: process.env.TWILIO_FROM_NUMBER || null,
       twilioWhatsappFrom: null,
+      whatsappProvider: "twilio",
+      metaWhatsappPhoneNumberId: process.env.META_WHATSAPP_PHONE_NUMBER_ID || null,
+      metaWhatsappAccessTokenSet: Boolean(process.env.META_WHATSAPP_ACCESS_TOKEN),
+      metaWhatsappAccessTokenHint: maskSecret(process.env.META_WHATSAPP_ACCESS_TOKEN),
+      metaWhatsappApiVersion: "v21.0",
+      openwaBaseUrl: process.env.OPENWA_BASE_URL || null,
+      openwaApiKeySet: Boolean(process.env.OPENWA_API_KEY),
+      openwaApiKeyHint: maskSecret(process.env.OPENWA_API_KEY),
+      openwaSessionId: process.env.OPENWA_SESSION_ID || "default",
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecretSet: Boolean(process.env.WEBFLOW_CLIENT_SECRET),
       googleClientId: process.env.GOOGLE_CLIENT_ID || null,
@@ -250,6 +282,17 @@ export async function getPlatformSecrets() {
       twilioAuthToken: safeDecrypt(row.twilioAuthTokenEncrypted) || process.env.TWILIO_AUTH_TOKEN || null,
       twilioFromNumber: row.twilioFromNumber || process.env.TWILIO_FROM_NUMBER || null,
       twilioWhatsappFrom: row.twilioWhatsappFrom,
+      whatsappProvider: (row.whatsappProvider || "twilio") as "twilio" | "meta" | "openwa",
+      metaWhatsappPhoneNumberId:
+        row.metaWhatsappPhoneNumberId || process.env.META_WHATSAPP_PHONE_NUMBER_ID || null,
+      metaWhatsappAccessToken:
+        safeDecrypt(row.metaWhatsappAccessTokenEncrypted) ||
+        process.env.META_WHATSAPP_ACCESS_TOKEN ||
+        null,
+      metaWhatsappApiVersion: row.metaWhatsappApiVersion || "v21.0",
+      openwaBaseUrl: row.openwaBaseUrl || process.env.OPENWA_BASE_URL || null,
+      openwaApiKey: safeDecrypt(row.openwaApiKeyEncrypted) || process.env.OPENWA_API_KEY || null,
+      openwaSessionId: row.openwaSessionId || process.env.OPENWA_SESSION_ID || "default",
       webflowClientId: row.webflowClientId || process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret:
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET || null,
@@ -288,6 +331,13 @@ export async function getPlatformSecrets() {
       twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || null,
       twilioFromNumber: process.env.TWILIO_FROM_NUMBER || null,
       twilioWhatsappFrom: null as string | null,
+      whatsappProvider: "twilio" as const,
+      metaWhatsappPhoneNumberId: process.env.META_WHATSAPP_PHONE_NUMBER_ID || null,
+      metaWhatsappAccessToken: process.env.META_WHATSAPP_ACCESS_TOKEN || null,
+      metaWhatsappApiVersion: "v21.0",
+      openwaBaseUrl: process.env.OPENWA_BASE_URL || null,
+      openwaApiKey: process.env.OPENWA_API_KEY || null,
+      openwaSessionId: process.env.OPENWA_SESSION_ID || "default",
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret: process.env.WEBFLOW_CLIENT_SECRET || null,
       googleClientId: process.env.GOOGLE_CLIENT_ID || null,
@@ -328,6 +378,13 @@ export type PlatformSettingsUpdate = {
   twilioAuthToken?: string;
   twilioFromNumber?: string | null;
   twilioWhatsappFrom?: string | null;
+  whatsappProvider?: "twilio" | "meta" | "openwa" | string;
+  metaWhatsappPhoneNumberId?: string | null;
+  metaWhatsappAccessToken?: string;
+  metaWhatsappApiVersion?: string | null;
+  openwaBaseUrl?: string | null;
+  openwaApiKey?: string;
+  openwaSessionId?: string | null;
   webflowClientId?: string | null;
   webflowClientSecret?: string;
   googleClientId?: string | null;
@@ -377,6 +434,24 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
   if (input.twilioAuthToken?.trim()) data.twilioAuthTokenEncrypted = encryptSecret(input.twilioAuthToken.trim());
   if (input.twilioFromNumber !== undefined) data.twilioFromNumber = input.twilioFromNumber || null;
   if (input.twilioWhatsappFrom !== undefined) data.twilioWhatsappFrom = input.twilioWhatsappFrom || null;
+  if (input.whatsappProvider) {
+    const p = String(input.whatsappProvider).toLowerCase();
+    if (p === "twilio" || p === "meta" || p === "openwa") data.whatsappProvider = p;
+  }
+  if (input.metaWhatsappPhoneNumberId !== undefined) {
+    data.metaWhatsappPhoneNumberId = input.metaWhatsappPhoneNumberId || null;
+  }
+  if (input.metaWhatsappAccessToken?.trim()) {
+    data.metaWhatsappAccessTokenEncrypted = encryptSecret(input.metaWhatsappAccessToken.trim());
+  }
+  if (input.metaWhatsappApiVersion !== undefined) {
+    data.metaWhatsappApiVersion = input.metaWhatsappApiVersion || "v21.0";
+  }
+  if (input.openwaBaseUrl !== undefined) data.openwaBaseUrl = input.openwaBaseUrl || null;
+  if (input.openwaApiKey?.trim()) {
+    data.openwaApiKeyEncrypted = encryptSecret(input.openwaApiKey.trim());
+  }
+  if (input.openwaSessionId !== undefined) data.openwaSessionId = input.openwaSessionId || null;
   if (input.webflowClientId !== undefined) data.webflowClientId = input.webflowClientId || null;
   if (input.webflowClientSecret?.trim()) {
     data.webflowClientSecretEncrypted = encryptSecret(input.webflowClientSecret.trim());

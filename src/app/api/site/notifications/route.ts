@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 const bodySchema = z.object({
   emailConfirm: z.boolean().optional(),
+  ownerEmailAlert: z.boolean().optional(),
   emailReminderHours: z.number().int().min(0).max(168).optional(),
   emailFollowUp: z.boolean().optional(),
   fromEmail: z.string().email().nullable().optional().or(z.literal("")),

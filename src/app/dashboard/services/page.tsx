@@ -36,9 +36,18 @@ const emptyStats: ServiceStats = {
   revenueMonthCents: 0,
 };
 
+type PaymentsInfo = {
+  connected: boolean;
+  chargesEnabled: boolean;
+  canChargePaidEvents: boolean;
+  setupUrl: string;
+  message: string;
+};
+
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [currency, setCurrency] = useState("USD");
+  const [payments, setPayments] = useState<PaymentsInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [name, setName] = useState("");
@@ -65,9 +74,12 @@ export default function ServicesPage() {
     if (res.ok) {
       setServices(data.services ?? []);
       setCurrency(data.currency || "USD");
+      setPayments(data.payments ?? null);
     }
     setLoading(false);
   }
+
+  const stripeReady = Boolean(payments?.canChargePaidEvents);
 
   useEffect(() => {
     void load();
@@ -102,6 +114,13 @@ export default function ServicesPage() {
   async function saveEdit(e: FormEvent) {
     e.preventDefault();
     if (!editing) return;
+    if (editForm.price > 0 && !stripeReady) {
+      setMsg(
+        payments?.message ||
+          "Connect Stripe before setting a paid price. Free events (price 0) are fine.",
+      );
+      return;
+    }
     setSavingEdit(true);
     setMsg("");
     const res = await fetch(`/api/site/services/${editing.id}`, {
@@ -119,7 +138,8 @@ export default function ServicesPage() {
     });
     setSavingEdit(false);
     if (!res.ok) {
-      setMsg("Could not save event");
+      const err = await res.json().catch(() => ({}));
+      setMsg(err.error || "Could not save event");
       return;
     }
     setEditing(null);
@@ -141,6 +161,13 @@ export default function ServicesPage() {
 
   async function create(e: FormEvent) {
     e.preventDefault();
+    if (price > 0 && !stripeReady) {
+      setMsg(
+        payments?.message ||
+          "Connect Stripe before adding a paid event. Free events (price 0) are fine.",
+      );
+      return;
+    }
     setPending(true);
     setMsg("");
     const res = await fetch("/api/site/services", {
@@ -156,7 +183,8 @@ export default function ServicesPage() {
     });
     setPending(false);
     if (!res.ok) {
-      setMsg("Could not add event");
+      const err = await res.json().catch(() => ({}));
+      setMsg(err.error || "Could not add event");
       return;
     }
     setName("");
@@ -239,6 +267,21 @@ export default function ServicesPage() {
 
       <section className="sw-card">
         <h2 className="mb-3 text-[15px] font-extrabold">Add an event</h2>
+        {!stripeReady ? (
+          <div
+            className="mb-3 rounded-xl border px-3.5 py-3 text-[13px]"
+            style={{
+              borderColor: "color-mix(in srgb, var(--ac) 35%, var(--ln))",
+              background: "color-mix(in srgb, var(--ac) 10%, var(--pn))",
+            }}
+          >
+            <b>Paid events need Stripe.</b> Free events (price 0) work anytime. To charge customers,{" "}
+            <a className="font-extrabold underline" href={payments?.setupUrl || "/dashboard/payments"}>
+              connect Stripe first
+            </a>
+            .
+          </div>
+        ) : null}
         <form onSubmit={create} className="grid gap-3 sm:grid-cols-3">
           <label className="grid gap-1 text-sm font-semibold sm:col-span-3">
             Name
@@ -261,7 +304,7 @@ export default function ServicesPage() {
             />
           </label>
           <label className="grid gap-1 text-sm font-semibold">
-            Price (0 = free, no label shown)
+            Price (0 = free)
             <input
               type="number"
               min={0}
@@ -270,9 +313,18 @@ export default function ServicesPage() {
               onChange={(e) => setPrice(Number(e.target.value))}
               className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-3 py-2 font-normal"
             />
+            {price > 0 && !stripeReady ? (
+              <span className="text-[11.5px] font-semibold" style={{ color: "var(--at)" }}>
+                Connect Stripe to use a paid price.
+              </span>
+            ) : null}
           </label>
           <div className="flex items-end">
-            <button type="submit" className="sw-btn sw-btn-primary w-full" disabled={pending}>
+            <button
+              type="submit"
+              className="sw-btn sw-btn-primary w-full"
+              disabled={pending || (price > 0 && !stripeReady)}
+            >
               {pending ? "Adding…" : "Add event"}
             </button>
           </div>

@@ -1,14 +1,24 @@
-import { addDays, format } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
+import { addDays, format, nextDay, type Day } from "date-fns";
+import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 import { getDaySlots } from "@/lib/booking/availability";
 import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
 import { formatCustomerPrice } from "@/lib/utils";
 
+export type SuggestedSlot = {
+  serviceId: string;
+  serviceName: string;
+  dateIso: string;
+  start: string;
+  end: string;
+  label: string;
+};
+
 export type CalendarChatAnswer = {
   reply: string;
   source: "openai" | "groq" | "rules";
   suggestedEventIds: string[];
+  suggestedSlots: SuggestedSlot[];
   suggestedQuestions: string[];
 };
 
@@ -32,6 +42,7 @@ async function llmChat(opts: {
   model: string;
   system: string;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
+  maxTokens?: number;
 }): Promise<string | null> {
   const res = await fetch(opts.url, {
     method: "POST",
@@ -41,8 +52,8 @@ async function llmChat(opts: {
     },
     body: JSON.stringify({
       model: opts.model,
-      temperature: 0.55,
-      max_tokens: 140,
+      temperature: 0.4,
+      max_tokens: opts.maxTokens ?? 280,
       messages: [{ role: "system", content: opts.system }, ...opts.messages],
     }),
   });
@@ -65,6 +76,11 @@ function workshopHint(q: string) {
 function shortHint(q: string) {
   return /short|quick|brief|30|half.?hour|express/i.test(q);
 }
+function slotHint(q: string) {
+  return /slot|available|availability|open(ing)?s?|free time|when can|what time|times?|book(ing)?|appoint|schedule|reserve/i.test(
+    q,
+  );
+}
 
 function scoreEvent(e: EventCard, question: string) {
   const q = question.toLowerCase();
@@ -82,6 +98,157 @@ function scoreEvent(e: EventCard, question: string) {
   return score;
 }
 
+/** Resolve visitor date phrases → YYYY-MM-DD in site timezone (up to 3 days). */
+export function resolveAskedDates(question: string, timezone: string): string[] {
+  const now = toZonedTime(new Date(), timezone);
+  const todayIso = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+  const q = question.toLowerCase();
+  const out: string[] = [];
+  const push = (d: Date) => {
+    const iso = formatInTimeZone(d, timezone, "yyyy-MM-dd");
+    if (!out.includes(iso)) out.push(iso);
+  };
+
+  const isoMatch = q.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+  if (isoMatch) out.push(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`);
+
+  if (/\btoday\b/i.test(q)) push(now);
+  if (/\btomorrow\b/i.test(q)) push(addDays(now, 1));
+
+  const weekdayMap: Array<{ re: RegExp; day: Day }> = [
+    { re: /\bsunday\b|\bsun\b/i, day: 0 },
+    { re: /\bmonday\b|\bmon\b/i, day: 1 },
+    { re: /\btuesday\b|\btues?\b/i, day: 2 },
+    { re: /\bwednesday\b|\bwed\b/i, day: 3 },
+    { re: /\bthursday\b|\bthurs?\b/i, day: 4 },
+    { re: /\bfriday\b|\bfri\b/i, day: 5 },
+    { re: /\bsaturday\b|\bsat\b/i, day: 6 },
+  ];
+  for (const { re, day } of weekdayMap) {
+    if (re.test(q)) {
+      const dow = now.getDay();
+      if (dow === day && /\bthis\b|\btoday\b/i.test(q)) push(now);
+      else push(nextDay(now, day));
+    }
+  }
+
+  if (/\bweekend\b/i.test(q)) {
+    // Next Sat + Sun
+    push(nextDay(now, 6));
+    push(nextDay(addDays(now, 1), 0));
+  }
+
+  if (!out.length && slotHint(question)) {
+    // Default: today + next 2 days when asking about openings
+    push(now);
+    push(addDays(now, 1));
+    push(addDays(now, 2));
+  }
+
+  // Prefer today first if present
+  return out
+    .filter((d) => d >= todayIso || out.length === 1)
+    .slice(0, 3);
+}
+
+function matchEvents(events: EventCard[], question: string): EventCard[] {
+  const scored = events
+    .map((e) => ({ e, score: scoreEvent(e, question) }))
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((r) => r.e);
+  if (scored.length) return scored.slice(0, 4);
+  const featured = events.filter((e) => e.featured).slice(0, 3);
+  return featured.length ? featured : events.slice(0, 3);
+}
+
+type SlotLookup = {
+  dateIso: string;
+  dateLabel: string;
+  lines: string[];
+  suggested: SuggestedSlot[];
+};
+
+async function lookupConcreteSlots(opts: {
+  siteId: string;
+  timezone: string;
+  weekly: Array<{ dayOfWeek: number; enabled: boolean; startTime: string; endTime: string }>;
+  timeOff: Array<{ startsAt: Date; endsAt: Date }>;
+  events: EventCard[];
+  dateIsos: string[];
+  focusEvents: EventCard[];
+}): Promise<SlotLookup[]> {
+  const results: SlotLookup[] = [];
+  const focus = opts.focusEvents.slice(0, 3);
+  if (!focus.length || !opts.dateIsos.length) return results;
+
+  for (const dateIso of opts.dateIsos) {
+    const dayStart = new Date(`${dateIso}T00:00:00.000Z`);
+    const dayEnd = addDays(dayStart, 1);
+    const bookings = await prisma.booking.findMany({
+      where: {
+        siteId: opts.siteId,
+        status: { not: "CANCELLED" },
+        startsAt: { lt: dayEnd },
+        endsAt: { gt: dayStart },
+      },
+      select: { startsAt: true, endsAt: true, serviceId: true },
+    });
+
+    const dateLabel = formatInTimeZone(
+      new Date(`${dateIso}T12:00:00.000Z`),
+      opts.timezone,
+      "EEE MMM d",
+    );
+    const lines: string[] = [];
+    const suggested: SuggestedSlot[] = [];
+
+    for (const ev of focus) {
+      const relevant = bookings
+        .filter((b) => b.serviceId === ev.id)
+        .map((b) => ({ startsAt: b.startsAt, endsAt: b.endsAt }));
+      // Also block overlapping any booking if staff pool is shared — use all bookings for safety
+      const all = bookings.map((b) => ({ startsAt: b.startsAt, endsAt: b.endsAt }));
+      const slots = getDaySlots({
+        date: new Date(`${dateIso}T12:00:00.000Z`),
+        timezone: opts.timezone,
+        durationMin: ev.durationMin,
+        bufferBeforeMin: ev.bufferBeforeMin,
+        bufferAfterMin: ev.bufferAfterMin,
+        minNoticeMin: ev.minNoticeMin,
+        weekly: opts.weekly,
+        bookings: all.length ? all : relevant,
+        timeOff: opts.timeOff,
+      });
+      const open = slots.filter((s) => s.available);
+      if (!open.length) {
+        lines.push(`${ev.name} on ${dateLabel}: no open times`);
+        continue;
+      }
+      const sample = open.slice(0, 8);
+      lines.push(
+        `${ev.name} on ${dateLabel}: ${sample.map((s) => s.label).join(", ")}${
+          open.length > sample.length ? ` (+${open.length - sample.length} more)` : ""
+        }`,
+      );
+      for (const s of sample.slice(0, 6)) {
+        suggested.push({
+          serviceId: ev.id,
+          serviceName: ev.name,
+          dateIso,
+          start: s.start.toISOString(),
+          end: s.end.toISOString(),
+          label: s.label,
+        });
+      }
+    }
+
+    results.push({ dateIso, dateLabel, lines, suggested });
+  }
+
+  return results;
+}
+
 function rulesAnswer(input: {
   siteName: string;
   currency: string;
@@ -89,6 +256,8 @@ function rulesAnswer(input: {
   question: string;
   events: EventCard[];
   availabilityNotes: string[];
+  slotLines: string[];
+  suggestedSlots: SuggestedSlot[];
 }): CalendarChatAnswer {
   const ranked = [...input.events]
     .map((e) => ({ e, score: scoreEvent(e, input.question) }))
@@ -96,26 +265,55 @@ function rulesAnswer(input: {
   const top = ranked.filter((r) => r.score > 0).slice(0, 4).map((r) => r.e);
   const picks = top.length ? top : input.events.filter((e) => e.featured).slice(0, 3);
   const pool = picks.length ? picks : input.events.slice(0, 3);
-  const availBit = input.availabilityNotes.slice(0, 2).join(" ");
 
   if (!input.events.length) {
     return {
       reply: `Nothing bookable is published yet — check back soon.`,
       source: "rules",
       suggestedEventIds: [],
+      suggestedSlots: [],
       suggestedQuestions: ["What services do you offer?", "How do I book?"],
+    };
+  }
+
+  if (input.suggestedSlots.length) {
+    const byDay = new Map<string, SuggestedSlot[]>();
+    for (const s of input.suggestedSlots) {
+      const list = byDay.get(s.dateIso) || [];
+      list.push(s);
+      byDay.set(s.dateIso, list);
+    }
+    const bits = [...byDay.entries()].slice(0, 2).map(([dateIso, slots]) => {
+      const label = slots[0]
+        ? formatInTimeZone(new Date(`${dateIso}T12:00:00Z`), input.timezone, "EEE MMM d")
+        : dateIso;
+      const times = [...new Set(slots.map((s) => s.label))].slice(0, 5).join(", ");
+      const names = [...new Set(slots.map((s) => s.serviceName))].slice(0, 2).join(" / ");
+      return `${names} on ${label}: ${times}`;
+    });
+    return {
+      reply: `Open times — ${bits.join(" · ")}. Tap a time below to start booking.`,
+      source: "rules",
+      suggestedEventIds: [...new Set(input.suggestedSlots.map((s) => s.serviceId))],
+      suggestedSlots: input.suggestedSlots.slice(0, 12),
+      suggestedQuestions: [
+        "What’s available tomorrow?",
+        "Any free sessions?",
+        "Show weekend openings",
+      ],
     };
   }
 
   if (/how (do|can) i book|book(ing)?/i.test(input.question)) {
     return {
-      reply: `Pick an event, choose a time (${input.timezone}), then enter your details — you’re set.`,
+      reply: `Ask for a day (e.g. “Friday openings”), tap a time, then enter your details — or pick an event on the calendar.`,
       source: "rules",
       suggestedEventIds: pool.map((e) => e.id),
+      suggestedSlots: [],
       suggestedQuestions: [
+        "What’s available today?",
         "What’s happening this weekend?",
         "Are there any free workshops?",
-        "Which events are shortest?",
       ],
     };
   }
@@ -130,17 +328,19 @@ function rulesAnswer(input: {
           .join(" or ")}.`,
         source: "rules",
         suggestedEventIds: pool.map((e) => e.id),
-        suggestedQuestions: ["What’s popular?", "Show short sessions", "How do I book?"],
+        suggestedSlots: [],
+        suggestedQuestions: ["What’s available today?", "Show short sessions", "How do I book?"],
       };
     }
     return {
       reply: `Yes — free options: ${frees
         .slice(0, 3)
         .map((e) => e.name)
-        .join(", ")}. Tap one to book.`,
+        .join(", ")}. Ask for a day to see open times.`,
       source: "rules",
       suggestedEventIds: frees.slice(0, 4).map((e) => e.id),
-      suggestedQuestions: ["What’s happening this weekend?", "How do I book?", "Any workshops?"],
+      suggestedSlots: [],
+      suggestedQuestions: ["What’s available tomorrow?", "How do I book?", "Any workshops?"],
     };
   }
 
@@ -150,30 +350,31 @@ function rulesAnswer(input: {
       reply: `Quickest: ${shorts.map((e) => `${e.name} (${e.durationMin}m)`).join(", ")}.`,
       source: "rules",
       suggestedEventIds: shorts.map((e) => e.id),
-      suggestedQuestions: ["Any free options?", "What’s this weekend?", "How do I book?"],
+      suggestedSlots: [],
+      suggestedQuestions: ["Any free options?", "What’s available today?", "How do I book?"],
     };
   }
 
-  const intro = weekendHint(input.question)
-    ? `This weekend, try:`
-    : `Good matches:`;
+  const intro = weekendHint(input.question) ? `This weekend, try:` : `Good matches:`;
+  const availBit = input.slotLines[0] || input.availabilityNotes[0] || "";
 
   return {
     reply: `${intro} ${pool
       .slice(0, 3)
       .map((e) => e.name)
-      .join(", ")}.${availBit ? ` ${availBit}` : ""}`,
+      .join(", ")}.${availBit ? ` ${availBit}` : ""} Ask a day to see exact times.`,
     source: "rules",
     suggestedEventIds: pool.map((e) => e.id),
+    suggestedSlots: [],
     suggestedQuestions: [
+      "What’s available today?",
       "Are there any free workshops?",
-      "What’s the shortest session?",
       "How do I book?",
     ],
   };
 }
 
-async function buildCalendarContext(siteId: string) {
+async function buildCalendarContext(siteId: string, question: string) {
   const site = await prisma.site.findUnique({
     where: { id: siteId },
     include: {
@@ -215,7 +416,23 @@ async function buildCalendarContext(siteId: string) {
         .join(", ")
     : "Hours not configured — default weekday openings may apply";
 
-  const horizon = 10;
+  const focusEvents = matchEvents(events, question);
+  const askedDates = resolveAskedDates(question, site.timezone);
+  const concrete = await lookupConcreteSlots({
+    siteId: site.id,
+    timezone: site.timezone,
+    weekly,
+    timeOff: site.timeOff.map((t) => ({ startsAt: t.startsAt, endsAt: t.endsAt })),
+    events,
+    dateIsos: askedDates,
+    focusEvents,
+  });
+
+  const suggestedSlots = concrete.flatMap((c) => c.suggested).slice(0, 12);
+  const slotLines = concrete.flatMap((c) => c.lines);
+
+  // Broad 7-day count snapshot for general questions
+  const horizon = 7;
   const rangeStart = new Date();
   const rangeEnd = addDays(rangeStart, horizon + 1);
   const bookings = await prisma.booking.findMany({
@@ -225,13 +442,11 @@ async function buildCalendarContext(siteId: string) {
       startsAt: { lt: rangeEnd },
       endsAt: { gt: rangeStart },
     },
-    select: { startsAt: true, endsAt: true, serviceId: true },
+    select: { startsAt: true, endsAt: true },
   });
 
-  const sampleEvents = events.slice(0, 6);
-  const availabilityNotes: string[] = [];
   const openByDay: string[] = [];
-
+  const sampleEvents = (focusEvents.length ? focusEvents : events).slice(0, 5);
   for (let i = 0; i < horizon; i++) {
     const day = addDays(new Date(), i);
     const dateIso = formatInTimeZone(day, site.timezone, "yyyy-MM-dd");
@@ -253,21 +468,19 @@ async function buildCalendarContext(siteId: string) {
       });
       const open = slots.filter((s) => s.available).length;
       openTotal += open;
-      if (open > 0) perEvent.push(`${ev.name}: ${open} opens`);
+      if (open > 0) perEvent.push(`${ev.name}: ${open}`);
     }
-    if (openTotal > 0) {
-      openByDay.push(`${label}: ${openTotal} open slots${perEvent.length ? ` (${perEvent.slice(0, 3).join("; ")})` : ""}`);
-    } else {
-      openByDay.push(`${label}: limited / no open slots in sample events`);
-    }
+    openByDay.push(
+      openTotal > 0
+        ? `${label}: ${openTotal} opens${perEvent.length ? ` (${perEvent.slice(0, 3).join("; ")})` : ""}`
+        : `${label}: no opens in focus events`,
+    );
   }
 
+  const availabilityNotes: string[] = [];
+  if (slotLines.length) availabilityNotes.push(...slotLines.slice(0, 6));
   const weekendDays = openByDay.filter((l) => /Sat|Sun/.test(l)).slice(0, 2);
-  if (weekendDays.length) {
-    availabilityNotes.push(`Weekend snapshot: ${weekendDays.join(" · ")}`);
-  }
-  const soon = openByDay.find((l) => !/limited/.test(l));
-  if (soon) availabilityNotes.push(`Soonest openings look like: ${soon}.`);
+  if (weekendDays.length) availabilityNotes.push(`Weekend: ${weekendDays.join(" · ")}`);
 
   const timeOffNote =
     site.timeOff.length > 0
@@ -285,6 +498,10 @@ async function buildCalendarContext(siteId: string) {
     availabilityNotes,
     timeOffNote,
     staffNames: site.staff.map((s) => s.name),
+    suggestedSlots,
+    slotLines,
+    askedDates,
+    focusEvents,
   };
 }
 
@@ -293,8 +510,20 @@ export async function answerCalendarQuestion(input: {
   question: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 }): Promise<CalendarChatAnswer> {
-  const ctx = await buildCalendarContext(input.siteId);
-  const { site, events, hoursSummary, openByDay, availabilityNotes, timeOffNote, staffNames } = ctx;
+  const ctx = await buildCalendarContext(input.siteId, input.question);
+  const {
+    site,
+    events,
+    hoursSummary,
+    openByDay,
+    availabilityNotes,
+    timeOffNote,
+    staffNames,
+    suggestedSlots,
+    slotLines,
+    askedDates,
+    focusEvents,
+  } = ctx;
   const siteName = site.branding?.businessName || site.name;
   const nowLocal = formatInTimeZone(new Date(), site.timezone, "EEEE, MMM d yyyy · HH:mm zzz");
 
@@ -305,10 +534,18 @@ export async function answerCalendarQuestion(input: {
     })
     .join("\n");
 
-  const system = `You are the friendly front-desk assistant for "${siteName}" (Slotwise Calendar Chat, BETA).
-Keep replies SHORT: 1–2 sentences, or at most 3 tight bullets. Aim under ~220 characters unless listing 2–3 event names. No fluff, no markdown headings, no emoji spam.
+  const concreteBlock = slotLines.length
+    ? `CONCRETE OPEN TIMES (authoritative — use these exact times, never invent):\n${slotLines.join("\n")}`
+    : askedDates.length
+      ? `CONCRETE OPEN TIMES: none found for ${askedDates.join(", ")} on focus events.`
+      : "CONCRETE OPEN TIMES: visitor did not ask a specific day yet — give counts from the snapshot and invite them to name a day.";
 
-Grounded in THIS calendar only:
+  const system = `You are the booking assistant for "${siteName}" (Slotwise Calendar Chat).
+You help visitors find real open appointment times and start a booking.
+
+Style: clear and helpful. 2–4 short sentences OR up to 5 tight bullets. List real clock times when available. No markdown headings, no emoji spam.
+
+Calendar facts:
 - Timezone: ${site.timezone} · Now: ${nowLocal}
 - Currency: ${site.currency}
 - Hours: ${hoursSummary}
@@ -316,12 +553,14 @@ Grounded in THIS calendar only:
 ${timeOffNote ? `- ${timeOffNote}` : ""}
 
 Rules:
-1) ONLY use the catalog + availability. Never invent events, prices, or times.
-2) Name events exactly so visitors can tap them.
-3) Prefer one clear recommendation over long lists.
-4) If unsure, ask one short question.`;
+1) ONLY use the catalog + availability blocks. Never invent events, prices, or times.
+2) When CONCRETE OPEN TIMES lists times, quote those exact labels (e.g. 2:00 PM).
+3) If they want to book, tell them to tap a time chip below (the UI starts booking for them).
+4) Name events exactly as in the catalog.
+5) If no times, say so and suggest another day or event.
+6) Focus events for this question: ${focusEvents.map((e) => e.name).join(", ") || "general"}.`;
 
-  const contextBlock = `EVENT CATALOG:\n${catalog || "(no active events)"}\n\nAVAILABILITY SNAPSHOT (next ~10 days, open slot counts):\n${openByDay.join("\n")}\n\nNOTES:\n${availabilityNotes.join("\n") || "none"}`;
+  const contextBlock = `EVENT CATALOG:\n${catalog || "(no active events)"}\n\n${concreteBlock}\n\nAVAILABILITY COUNTS (next ~7 days):\n${openByDay.join("\n")}\n\nNOTES:\n${availabilityNotes.join("\n") || "none"}`;
 
   const historyMsgs = (input.history || []).slice(-8);
   const messages: Array<{ role: "user" | "assistant"; content: string }> = [
@@ -336,35 +575,37 @@ Rules:
   const provider = secrets.aiProvider || "openai";
   let text: string | null = null;
   let source: CalendarChatAnswer["source"] = "rules";
+  const maxTokens = suggestedSlots.length || slotHint(input.question) ? 320 : 200;
 
   if (provider !== "template") {
+    const run = async (url: string, apiKey: string, model: string, src: "openai" | "groq") => {
+      const out = await llmChat({ url, apiKey, model, system, messages, maxTokens });
+      if (out) {
+        text = out;
+        source = src;
+      }
+    };
     if (provider === "groq" && secrets.groqApiKey) {
-      text = await llmChat({
-        url: "https://api.groq.com/openai/v1/chat/completions",
-        apiKey: secrets.groqApiKey,
-        model: secrets.groqModel || "llama-3.3-70b-versatile",
-        system,
-        messages,
-      });
-      if (text) source = "groq";
+      await run(
+        "https://api.groq.com/openai/v1/chat/completions",
+        secrets.groqApiKey,
+        secrets.groqModel || "llama-3.3-70b-versatile",
+        "groq",
+      );
     } else if (secrets.openaiApiKey) {
-      text = await llmChat({
-        url: "https://api.openai.com/v1/chat/completions",
-        apiKey: secrets.openaiApiKey,
-        model: secrets.openaiModel || "gpt-4o-mini",
-        system,
-        messages,
-      });
-      if (text) source = "openai";
+      await run(
+        "https://api.openai.com/v1/chat/completions",
+        secrets.openaiApiKey,
+        secrets.openaiModel || "gpt-4o-mini",
+        "openai",
+      );
     } else if (secrets.groqApiKey) {
-      text = await llmChat({
-        url: "https://api.groq.com/openai/v1/chat/completions",
-        apiKey: secrets.groqApiKey,
-        model: secrets.groqModel || "llama-3.3-70b-versatile",
-        system,
-        messages,
-      });
-      if (text) source = "groq";
+      await run(
+        "https://api.groq.com/openai/v1/chat/completions",
+        secrets.groqApiKey,
+        secrets.groqModel || "llama-3.3-70b-versatile",
+        "groq",
+      );
     }
   }
 
@@ -376,28 +617,38 @@ Rules:
       question: input.question,
       events,
       availabilityNotes,
+      slotLines,
+      suggestedSlots,
     });
   }
 
   const mentioned = events
     .filter((e) => text!.toLowerCase().includes(e.name.toLowerCase()))
     .slice(0, 4);
-  const fallbackIds = rulesAnswer({
+  const fallback = rulesAnswer({
     siteName,
     currency: site.currency,
     timezone: site.timezone,
     question: input.question,
     events,
     availabilityNotes,
-  }).suggestedEventIds;
+    slotLines,
+    suggestedSlots,
+  });
 
   return {
     reply: text,
     source,
-    suggestedEventIds: mentioned.length ? mentioned.map((e) => e.id) : fallbackIds,
+    suggestedEventIds: mentioned.length
+      ? mentioned.map((e) => e.id)
+      : suggestedSlots.length
+        ? [...new Set(suggestedSlots.map((s) => s.serviceId))]
+        : fallback.suggestedEventIds,
+    suggestedSlots: suggestedSlots.length ? suggestedSlots : fallback.suggestedSlots,
     suggestedQuestions: [
-      "What’s happening this weekend?",
-      "Are there any free workshops?",
+      "What’s available today?",
+      "What’s available tomorrow?",
+      "Show weekend openings",
       "How do I book?",
     ],
   };

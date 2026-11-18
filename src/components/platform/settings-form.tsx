@@ -15,6 +15,8 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
   const [resendApiKey, setResendApiKey] = useState("");
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
+  const [metaWhatsappAccessToken, setMetaWhatsappAccessToken] = useState("");
+  const [openwaApiKey, setOpenwaApiKey] = useState("");
   const [webflowClientSecret, setWebflowClientSecret] = useState("");
   const [googleClientSecret, setGoogleClientSecret] = useState("");
   const [microsoftClientSecret, setMicrosoftClientSecret] = useState("");
@@ -57,6 +59,11 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.twilioAccountSid = form.twilioAccountSid;
         payload.twilioFromNumber = form.twilioFromNumber;
         payload.twilioWhatsappFrom = form.twilioWhatsappFrom;
+        payload.whatsappProvider = form.whatsappProvider;
+        payload.metaWhatsappPhoneNumberId = form.metaWhatsappPhoneNumberId;
+        payload.metaWhatsappApiVersion = form.metaWhatsappApiVersion;
+        payload.openwaBaseUrl = form.openwaBaseUrl;
+        payload.openwaSessionId = form.openwaSessionId;
         payload.webflowClientId = form.webflowClientId;
         payload.googleClientId = form.googleClientId;
         payload.microsoftClientId = form.microsoftClientId;
@@ -66,6 +73,10 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.groqModel = form.groqModel;
         if (resendApiKey.trim()) payload.resendApiKey = resendApiKey.trim();
         if (twilioAuthToken.trim()) payload.twilioAuthToken = twilioAuthToken.trim();
+        if (metaWhatsappAccessToken.trim()) {
+          payload.metaWhatsappAccessToken = metaWhatsappAccessToken.trim();
+        }
+        if (openwaApiKey.trim()) payload.openwaApiKey = openwaApiKey.trim();
         if (webflowClientSecret.trim()) payload.webflowClientSecret = webflowClientSecret.trim();
         if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
         if (microsoftClientSecret.trim()) payload.microsoftClientSecret = microsoftClientSecret.trim();
@@ -233,9 +244,9 @@ export function PlatformSettingsForm({ initial, section }: Props) {
           </section>
 
           <section className="sw-card">
-            <h2 className="mb-1 text-[15px] font-extrabold">SMS / WhatsApp (Twilio)</h2>
+            <h2 className="mb-1 text-[15px] font-extrabold">SMS (Twilio)</h2>
             <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-              Reminders and waitlist offers (P1). Auth token is encrypted at rest.
+              SMS reminders and waitlist offers. Auth token is encrypted at rest.
             </p>
             <Field label="Account SID">
               <input
@@ -263,14 +274,101 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 placeholder="+15551234567"
               />
             </Field>
-            <Field label="WhatsApp from" hint="Optional · whatsapp:+…">
-              <input
+          </section>
+
+          <section className="sw-card">
+            <h2 className="mb-1 text-[15px] font-extrabold">WhatsApp provider</h2>
+            <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+              Booking confirmations when a site enables WhatsApp. Choose Twilio, Meta Cloud API, or
+              self-hosted OpenWA. Secrets are encrypted at rest.
+            </p>
+            <Field label="Active provider">
+              <select
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
-                value={form.twilioWhatsappFrom ?? ""}
-                onChange={(e) => set("twilioWhatsappFrom", e.target.value || null)}
-                placeholder="whatsapp:+14155238886"
-              />
+                value={form.whatsappProvider || "twilio"}
+                onChange={(e) => set("whatsappProvider", e.target.value)}
+              >
+                <option value="twilio">Twilio WhatsApp</option>
+                <option value="meta">Meta Cloud API</option>
+                <option value="openwa">OpenWA (self-hosted)</option>
+              </select>
             </Field>
+
+            {(form.whatsappProvider || "twilio") === "twilio" ? (
+              <Field label="WhatsApp from" hint="whatsapp:+…">
+                <input
+                  className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                  value={form.twilioWhatsappFrom ?? ""}
+                  onChange={(e) => set("twilioWhatsappFrom", e.target.value || null)}
+                  placeholder="whatsapp:+14155238886"
+                />
+              </Field>
+            ) : null}
+
+            {form.whatsappProvider === "meta" ? (
+              <>
+                <Field label="Phone number ID" hint="Meta Business → WhatsApp → API Setup">
+                  <input
+                    className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                    value={form.metaWhatsappPhoneNumberId ?? ""}
+                    onChange={(e) => set("metaWhatsappPhoneNumberId", e.target.value || null)}
+                    placeholder="123456789012345"
+                  />
+                </Field>
+                <Field
+                  label="Access token"
+                  hint={form.metaWhatsappAccessTokenHint ?? "Not set"}
+                >
+                  <input
+                    type="password"
+                    className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                    value={metaWhatsappAccessToken}
+                    onChange={(e) => setMetaWhatsappAccessToken(e.target.value)}
+                    placeholder="Paste permanent token to rotate"
+                    autoComplete="new-password"
+                  />
+                </Field>
+                <Field label="API version">
+                  <input
+                    className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                    value={form.metaWhatsappApiVersion ?? "v21.0"}
+                    onChange={(e) => set("metaWhatsappApiVersion", e.target.value || null)}
+                    placeholder="v21.0"
+                  />
+                </Field>
+              </>
+            ) : null}
+
+            {form.whatsappProvider === "openwa" ? (
+              <>
+                <Field label="Base URL" hint="Your OpenWA / Evolution host">
+                  <input
+                    className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                    value={form.openwaBaseUrl ?? ""}
+                    onChange={(e) => set("openwaBaseUrl", e.target.value || null)}
+                    placeholder="https://wa.your-server.com"
+                  />
+                </Field>
+                <Field label="API key" hint={form.openwaApiKeyHint ?? "Not set"}>
+                  <input
+                    type="password"
+                    className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                    value={openwaApiKey}
+                    onChange={(e) => setOpenwaApiKey(e.target.value)}
+                    placeholder="Paste API key to rotate"
+                    autoComplete="new-password"
+                  />
+                </Field>
+                <Field label="Session ID">
+                  <input
+                    className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                    value={form.openwaSessionId ?? "default"}
+                    onChange={(e) => set("openwaSessionId", e.target.value || null)}
+                    placeholder="default"
+                  />
+                </Field>
+              </>
+            ) : null}
           </section>
 
           <section className="sw-card">

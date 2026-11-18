@@ -118,6 +118,7 @@ export async function siteBootstrapPayload(
     connected: Boolean(stripe?.stripeAccountId),
     chargesEnabled: Boolean(stripe?.chargesEnabled),
     payoutsEnabled: Boolean(stripe?.payoutsEnabled),
+    canChargePaidEvents: Boolean(stripe?.stripeAccountId && stripe?.chargesEnabled),
     paymentMode: stripe?.paymentMode || "PAY_ON_SITE",
     depositPercent: stripe?.depositPercent ?? 30,
     setupUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://slotwise.hindaralabs.com"}/dashboard/payments`,
