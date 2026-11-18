@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { formatMoney } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 
 type Service = {
   id: string;
@@ -95,7 +95,7 @@ export default function ServicesPage() {
               <div>
                 <b>{s.name}</b>
                 <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-                  {s.durationMin} min · {formatMoney(s.priceCents)} · buffer {s.bufferAfterMin}m · notice{" "}
+                  {s.durationMin} min · {formatPrice(s.priceCents)} · buffer {s.bufferAfterMin}m · notice{" "}
                   {s.minNoticeMin}m
                 </small>
               </div>

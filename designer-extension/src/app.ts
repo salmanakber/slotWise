@@ -14,6 +14,8 @@ import { brandLoader } from "./loader";
 type Tab = "home" | "events" | "create" | "theme" | "tools" | "settings";
 
 const THEME_KEY = "slotwise-designer-theme";
+const PANEL_MODE_KEY = "slotwise-panel-mode";
+const CANVAS_WIDE_KEY = "slotwise-canvas-wide";
 
 const TAB_META: Record<Tab, { label: string; icon: string }> = {
   home: { label: "Home", icon: icons.home },
@@ -29,12 +31,15 @@ export async function boot(root: HTMLElement) {
 
   const state = {
     theme: (localStorage.getItem(THEME_KEY) as "light" | "dark") || "light",
+    panelMode: (localStorage.getItem(PANEL_MODE_KEY) as "mobile" | "full") || "mobile",
+    canvasWide: localStorage.getItem(CANVAS_WIDE_KEY) === "1",
     tab: "home" as Tab,
     webflowSiteId: null as string | null,
     bootstrap: null as api.Bootstrap | null,
     services: [] as api.Service[],
     themes: [] as api.DesignerTheme[],
     branding: null as api.DesignerBranding | null,
+    selectedBookingId: null as string | null,
     status: "",
     statusOk: true,
     busy: false,
@@ -68,6 +73,7 @@ export async function boot(root: HTMLElement) {
   }
 
   function money(cents: number, currency = "USD") {
+    if (!cents || cents <= 0) return "Free";
     try {
       return new Intl.NumberFormat(undefined, {
         style: "currency",
@@ -78,6 +84,13 @@ export async function boot(root: HTMLElement) {
       return `$${(cents / 100).toFixed(0)}`;
     }
   }
+
+  function setPanelMode(mode: "mobile" | "full") {
+    state.panelMode = mode;
+    localStorage.setItem(PANEL_MODE_KEY, mode);
+    document.documentElement.dataset.panel = mode;
+  }
+  setPanelMode(state.panelMode);
 
   function gate(feature: string) {
     return state.bootstrap?.entitlements.gates[feature];
@@ -137,8 +150,8 @@ export async function boot(root: HTMLElement) {
             <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle theme">
               ${state.theme === "light" ? icons.moon : icons.sun}
             </button>
-            <button type="button" class="btn btn-icon btn-primary" id="publishBtn" title="Publish">
-              <span class="ico">${icons.rocket}</span>
+            <button type="button" class="btn btn-sm btn-primary" id="publishBtn" title="Publish site">
+              ${iconLabel(icons.publish, "Publish")}
             </button>
           </div>
         </header>
@@ -295,20 +308,20 @@ export async function boot(root: HTMLElement) {
   }
 
   function appsCard() {
-    const apps = state.bootstrap?.apps || [];
+    const apps = (state.bootstrap?.apps || []).filter((a) => a.ready || a.connected);
     if (!apps.length) return "";
     return `<section class="card card-soft">
       ${cardTitle(icons.grid, "Connected apps")}
-      <p class="lead">Calendars and meeting tools for this site.</p>
+      <p class="lead">Calendars and meeting tools ready for this site.</p>
       <div class="app-list">
         ${apps
           .map((a) => {
-            const stateLabel = a.connected ? "Connected" : a.ready ? "Available" : "Soon";
-            const tone = a.connected ? "ok" : a.ready ? "warn" : "muted";
+            const stateLabel = a.connected ? "Connected" : "Available";
+            const tone = a.connected ? "ok" : "warn";
             return `<div class="app-row">
               <div class="app-meta">
                 <b>${escapeHtml(a.label)}</b>
-                <small>${a.connected && a.email ? escapeHtml(a.email) : a.connected ? "Linked" : a.ready ? "Connect in dashboard" : "Coming soon"}</small>
+                <small>${a.connected && a.email ? escapeHtml(a.email) : a.connected ? "Linked" : "Connect in dashboard"}</small>
               </div>
               <em class="pill pill-${tone}">${stateLabel}</em>
             </div>`;
@@ -323,22 +336,20 @@ export async function boot(root: HTMLElement) {
     const events = state.bootstrap?.activeEvents || state.services.filter((s) => s.active).slice(0, 8);
     return `<section class="card">
       <div class="card-h-row">
-        ${cardTitle(icons.calendar, "Active events")}
+        ${cardTitle(icons.calendar, "Events")}
         <button type="button" class="link-quiet" id="gotoEvents">See all</button>
       </div>
       ${
         events.length
-          ? `<div class="mini-list">
+          ? `<div class="home-grid">
         ${events
-          .slice(0, 5)
+          .slice(0, 6)
           .map(
-            (s) => `<div class="mini-row">
+            (s) => `<article class="home-tile">
             <i class="dot" style="background:${s.color || "var(--ac)"}"></i>
-            <div class="mini-meta">
-              <b>${escapeHtml(s.name)}</b>
-              <small>${s.durationMin} min · ${money(s.priceCents, state.bootstrap?.site.currency)}</small>
-            </div>
-          </div>`,
+            <b>${escapeHtml(s.name)}</b>
+            <small>${s.durationMin} min · ${money(s.priceCents, state.bootstrap?.site.currency)}</small>
+          </article>`,
           )
           .join("")}
       </div>`
@@ -352,20 +363,23 @@ export async function boot(root: HTMLElement) {
     const bookings = state.bootstrap?.recentBookings || [];
     return `<section class="card">
       <div class="card-h-row">
-        ${cardTitle(icons.check, "Recent bookings")}
-        <a class="link-quiet" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">Open</a>
+        ${cardTitle(icons.check, "Bookings")}
+        <a class="link-quiet" href="${api.APP_URL}/dashboard/bookings" target="_blank" rel="noreferrer">Open</a>
       </div>
       ${
         bookings.length
-          ? `<div class="mini-list">
+          ? `<div class="home-list">
         ${bookings
           .map(
-            (b) => `<div class="mini-row">
+            (b) => `<div class="home-booking">
             <div class="mini-meta">
               <b>${escapeHtml(b.customerName)}</b>
               <small>${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}</small>
             </div>
-            <em class="pill pill-muted">${escapeHtml(b.status)}</em>
+            <div class="home-booking-actions">
+              <em class="pill pill-muted">${escapeHtml(b.status)}</em>
+              <button type="button" class="btn btn-sm" data-booking-id="${escapeHtml(b.id)}">Details</button>
+            </div>
           </div>`,
           )
           .join("")}
@@ -373,6 +387,38 @@ export async function boot(root: HTMLElement) {
           : `<div class="empty">No bookings yet — share your widget to get the first one.</div>`
       }
     </section>`;
+  }
+
+  function bookingDrawer() {
+    const b = (state.bootstrap?.recentBookings || []).find((x) => x.id === state.selectedBookingId);
+    if (!b) return "";
+    const currency = b.currency || state.bootstrap?.site.currency || "USD";
+    return `<div class="drawer-root" id="bookingDrawer">
+      <button type="button" class="drawer-backdrop" id="closeBookingDrawer" aria-label="Close"></button>
+      <aside class="drawer-panel" role="dialog" aria-modal="true">
+        <header class="drawer-head">
+          <div>
+            <div class="eyebrow">${escapeHtml(b.reference)}</div>
+            <h3>${escapeHtml(b.customerName)}</h3>
+            <em class="pill">${escapeHtml(b.status)}</em>
+          </div>
+          <button type="button" class="btn btn-icon btn-ghost" id="closeBookingDrawer2" aria-label="Close">✕</button>
+        </header>
+        <div class="drawer-body">
+          <div class="drawer-row"><span>Service</span><b>${escapeHtml(b.serviceName)}</b></div>
+          <div class="drawer-row"><span>When</span><b>${escapeHtml(formatWhen(b.startsAt))}</b></div>
+          <div class="drawer-row"><span>Email</span><b>${escapeHtml(b.customerEmail || "—")}</b></div>
+          <div class="drawer-row"><span>Phone</span><b>${escapeHtml(b.customerPhone || "—")}</b></div>
+          <div class="drawer-row"><span>Amount</span><b>${money(b.amountCents || 0, currency)}</b></div>
+          <div class="drawer-row"><span>Deposit</span><b>${b.depositCents ? money(b.depositCents, currency) : "None"}</b></div>
+          <div class="drawer-row"><span>Notes</span><b>${escapeHtml(b.notes?.trim() || "No notes")}</b></div>
+        </div>
+        <footer class="drawer-foot">
+          ${b.customerEmail ? `<a class="btn btn-primary btn-block" href="mailto:${escapeHtml(b.customerEmail)}">Email customer</a>` : ""}
+          <button type="button" class="btn btn-block" id="closeBookingDrawer3">Close</button>
+        </footer>
+      </aside>
+    </div>`;
   }
 
   function viewHome() {
@@ -391,10 +437,9 @@ export async function boot(root: HTMLElement) {
           <div>
             <div class="eyebrow">${escapeHtml(state.bootstrap.entitlements.label)} plan</div>
             <h2 class="hero-title">${escapeHtml(state.bootstrap.site.name)}</h2>
-            <p class="lead">Manage events, payments, and your booking page from here.</p>
           </div>
         </div>
-        <div class="stats">
+        <div class="stats stats-compact">
           <div class="stat">
             <div class="top"><span class="label">Events</span></div>
             <b>${state.bootstrap.counts.services}${lim != null ? `<span class="lim">/${lim}</span>` : ""}</b>
@@ -407,23 +452,21 @@ export async function boot(root: HTMLElement) {
                 : ""
             }</b>
           </div>
-          <div class="stat">
-            <div class="top"><span class="label">Staff</span></div>
-            <b>${state.bootstrap.counts.staff}</b>
-          </div>
         </div>
         <div class="quiet-actions">
           <button type="button" class="btn btn-quiet" id="embedBtn" ${!state.canDesign ? "disabled" : ""}>
             ${iconLabel(icons.layout, embedLabel)}
           </button>
-          <a class="btn btn-ghost-soft" href="${api.APP_URL}/book/${state.bootstrap.site.publicKey}?embed=1" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Preview booking")}</a>
-          <a class="btn btn-ghost-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">${iconLabel(icons.grid, "Full dashboard")}</a>
+          <a class="btn btn-ghost-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">${iconLabel(icons.grid, "Dashboard")}</a>
         </div>
       </section>
+      <div class="home-columns">
+        ${bookingsPreview()}
+        ${eventsPreview()}
+      </div>
       ${paymentCard()}
-      ${eventsPreview()}
-      ${bookingsPreview()}
       ${appsCard()}
+      ${bookingDrawer()}
     `;
   }
 
@@ -582,9 +625,17 @@ export async function boot(root: HTMLElement) {
       <label class="field" style="margin-top:8px"><span>Radius · <span id="radiusVal">${radius}</span>px</span>
         <input type="range" id="brandRadius" min="0" max="28" value="${radius}" />
       </label>
+      <label class="field"><span>How it opens</span>
+        <select id="brandLayout">
+          <option value="INLINE" ${state.branding?.layout === "INLINE" || !state.branding?.layout ? "selected" : ""}>Inline</option>
+          <option value="POPUP" ${state.branding?.layout === "POPUP" ? "selected" : ""}>Popup</option>
+          <option value="FLOATING" ${state.branding?.layout === "FLOATING" ? "selected" : ""}>Floating button</option>
+        </select>
+      </label>
       <button type="button" class="btn btn-primary btn-block" id="saveBranding">
         ${iconLabel(icons.check, "Save branding")}
       </button>
+      <p class="lead" style="margin-top:8px">Saved branding syncs with Dashboard → Branding.</p>
     </section>`;
   }
 
@@ -608,7 +659,11 @@ export async function boot(root: HTMLElement) {
     <section class="card">
       ${cardTitle(icons.layout, "Canvas")}
       <p class="lead">Insert a live booking iframe.</p>
-      <button type="button" class="btn btn-quiet btn-block" id="embedBtn2" ${!state.canDesign ? "disabled" : ""}>
+      <div class="seg" id="canvasWideSeg">
+        <button type="button" class="btn ${!state.canvasWide ? "btn-primary" : ""}" data-canvas-wide="0">${iconLabel(icons.phone, "Mobile width")}</button>
+        <button type="button" class="btn ${state.canvasWide ? "btn-primary" : ""}" data-canvas-wide="1">${iconLabel(icons.expand, "Full width")}</button>
+      </div>
+      <button type="button" class="btn btn-quiet btn-block" id="embedBtn2" ${!state.canDesign ? "disabled" : ""} style="margin-top:8px">
         ${iconLabel(icons.layout, state.canDesign ? "Add booking to page" : "Switch to Design mode first")}
       </button>
     </section>`;
@@ -617,10 +672,15 @@ export async function boot(root: HTMLElement) {
   function viewSettings() {
     return `<section class="card">
       ${cardTitle(icons.settings, "Appearance")}
-      <p class="lead">Panel theme (independent of your site).</p>
-      <div style="display:flex;gap:5px">
+      <p class="lead">Panel chrome (independent of your site branding).</p>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
         <button type="button" class="btn ${state.theme === "light" ? "btn-primary" : ""}" id="lightBtn">${iconLabel(icons.sun, "Light")}</button>
         <button type="button" class="btn ${state.theme === "dark" ? "btn-primary" : ""}" id="darkBtn">${iconLabel(icons.moon, "Dark")}</button>
+      </div>
+      <p class="lead" style="margin-top:10px">Panel size</p>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button type="button" class="btn ${state.panelMode === "mobile" ? "btn-primary" : ""}" id="panelMobile">${iconLabel(icons.phone, "Mobile")}</button>
+        <button type="button" class="btn ${state.panelMode === "full" ? "btn-primary" : ""}" id="panelFull">${iconLabel(icons.expand, "Full screen")}</button>
       </div>
     </section>
     <section class="card">
@@ -779,6 +839,7 @@ export async function boot(root: HTMLElement) {
       const accentEl = root.querySelector("#brandAccent") as HTMLInputElement | null;
       const inkEl = root.querySelector("#brandInk") as HTMLInputElement | null;
       const radiusInput = root.querySelector("#brandRadius") as HTMLInputElement | null;
+      const layoutEl = root.querySelector("#brandLayout") as HTMLSelectElement | null;
       try {
         setStatus("Saving branding…");
         const res = await api.patchBranding({
@@ -788,15 +849,47 @@ export async function boot(root: HTMLElement) {
           accent: accentEl?.value,
           inkColor: inkEl?.value,
           radius: radiusInput ? Number(radiusInput.value) : undefined,
+          layout: (layoutEl?.value as "INLINE" | "POPUP" | "FLOATING") || undefined,
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;
         document.documentElement.style.setProperty("--ac", res.branding.accent);
-        setStatus("Branding saved");
+        setStatus("Branding saved · synced with dashboard");
         void render();
       } catch (e) {
         setStatus(e instanceof Error ? e.message : "Branding save failed", false);
       }
+    });
+
+    root.querySelectorAll("[data-booking-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.selectedBookingId = (btn as HTMLElement).dataset.bookingId || null;
+        void render();
+      });
+    });
+    const closeDrawer = () => {
+      state.selectedBookingId = null;
+      void render();
+    };
+    root.querySelector("#closeBookingDrawer")?.addEventListener("click", closeDrawer);
+    root.querySelector("#closeBookingDrawer2")?.addEventListener("click", closeDrawer);
+    root.querySelector("#closeBookingDrawer3")?.addEventListener("click", closeDrawer);
+
+    root.querySelector("#panelMobile")?.addEventListener("click", () => {
+      setPanelMode("mobile");
+      void render();
+    });
+    root.querySelector("#panelFull")?.addEventListener("click", () => {
+      setPanelMode("full");
+      void render();
+    });
+    root.querySelectorAll("[data-canvas-wide]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.canvasWide = (btn as HTMLElement).dataset.canvasWide === "1";
+        localStorage.setItem(CANVAS_WIDE_KEY, state.canvasWide ? "1" : "0");
+        setStatus(state.canvasWide ? "Canvas embed: full width" : "Canvas embed: mobile width");
+        void render();
+      });
     });
 
     root.querySelectorAll("[data-del]").forEach((btn) => {

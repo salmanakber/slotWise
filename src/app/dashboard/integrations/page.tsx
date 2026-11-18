@@ -221,8 +221,9 @@ function IntegrationsClient() {
           const row = byProvider[key];
           const meta = PROVIDER_META[key];
           if (!row || !meta) return null;
+          // Hide until admin enables the integration (still show if already connected)
+          if (!row.platformConfigured && !row.connected) return null;
           const pending = busy === key;
-          const comingSoon = key === "zapier" && !row.platformConfigured;
 
           return (
             <div key={key} className="border-t border-[var(--ln)] py-3">
@@ -230,46 +231,33 @@ function IntegrationsClient() {
                 <div>
                   <b>{meta.label}</b>
                   <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-                    {comingSoon
-                      ? "Coming soon — connect in one click when it’s ready"
-                      : row.connected && row.externalAccountEmail
-                        ? row.externalAccountEmail
-                        : meta.blurb}
-                    {!comingSoon && !row.platformConfigured && row.hint
-                      ? ` · ${row.hint}`
-                      : null}
+                    {row.connected && row.externalAccountEmail
+                      ? row.externalAccountEmail
+                      : meta.blurb}
                   </small>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {comingSoon ? (
-                    <em className="sw-tag sw-tag-muted">Coming soon</em>
+                  <em className={`sw-tag ${row.connected ? "sw-tag-ok" : "sw-tag-muted"}`}>
+                    {row.connected ? "Connected" : "Not connected"}
+                  </em>
+                  {row.connected ? (
+                    <button
+                      type="button"
+                      className="sw-btn"
+                      disabled={pending}
+                      onClick={() => void disconnect(key)}
+                    >
+                      {pending ? "…" : "Disconnect"}
+                    </button>
                   ) : (
-                    <>
-                      <em className={`sw-tag ${row.connected ? "sw-tag-ok" : "sw-tag-muted"}`}>
-                        {row.connected ? "Connected" : "Not connected"}
-                      </em>
-                      {row.connected ? (
-                        <button
-                          type="button"
-                          className="sw-btn"
-                          disabled={pending}
-                          onClick={() => void disconnect(key)}
-                        >
-                          {pending ? "…" : "Disconnect"}
-                        </button>
-                      ) : row.platformConfigured ? (
-                        <button
-                          type="button"
-                          className="sw-btn sw-btn-primary"
-                          disabled={pending}
-                          onClick={() => void connect(key)}
-                        >
-                          {pending ? "…" : "Connect"}
-                        </button>
-                      ) : (
-                        <em className="sw-tag sw-tag-muted">Not available yet</em>
-                      )}
-                    </>
+                    <button
+                      type="button"
+                      className="sw-btn sw-btn-primary"
+                      disabled={pending}
+                      onClick={() => void connect(key)}
+                    >
+                      {pending ? "…" : "Connect"}
+                    </button>
                   )}
                 </div>
               </div>

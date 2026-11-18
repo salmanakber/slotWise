@@ -110,10 +110,13 @@ export async function insertBookingIframe(publicKey: string) {
   if (!parent?.append) throw new Error("Select a section or container on the canvas first");
 
   const src = `${APP_URL}/book/${encodeURIComponent(publicKey)}?embed=1`;
+  const wide =
+    typeof localStorage !== "undefined" && localStorage.getItem("slotwise-canvas-wide") === "1";
   const wrapStyle =
     "width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;display:block;";
-  const frameStyle =
-    "display:block;width:100%;max-width:26.5rem;margin-left:auto;margin-right:auto;min-height:640px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
+  const frameStyle = wide
+    ? "display:block;width:100%;max-width:100%;margin:0;min-height:720px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
+    : "display:block;width:100%;max-width:26.5rem;margin-left:auto;margin-right:auto;min-height:640px;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
 
   try {
     if (typeof api.elementBuilder === "function") {

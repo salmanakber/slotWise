@@ -3,9 +3,12 @@ import { addMinutes } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { getDaySlots, rankSlots } from "@/lib/booking/availability";
 import { sendBookingConfirmation } from "@/lib/email";
+import { syncBookingIntegrations } from "@/lib/integrations-sync";
+import { canUse, entitlementsForTier } from "@/lib/plan-entitlements";
 import { notifyZapierBooking } from "@/lib/zapier";
 import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
+import { sendSms } from "@/lib/sms";
 
 function refCode() {
   return `#${Math.floor(1000 + Math.random() * 9000)}`;
@@ -14,7 +17,7 @@ function refCode() {
 export class BookingError extends Error {
   constructor(
     message: string,
-    public code: "NOT_FOUND" | "UNAVAILABLE" | "INACTIVE" | "VALIDATION",
+    public code: "NOT_FOUND" | "UNAVAILABLE" | "INACTIVE" | "VALIDATION" | "LIMIT_REACHED",
   ) {
     super(message);
   }
@@ -151,6 +154,25 @@ export async function createBooking(input: {
   const service = site.services.find((s) => s.id === input.serviceId);
   if (!service) throw new BookingError("Service not found", "NOT_FOUND");
 
+  const entitlements = entitlementsForTier(site.plan?.tier);
+  if (entitlements.bookingsLimit != null) {
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const used = await prisma.booking.count({
+      where: {
+        siteId: site.id,
+        createdAt: { gte: monthStart },
+        status: { not: BookingStatus.CANCELLED },
+      },
+    });
+    if (used >= entitlements.bookingsLimit) {
+      throw new BookingError(
+        `This site reached its ${entitlements.bookingsLimit} bookings/month plan limit. Upgrade to accept more bookings.`,
+        "LIMIT_REACHED",
+      );
+    }
+  }
+
   const startsAt = new Date(input.startsAtIso);
   if (Number.isNaN(startsAt.getTime())) {
     throw new BookingError("Invalid start time", "VALIDATION");
@@ -241,16 +263,59 @@ export async function createBooking(input: {
     site.notificationSettings?.replyToEmail ||
     site.workspace?.memberships?.[0]?.user?.email ||
     null;
-  await sendBookingConfirmation({
-    to: booking.customerEmail,
+  const manageUrl = `${appUrl}/manage/${booking.manageToken}`;
+  const whenLabel = formatInTimeZone(
+    booking.startsAt,
+    site.timezone,
+    "EEE, MMM d · h:mm a",
+  );
+  const businessName = site.branding?.businessName || site.name;
+
+  if (site.notificationSettings?.emailConfirm !== false) {
+    await sendBookingConfirmation({
+      to: booking.customerEmail,
+      reference: booking.reference,
+      serviceName: booking.service.name,
+      whenLabel,
+      manageUrl,
+      businessName,
+      fromEmail: site.notificationSettings?.fromEmail || null,
+      replyToEmail: ownerEmail,
+    }).catch((err) => console.error("confirmation email failed", err));
+  }
+
+  const sync = await syncBookingIntegrations({
+    siteId: site.id,
     reference: booking.reference,
+    customerName: booking.customerName,
+    customerEmail: booking.customerEmail,
     serviceName: booking.service.name,
-    whenLabel: booking.startsAt.toISOString(),
-    manageUrl: `${appUrl}/manage/${booking.manageToken}`,
-    businessName: site.branding?.businessName || site.name,
-    fromEmail: site.notificationSettings?.fromEmail || null,
-    replyToEmail: ownerEmail,
-  }).catch((err) => console.error("confirmation email failed", err));
+    startsAt: booking.startsAt,
+    endsAt: booking.endsAt,
+    timezone: site.timezone,
+    manageUrl,
+    locationType: booking.service.locationType,
+  }).catch((err) => {
+    console.error("integrations sync failed", err);
+    return { providers: [] as string[], meetingUrl: null as string | null };
+  });
+
+  if (
+    booking.customerPhone &&
+    site.notificationSettings?.smsEnabled &&
+    canUse(site.plan?.tier, "sms")
+  ) {
+    const smsBody = [
+      `${businessName}: booking ${booking.reference} confirmed for ${whenLabel}.`,
+      sync.meetingUrl ? `Join: ${sync.meetingUrl}` : null,
+      `Manage: ${manageUrl}`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    await sendSms({ to: booking.customerPhone, body: smsBody }).catch((err) =>
+      console.error("sms failed", err),
+    );
+  }
 
   await notifyZapierBooking({
     siteId: site.id,
@@ -265,8 +330,9 @@ export async function createBooking(input: {
       endsAt: booking.endsAt.toISOString(),
       amountCents: booking.amountCents,
       currency: booking.currency,
-      manageUrl: `${appUrl}/manage/${booking.manageToken}`,
-      siteName: site.branding?.businessName || site.name,
+      manageUrl,
+      meetingUrl: sync.meetingUrl,
+      siteName: businessName,
     },
   }).catch((err) => console.error("zapier notify failed", err));
 

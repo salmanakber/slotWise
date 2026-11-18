@@ -53,6 +53,30 @@ export async function POST(request: Request) {
         },
       });
     }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as {
+        metadata?: { siteId?: string; planId?: string; planTier?: string };
+        mode?: string;
+      };
+      if (session.mode === "subscription" && session.metadata?.siteId && session.metadata?.planId) {
+        await prisma.site.update({
+          where: { id: session.metadata.siteId },
+          data: { planId: session.metadata.planId },
+        });
+        await prisma.auditLog.create({
+          data: {
+            scope: "SITE",
+            action: "plan.upgraded",
+            siteId: session.metadata.siteId,
+            meta: {
+              planId: session.metadata.planId,
+              tier: session.metadata.planTier,
+            },
+          },
+        });
+      }
+    }
   } catch (e) {
     console.error("Webhook handler error", e);
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
-import { formatMoney } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 
 type Service = {
   id: string;
@@ -99,6 +99,7 @@ export function BookingWidget({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [floatingOpen, setFloatingOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{
     reference: string;
@@ -246,7 +247,10 @@ export function BookingWidget({
   ] as const;
   const stepIndex = steps.findIndex((s) => s.key === step);
 
-  return (
+  const isFloating = branding?.layout === "FLOATING" && !embed;
+  const showPanel = !isFloating || floatingOpen;
+
+  const panelNode = (
     <div
       ref={rootRef}
       className="sw-widget mx-auto box-border w-full overflow-hidden"
@@ -270,6 +274,7 @@ export function BookingWidget({
       }}
       data-slotwise-root
       data-embed={embed ? "1" : undefined}
+      data-layout={branding?.layout || "INLINE"}
     >
       <style>{`
         @keyframes sw-w-in {
@@ -447,7 +452,7 @@ export function BookingWidget({
                       </span>
                       {branding?.showPrice !== false ? (
                         <em className="shrink-0 not-italic text-[13.5px] font-extrabold">
-                          {formatMoney(s.priceCents, site.currency)}
+                          {formatPrice(s.priceCents, site.currency)}
                         </em>
                       ) : null}
                     </button>
@@ -643,7 +648,7 @@ export function BookingWidget({
                   })
                 : "Select a time"}
               {branding?.showPrice !== false && service
-                ? ` · ${formatMoney(service.priceCents, site.currency)}`
+                ? ` · ${formatPrice(service.priceCents, site.currency)}`
                 : ""}
             </span>
           </div>
@@ -698,6 +703,32 @@ export function BookingWidget({
           Powered by Slotwise
         </div>
       ) : null}
+    </div>
+  );
+
+  if (!isFloating) return panelNode;
+
+  return (
+    <div className="relative min-h-[120px] w-full">
+      {floatingOpen ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 p-3 sm:items-center">
+          <button
+            type="button"
+            aria-label="Close booking"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setFloatingOpen(false)}
+          />
+          <div className="relative z-[1] w-full max-w-[26.5rem]">{panelNode}</div>
+        </div>
+      ) : null}
+      <button
+        type="button"
+        className="fixed bottom-5 right-5 z-[70] rounded-full px-5 py-3.5 text-[14px] font-extrabold shadow-lg"
+        style={{ background: accent, color: onAccent }}
+        onClick={() => setFloatingOpen(true)}
+      >
+        Book now
+      </button>
     </div>
   );
 }

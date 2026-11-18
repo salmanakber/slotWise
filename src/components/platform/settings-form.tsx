@@ -367,7 +367,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
           <section className="sw-card">
             <h2 className="mb-1 text-[15px] font-extrabold">Zapier</h2>
             <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-              When off, site owners see Zapier as Coming soon. Turn on when you’re ready to offer
+              When off, Zapier is hidden from site owners. Turn on when you’re ready to offer
               one-click Zapier connect.
             </p>
             <Toggle

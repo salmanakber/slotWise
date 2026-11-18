@@ -22,6 +22,7 @@ const patchSchema = z.object({
   inkColor: z.string().min(4).max(9).optional().nullable(),
   radius: z.number().int().min(0).max(28).optional(),
   font: z.string().min(1).optional(),
+  layout: z.enum(["INLINE", "POPUP", "FLOATING"]).optional(),
 });
 
 type BrandingRow = {
@@ -30,6 +31,7 @@ type BrandingRow = {
   inkColor?: string | null;
   radius?: number | null;
   font?: string | null;
+  layout?: string | null;
   businessName?: string | null;
 };
 
@@ -46,6 +48,7 @@ function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteFor
     inkColor: readInk(branding, theme.ink),
     radius: branding?.radius ?? theme.radius,
     font: branding?.font ?? theme.font,
+    layout: branding?.layout ?? "INLINE",
     businessName: branding?.businessName ?? site.name,
     theme,
   };
@@ -81,16 +84,17 @@ export async function PATCH(request: Request) {
       inkColor: body.inkColor === undefined ? undefined : body.inkColor,
       radius: body.radius ?? theme?.radius,
       font: body.font ?? theme?.font,
+      layout: body.layout,
       buttonStyle: theme?.button,
     };
 
-    // inkColor is on Branding schema; cast until prisma generate runs
     const updateData: Record<string, unknown> = {
       ...(data.themeKey !== undefined ? { themeKey: data.themeKey } : {}),
       ...(data.accent !== undefined ? { accent: data.accent } : {}),
       ...(data.inkColor !== undefined ? { inkColor: data.inkColor } : {}),
       ...(data.radius !== undefined ? { radius: data.radius } : {}),
       ...(data.font !== undefined ? { font: data.font } : {}),
+      ...(data.layout !== undefined ? { layout: data.layout } : {}),
       ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
     };
 

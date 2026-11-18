@@ -53,8 +53,15 @@ export type Bootstrap = {
     id: string;
     reference: string;
     customerName: string;
+    customerEmail?: string;
+    customerPhone?: string | null;
+    notes?: string | null;
     serviceName: string;
     startsAt: string;
+    endsAt?: string;
+    amountCents?: number;
+    depositCents?: number;
+    currency?: string;
     status: string;
   }>;
 };
@@ -178,6 +185,7 @@ export type DesignerBranding = {
   inkColor?: string | null;
   radius: number;
   font: string;
+  layout?: "INLINE" | "POPUP" | "FLOATING" | string;
   businessName?: string | null;
   theme?: DesignerTheme;
 };
@@ -201,6 +209,7 @@ export function patchBranding(body: {
   inkColor?: string | null;
   radius?: number;
   font?: string;
+  layout?: "INLINE" | "POPUP" | "FLOATING";
 }) {
   return req<{ branding: DesignerBranding }>("/api/designer/branding", {
     method: "PATCH",

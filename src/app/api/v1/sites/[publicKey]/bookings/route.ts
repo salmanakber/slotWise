@@ -52,7 +52,14 @@ export async function POST(
     );
   } catch (e) {
     if (e instanceof BookingError) {
-      const status = e.code === "UNAVAILABLE" ? 409 : e.code === "NOT_FOUND" ? 404 : 400;
+      const status =
+        e.code === "UNAVAILABLE"
+          ? 409
+          : e.code === "NOT_FOUND"
+            ? 404
+            : e.code === "LIMIT_REACHED"
+              ? 403
+              : 400;
       return NextResponse.json({ error: e.message, code: e.code }, { status });
     }
     console.error(e);

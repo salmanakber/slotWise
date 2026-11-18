@@ -59,6 +59,15 @@ export const icons = {
   file: s(
     `<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>`,
   ),
+  publish: s(
+    `<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/><path d="M5 19h14"/>`,
+  ),
+  phone: s(
+    `<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>`,
+  ),
+  expand: s(
+    `<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/>`,
+  ),
 };
 
 export function iconLabel(icon: string, label: string) {

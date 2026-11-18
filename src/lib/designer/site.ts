@@ -23,12 +23,19 @@ const siteInclude = {
   },
   bookings: {
     orderBy: { startsAt: "desc" as const },
-    take: 6,
+    take: 8,
     select: {
       id: true,
       reference: true,
       customerName: true,
+      customerEmail: true,
+      customerPhone: true,
+      notes: true,
       startsAt: true,
+      endsAt: true,
+      amountCents: true,
+      depositCents: true,
+      currency: true,
       status: true,
       service: { select: { name: true } },
     },
@@ -118,6 +125,7 @@ export async function siteBootstrapPayload(
     },
     entitlements,
     payments,
+    // Only surface apps that are ready from admin (or already connected)
     apps: [
       appRow(
         "google_calendar",
@@ -132,7 +140,7 @@ export async function siteBootstrapPayload(
       appRow("zoom", "Zoom", Boolean(platform.zoomClientId && platform.zoomClientSecretSet)),
       appRow("meet", "Google Meet", Boolean(platform.googleClientId && platform.googleClientSecretSet)),
       appRow("zapier", "Zapier", Boolean(platform.zapierEnabled)),
-    ],
+    ].filter((a) => a.ready || a.connected),
     activeEvents: site.services.map((s) => ({
       id: s.id,
       name: s.name,
@@ -145,8 +153,15 @@ export async function siteBootstrapPayload(
       id: b.id,
       reference: b.reference,
       customerName: b.customerName,
+      customerEmail: b.customerEmail,
+      customerPhone: b.customerPhone,
+      notes: b.notes,
       serviceName: b.service?.name || "Booking",
       startsAt: b.startsAt.toISOString(),
+      endsAt: b.endsAt.toISOString(),
+      amountCents: b.amountCents,
+      depositCents: b.depositCents,
+      currency: b.currency,
       status: b.status,
     })),
   };
