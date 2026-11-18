@@ -209,7 +209,7 @@ export async function createBooking(input: {
         ? amountCents
         : Math.max(1, Math.round((amountCents * depositPercent) / 100));
   const depositCents = chargeCents;
-  let connectedId = site.stripeAccount?.stripeAccountId || null;
+  const connectedId = site.stripeAccount?.stripeAccountId || null;
   let chargesEnabled = Boolean(site.stripeAccount?.chargesEnabled);
   const needsOnlinePayment = chargeCents > 0;
 
