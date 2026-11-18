@@ -58,7 +58,7 @@ export async function boot(root: HTMLElement) {
     return lum > 0.62 ? "#1a1203" : "#ffffff";
   }
 
-  /** Widget branding colors drive Designer chrome + live preview in real time. */
+  /** Accent always; ink only in light chrome so dark mode keeps white text. */
   function applyBrandColors(accent?: string | null, ink?: string | null) {
     const root = document.documentElement;
     const ac = accent || state.branding?.accent || state.bootstrap?.site.accent || "#f5a000";
@@ -70,10 +70,30 @@ export async function boot(root: HTMLElement) {
       null;
     root.style.setProperty("--ac", ac);
     root.style.setProperty("--on", contrastOn(ac));
+    if (state.theme === "dark") {
+      // Panel dark mode: readable light text (ignore dark branding ink for chrome)
+      root.style.setProperty("--ink", "#eef3fa");
+      root.style.setProperty("--mut", "#9aabc0");
+      root.style.setProperty("--bg", "#0b121c");
+      root.style.setProperty("--panel", "#121b28");
+      root.style.setProperty("--line", "#243247");
+      root.style.setProperty("--soft", "#182333");
+      root.style.setProperty("--nav", "rgba(11, 18, 28, 0.96)");
+      if (inkColor) root.style.setProperty("--brand-ink", inkColor);
+      return;
+    }
+    root.style.removeProperty("--bg");
+    root.style.removeProperty("--panel");
+    root.style.removeProperty("--line");
+    root.style.removeProperty("--soft");
+    root.style.removeProperty("--nav");
     if (inkColor) {
       root.style.setProperty("--ink", inkColor);
       root.style.setProperty("--brand-ink", inkColor);
-      root.style.setProperty("--mut", `color-mix(in srgb, ${inkColor} 55%, #8a95a8)`);
+      root.style.setProperty("--mut", `color-mix(in srgb, ${inkColor} 52%, #8a95a8)`);
+    } else {
+      root.style.removeProperty("--ink");
+      root.style.removeProperty("--mut");
     }
   }
 
@@ -81,7 +101,6 @@ export async function boot(root: HTMLElement) {
     state.theme = theme;
     localStorage.setItem(THEME_KEY, theme);
     document.documentElement.dataset.theme = theme;
-    // Re-apply branding ink/accent after chrome theme swap
     applyBrandColors();
   }
   setTheme(state.theme);
@@ -165,7 +184,27 @@ export async function boot(root: HTMLElement) {
     const showFab = state.tab !== "create" && Boolean(state.bootstrap);
     const full = state.panelMode === "full";
     const tabs = (Object.keys(TAB_META) as Tab[]).map(tabButton).join("");
-    const actions = `
+    const actions = full
+      ? `
+      <div class="side-foot">
+        <button type="button" class="btn btn-primary btn-publish" id="publishBtn" title="Publish">
+          <span class="ico">${icons.rocket}</span>
+          <span>Publish</span>
+        </button>
+        <div class="side-foot-row">
+          <a class="side-foot-link" href="${upgradeUrl()}" target="_blank" rel="noreferrer">
+            <span class="ico">${icons.spark}</span>
+            Upgrade
+          </a>
+          <a class="side-foot-icon" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">
+            <span class="ico">${icons.grid}</span>
+          </a>
+          <button type="button" class="side-foot-icon" id="themeBtn" title="${state.theme === "light" ? "Dark mode" : "Light mode"}">
+            ${state.theme === "light" ? icons.moon : icons.sun}
+          </button>
+        </div>
+      </div>`
+      : `
       <a class="link-upgrade" href="${upgradeUrl()}" target="_blank" rel="noreferrer">Upgrade</a>
       <div class="side-tools">
         <a class="btn btn-icon btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">

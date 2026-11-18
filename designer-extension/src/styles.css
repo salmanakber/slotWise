@@ -209,17 +209,15 @@ html[data-panel="full"] .app,
   text-overflow: unset;
 }
 .side-actions {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   padding-top: 10px;
   margin-top: 4px;
   border-top: 1px solid var(--line);
   flex-shrink: 0;
 }
 .side-actions .link-upgrade {
-  justify-self: start;
   font-size: 11px;
   font-weight: 800;
   padding: 6px 8px;
@@ -233,22 +231,102 @@ html[data-panel="full"] .app,
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  justify-self: end;
 }
 .side-actions .btn-icon {
   width: 30px;
   height: 30px;
 }
 .side-actions .btn-publish {
-  grid-column: 1 / -1;
   width: 100%;
   height: 32px;
   justify-content: center;
+}
+.nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
 }
 .nav-actions .side-tools {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Full dashboard sidebar footer */
+.side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.side-foot .btn-publish {
+  width: 100%;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ac) 28%, transparent);
+}
+.side-foot-row {
+  display: grid;
+  grid-template-columns: 1fr 32px 32px;
+  gap: 6px;
+  align-items: center;
+}
+.side-foot-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.side-foot-link:hover {
+  background: color-mix(in srgb, var(--ac) 12%, var(--soft));
+  border-color: color-mix(in srgb, var(--ac) 30%, var(--line));
+}
+.side-foot-link .ico,
+.side-foot-link .ico svg {
+  width: 12px;
+  height: 12px;
+  color: var(--ac);
+}
+.side-foot-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.side-foot-icon:hover {
+  background: color-mix(in srgb, var(--ac) 12%, var(--soft));
+  border-color: color-mix(in srgb, var(--ac) 32%, var(--line));
+  color: var(--ac);
+}
+.side-foot-icon .ico,
+.side-foot-icon .ico svg {
+  width: 14px;
+  height: 14px;
 }
 .workspace {
   min-width: 0;

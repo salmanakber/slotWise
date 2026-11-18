@@ -76,13 +76,14 @@ export function AdminShell({
         radius: typeof d.radius === "number" ? d.radius : 14,
       };
       const sig = siteThemeSignature(tokens);
+      const chrome = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
       if (sig === sigRef.current) {
-        applySiteThemeToDocument(tokens);
+        applySiteThemeToDocument(tokens, { chrome });
         return;
       }
       sigRef.current = sig;
       setBrand(tokens);
-      applySiteThemeToDocument(tokens);
+      applySiteThemeToDocument(tokens, { chrome });
     };
 
     const loadBrand = () => {
@@ -164,10 +165,9 @@ export function AdminShell({
   }, [pathname]);
 
   useEffect(() => {
-    // UI contrast preference only — never wipe site branding colors
     document.documentElement.dataset.theme = theme === "dark" ? "dark" : "";
     window.localStorage.setItem("sw-theme", theme);
-    if (brand) applySiteThemeToDocument(brand);
+    if (brand) applySiteThemeToDocument(brand, { chrome: theme });
   }, [theme, brand]);
 
   return (

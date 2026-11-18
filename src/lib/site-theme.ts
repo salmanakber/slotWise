@@ -42,17 +42,37 @@ function contrastOn(accent: string) {
 }
 
 /** Apply site branding tokens to the whole workspace (dashboard chrome). */
-export function applySiteThemeToDocument(tokens: SiteThemeTokens) {
+export function applySiteThemeToDocument(
+  tokens: SiteThemeTokens,
+  opts?: { chrome?: "light" | "dark" },
+) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
+  const chrome =
+    opts?.chrome ||
+    (root.dataset.theme === "dark" ? "dark" : "light");
   const on = contrastOn(tokens.accent);
+  root.style.setProperty("--ac", tokens.accent);
+  root.style.setProperty("--on", on);
+  root.style.setProperty("--at", tokens.accent);
+
+  if (chrome === "dark") {
+    // Night chrome: force readable light text (branding ink can stay dark for the widget)
+    root.style.setProperty("--bg", "#0b1524");
+    root.style.setProperty("--pn", "#132238");
+    root.style.setProperty("--ink", "#eef3fa");
+    root.style.setProperty("--mut", "#9aabc0");
+    root.style.setProperty("--ln", "#243247");
+    root.style.setProperty("--sf", `color-mix(in srgb, ${tokens.accent} 18%, #182333)`);
+    root.style.setProperty("--sh", "0 10px 28px rgba(0, 0, 0, 0.35)");
+    root.dataset.siteTheme = tokens.themeKey;
+    return;
+  }
+
   root.style.setProperty("--bg", tokens.bg);
   root.style.setProperty("--pn", tokens.panel);
   root.style.setProperty("--ink", tokens.inkColor);
   root.style.setProperty("--ln", tokens.line);
-  root.style.setProperty("--ac", tokens.accent);
-  root.style.setProperty("--on", on);
-  root.style.setProperty("--at", tokens.accent);
   root.style.setProperty(
     "--sf",
     `color-mix(in srgb, ${tokens.accent} 16%, ${tokens.panel})`,

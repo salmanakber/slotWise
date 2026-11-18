@@ -15,13 +15,13 @@
   --sh: 0 1px 2px rgba(15, 27, 45, 0.06), 0 10px 28px rgba(15, 27, 45, 0.06);
 }
 
-/* Fallback night palette — site branding (inline / data-site-theme) always wins when set */
-[data-theme="dark"]:not([data-site-theme]) {
+/* Night chrome — light text by default (inline JS also sets these when Night is on) */
+[data-theme="dark"] {
   --bg: #0b1524;
   --pn: #132238;
-  --ink: #eaf0f8;
-  --mut: #93a4bc;
-  --ln: #223553;
+  --ink: #eef3fa;
+  --mut: #9aabc0;
+  --ln: #243247;
   --ac: #ffb020;
   --on: #1a1203;
   --at: #ffb020;
