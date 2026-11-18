@@ -133,6 +133,7 @@ export function BookingWidget({
   } | null>(null);
   const [meetingBusy, setMeetingBusy] = useState<string | null>(null);
   const [meetingError, setMeetingError] = useState<string | null>(null);
+  const [meetingSkipped, setMeetingSkipped] = useState(false);
 
   useEffect(() => {
     if (site) return;
@@ -259,6 +260,8 @@ export function BookingWidget({
         window.location.assign(data.checkoutUrl);
         return;
       }
+      setMeetingSkipped(false);
+      setMeetingError(null);
       setConfirmation({
         reference: data.reference,
         manageToken: data.manageToken,
@@ -267,7 +270,6 @@ export function BookingWidget({
         meetingProvider: data.meetingProvider ?? null,
         meetingTools: Array.isArray(data.meetingTools) ? data.meetingTools : [],
       });
-      setMeetingError(null);
       setStep("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Booking failed");
@@ -477,18 +479,19 @@ export function BookingWidget({
                 href={confirmation.meetingUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mx-auto inline-flex items-center justify-center px-5 py-2.5 text-[13px] font-extrabold transition hover:brightness-105"
+                className="mx-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[13px] font-extrabold transition hover:brightness-105"
                 style={{
                   background: accent,
                   color: onAccent,
                   borderRadius: Math.max(radius - 4, 10),
                 }}
               >
-                Join {confirmation.meetingProvider === "zoom" ? "Zoom" : "Meet"}
+                <MeetingBrandIcon id={confirmation.meetingProvider || "meet"} />
+                Join {confirmation.meetingProvider === "zoom" ? "Zoom" : "Google Meet"}
               </a>
-            ) : confirmation.meetingTools.length > 0 ? (
+            ) : !meetingSkipped && confirmation.meetingTools.length > 0 ? (
               <div
-                className="rounded-2xl border px-3.5 py-3 text-left"
+                className="rounded-2xl border px-3.5 py-3.5 text-left"
                 style={{
                   borderColor: line,
                   background: `color-mix(in srgb, ${accent} 8%, ${panel})`,
@@ -496,9 +499,17 @@ export function BookingWidget({
               >
                 <div className="text-[13px] font-extrabold">Add a video call</div>
                 <p className="m-0 mt-1 text-[11.5px] leading-snug" style={{ color: mut }}>
-                  Optional — pick Zoom or Google Meet for this booking.
+                  Optional — choose a partner app, or skip if you don’t need video.
                 </p>
-                <div className="mt-2.5 flex flex-wrap gap-2">
+                <div
+                  className="mt-3 grid gap-2"
+                  style={{
+                    gridTemplateColumns:
+                      confirmation.meetingTools.length > 1
+                        ? "repeat(2, minmax(0, 1fr))"
+                        : "1fr",
+                  }}
+                >
                   {confirmation.meetingTools.map((tool) => (
                     <button
                       key={tool.id}
@@ -538,14 +549,27 @@ export function BookingWidget({
                           }
                         })();
                       }}
-                      className="px-3 py-2 text-[12px] font-extrabold disabled:opacity-50"
+                      className="flex flex-col items-center gap-2 border px-3 py-3.5 text-center transition disabled:opacity-50"
                       style={{
-                        borderRadius: Math.max(radius - 6, 10),
-                        background: accent,
-                        color: onAccent,
+                        borderRadius: Math.max(radius - 6, 12),
+                        borderColor: line,
+                        background: panel,
                       }}
                     >
-                      {meetingBusy === tool.id ? "Creating…" : tool.label}
+                      <span
+                        className="grid h-11 w-11 place-items-center rounded-xl"
+                        style={{
+                          background:
+                            tool.id === "zoom"
+                              ? "color-mix(in srgb, #2D8CFF 14%, transparent)"
+                              : "color-mix(in srgb, #00897B 14%, transparent)",
+                        }}
+                      >
+                        <MeetingBrandIcon id={tool.id} size={22} />
+                      </span>
+                      <span className="text-[12.5px] font-extrabold leading-tight">
+                        {meetingBusy === tool.id ? "Creating…" : tool.label}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -554,7 +578,35 @@ export function BookingWidget({
                     {meetingError}
                   </p>
                 ) : null}
+                <div className="mt-3 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    className="px-3 py-2 text-[12px] font-bold"
+                    style={{ color: mut, borderRadius: Math.max(radius - 8, 10) }}
+                    disabled={Boolean(meetingBusy)}
+                    onClick={() => setMeetingSkipped(true)}
+                  >
+                    Skip
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3.5 py-2 text-[12px] font-extrabold"
+                    style={{
+                      borderRadius: Math.max(radius - 8, 10),
+                      background: accent,
+                      color: onAccent,
+                    }}
+                    disabled={Boolean(meetingBusy)}
+                    onClick={() => setMeetingSkipped(true)}
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
+            ) : meetingSkipped ? (
+              <p className="m-0 text-[12px] font-semibold" style={{ color: mut }}>
+                No video call added — you’re all set.
+              </p>
             ) : null}
 
             <a
@@ -788,7 +840,20 @@ export function BookingWidget({
               </div>
             </div>
             <h3 className="text-[15px] font-extrabold tracking-tight">Your details</h3>
-            <Field label="Name" value={name} onChange={setName} accent={accent} line={line} bg={bg} radius={radius} />
+            <Field
+              label="Full name"
+              value={name}
+              onChange={setName}
+              accent={accent}
+              line={line}
+              bg={bg}
+              panel={panel}
+              mut={mut}
+              radius={radius}
+              autoComplete="name"
+              placeholder="Jane Smith"
+              icon="user"
+            />
             <Field
               label="Email"
               value={email}
@@ -797,18 +862,32 @@ export function BookingWidget({
               accent={accent}
               line={line}
               bg={bg}
+              panel={panel}
+              mut={mut}
               radius={radius}
+              autoComplete="email"
+              inputMode="email"
+              placeholder="jane@company.com"
+              hint="Confirmation and manage link go here"
+              icon="email"
             />
             <Field
-              label="Phone (optional)"
+              label="Phone"
               value={phone}
               onChange={setPhone}
               type="tel"
               accent={accent}
               line={line}
               bg={bg}
+              panel={panel}
+              mut={mut}
               radius={radius}
               required={false}
+              autoComplete="tel"
+              inputMode="tel"
+              placeholder="+1 555 000 0000"
+              hint="Optional · for SMS or WhatsApp if enabled"
+              icon="phone"
             />
           </section>
         ) : null}
@@ -844,6 +923,8 @@ export function BookingWidget({
             setStep("details");
           }}
           onBooked={(info) => {
+            setMeetingSkipped(false);
+            setMeetingError(null);
             setConfirmation({
               reference: info.reference,
               manageToken: info.manageToken,
@@ -1008,6 +1089,64 @@ function Chip({
   );
 }
 
+function FieldIcon({ kind }: { kind: "user" | "email" | "phone" }) {
+  const common = {
+    width: 16,
+    height: 16,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (kind === "email") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </svg>
+    );
+  }
+  if (kind === "phone") {
+    return (
+      <svg {...common}>
+        <path d="M22 16.9v2a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h2a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L7.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.6A2 2 0 0 1 22 16.9z" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function MeetingBrandIcon({ id, size = 18 }: { id: string; size?: number }) {
+  if (id === "zoom") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+        <rect width="24" height="24" rx="6" fill="#2D8CFF" />
+        <path
+          fill="#fff"
+          d="M6.2 8.2h6.1c.9 0 1.6.7 1.6 1.6v4.4c0 .9-.7 1.6-1.6 1.6H6.2c-.9 0-1.6-.7-1.6-1.6V9.8c0-.9.7-1.6 1.6-1.6zm8.3 1.5 3.6-2.1c.4-.2.9.1.9.5v7.8c0 .5-.5.8-.9.5l-3.6-2.1v-4.6z"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+      <rect width="24" height="24" rx="6" fill="#00897B" />
+      <path
+        fill="#fff"
+        d="M7 8.5h6.5a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 14v-4A1.5 1.5 0 0 1 7 8.5zm9.2 1.2 2.5-1.5c.4-.2.8.1.8.5v6.6c0 .4-.4.7-.8.5l-2.5-1.5v-4.6z"
+      />
+    </svg>
+  );
+}
+
 function Field({
   label,
   value,
@@ -1016,8 +1155,15 @@ function Field({
   accent,
   line,
   bg,
+  panel,
+  mut,
   radius,
   required = true,
+  placeholder,
+  hint,
+  autoComplete,
+  inputMode,
+  icon,
 }: {
   label: string;
   value: string;
@@ -1026,32 +1172,77 @@ function Field({
   accent: string;
   line: string;
   bg: string;
+  panel: string;
+  mut: string;
   radius: number;
   required?: boolean;
+  placeholder?: string;
+  hint?: string;
+  autoComplete?: string;
+  inputMode?: "email" | "tel" | "text";
+  icon?: "user" | "email" | "phone";
 }) {
   return (
     <label className="grid gap-1.5 text-[13px] font-bold">
-      {label}
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className="border px-3.5 py-2.5 font-medium outline-none transition"
+      <span className="flex items-center justify-between gap-2">
+        <span>{label}</span>
+        {!required ? (
+          <span className="text-[11px] font-semibold" style={{ color: mut }}>
+            Optional
+          </span>
+        ) : null}
+      </span>
+      <span
+        className="relative flex items-center border transition"
         style={{
-          borderRadius: Math.max(radius - 8, 10),
+          borderRadius: Math.max(radius - 8, 12),
           borderColor: line,
-          background: bg,
+          background: panel,
         }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = accent;
-          e.currentTarget.style.boxShadow = `0 0 0 3px color-mix(in srgb, ${accent} 28%, transparent)`;
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = line;
-          e.currentTarget.style.boxShadow = "none";
-        }}
-      />
+      >
+        {icon ? (
+          <span className="pointer-events-none absolute left-3.5" style={{ color: mut }}>
+            <FieldIcon kind={icon} />
+          </span>
+        ) : null}
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
+          className="w-full border-0 bg-transparent py-3 font-medium outline-none"
+          style={{
+            paddingLeft: icon ? 42 : 14,
+            paddingRight: 14,
+            color: "inherit",
+            background: "transparent",
+          }}
+          onFocus={(e) => {
+            const wrap = e.currentTarget.parentElement;
+            if (wrap) {
+              wrap.style.borderColor = accent;
+              wrap.style.boxShadow = `0 0 0 3px color-mix(in srgb, ${accent} 28%, transparent)`;
+              wrap.style.background = bg;
+            }
+          }}
+          onBlur={(e) => {
+            const wrap = e.currentTarget.parentElement;
+            if (wrap) {
+              wrap.style.borderColor = line;
+              wrap.style.boxShadow = "none";
+              wrap.style.background = panel;
+            }
+          }}
+        />
+      </span>
+      {hint ? (
+        <span className="text-[11.5px] font-medium leading-snug" style={{ color: mut }}>
+          {hint}
+        </span>
+      ) : null}
     </label>
   );
 }

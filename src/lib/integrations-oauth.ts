@@ -302,6 +302,106 @@ export async function exchangeOAuthCode(
   };
 }
 
+/** Refresh an access token using the stored refresh token. */
+export async function refreshOAuthAccessToken(
+  provider: IntegrationProvider,
+  refreshToken: string,
+): Promise<{
+  accessToken: string;
+  refreshToken: string | null;
+  expiresIn: number | null;
+}> {
+  const secrets = await getPlatformSecrets();
+  const family = oauthFamily(provider);
+  if (!family) throw new Error("Provider does not use OAuth");
+
+  if (family === "google") {
+    const clientId = secrets.googleClientId?.trim() || "";
+    const clientSecret = secrets.googleClientSecret?.trim() || "";
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (!res.ok || !data.access_token) {
+      throw new Error(
+        typeof data.error_description === "string"
+          ? data.error_description
+          : "Google token refresh failed — reconnect Google Meet in Integrations",
+      );
+    }
+    return {
+      accessToken: String(data.access_token),
+      refreshToken: typeof data.refresh_token === "string" ? data.refresh_token : null,
+      expiresIn: typeof data.expires_in === "number" ? data.expires_in : 3600,
+    };
+  }
+
+  if (family === "microsoft") {
+    const clientId = secrets.microsoftClientId?.trim() || "";
+    const clientSecret = secrets.microsoftClientSecret?.trim() || "";
+    const res = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+        scope: "offline_access Calendars.ReadWrite User.Read",
+      }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (!res.ok || !data.access_token) {
+      throw new Error(
+        typeof data.error_description === "string"
+          ? data.error_description
+          : "Outlook token refresh failed — reconnect in Integrations",
+      );
+    }
+    return {
+      accessToken: String(data.access_token),
+      refreshToken: typeof data.refresh_token === "string" ? data.refresh_token : null,
+      expiresIn: typeof data.expires_in === "number" ? data.expires_in : 3600,
+    };
+  }
+
+  // zoom
+  const clientId = secrets.zoomClientId?.trim() || "";
+  const clientSecret = secrets.zoomClientSecret?.trim() || "";
+  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const res = await fetch("https://zoom.us/oauth/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${basic}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }),
+  });
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!res.ok || !data.access_token) {
+    throw new Error(
+      typeof data.reason === "string"
+        ? data.reason
+        : "Zoom token refresh failed — reconnect Zoom in Integrations",
+    );
+  }
+  return {
+    accessToken: String(data.access_token),
+    refreshToken: typeof data.refresh_token === "string" ? data.refresh_token : null,
+    expiresIn: typeof data.expires_in === "number" ? data.expires_in : 3600,
+  };
+}
+
 export function missingKeysHint(provider: IntegrationProvider) {
   if (provider === "zapier") return "Coming soon";
   const family = oauthFamily(provider);

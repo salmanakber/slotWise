@@ -263,18 +263,41 @@ function IntegrationsClient() {
                   </small>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <em className={`sw-tag ${row.connected ? "sw-tag-ok" : "sw-tag-muted"}`}>
-                    {row.connected ? "Connected" : "Not connected"}
+                  <em
+                    className={`sw-tag ${
+                      row.status === "error"
+                        ? "sw-tag-bad"
+                        : row.connected
+                          ? "sw-tag-ok"
+                          : "sw-tag-muted"
+                    }`}
+                  >
+                    {row.status === "error"
+                      ? "Needs reconnect"
+                      : row.connected
+                        ? "Connected"
+                        : "Not connected"}
                   </em>
                   {row.connected ? (
-                    <button
-                      type="button"
-                      className="sw-btn"
-                      disabled={pending}
-                      onClick={() => void disconnect(key)}
-                    >
-                      {pending ? "…" : "Disconnect"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="sw-btn"
+                        disabled={pending}
+                        onClick={() => void connect(key)}
+                        title="Refresh Google / Zoom authorization"
+                      >
+                        {pending ? "…" : "Reconnect"}
+                      </button>
+                      <button
+                        type="button"
+                        className="sw-btn"
+                        disabled={pending}
+                        onClick={() => void disconnect(key)}
+                      >
+                        {pending ? "…" : "Disconnect"}
+                      </button>
+                    </>
                   ) : (
                     <button
                       type="button"
@@ -282,7 +305,7 @@ function IntegrationsClient() {
                       disabled={pending}
                       onClick={() => void connect(key)}
                     >
-                      {pending ? "…" : "Connect"}
+                      {pending ? "…" : row.status === "error" ? "Reconnect" : "Connect"}
                     </button>
                   )}
                 </div>

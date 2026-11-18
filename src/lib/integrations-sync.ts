@@ -1,5 +1,4 @@
-import { decryptSecret } from "@/lib/crypto";
-import { prisma } from "@/lib/prisma";
+import { ensureAccessToken } from "@/lib/meeting-tools";
 
 type BookingSyncInput = {
   siteId: string;
@@ -14,16 +13,6 @@ type BookingSyncInput = {
   locationType?: string | null;
 };
 
-async function tokensFor(siteId: string, provider: string) {
-  const row = await prisma.siteIntegration.findUnique({
-    where: { siteId_provider: { siteId, provider } },
-  });
-  if (!row || row.status !== "connected" || !row.accessTokenEncrypted) return null;
-  const access = decryptSecret(row.accessTokenEncrypted);
-  if (!access) return null;
-  return { access, refresh: row.refreshTokenEncrypted ? decryptSecret(row.refreshTokenEncrypted) : null, row };
-}
-
 /**
  * Sync booking onto connected calendars.
  * Meeting links (Zoom / Meet) are created on demand when the customer picks a tool.
@@ -33,10 +22,8 @@ export async function syncBookingIntegrations(input: BookingSyncInput) {
   const meetingUrl: string | null = null;
 
   // Google Calendar (event only — Meet is customer-opt-in)
-  const gcal = await tokensFor(input.siteId, "google_calendar");
-  const meet = await tokensFor(input.siteId, "meet");
-  const googleToken = gcal?.access || meet?.access;
-  if (googleToken) {
+  const google = await ensureAccessToken(input.siteId, ["google_calendar", "meet"]);
+  if (google) {
     try {
       const body: Record<string, unknown> = {
         summary: `${input.serviceName} · ${input.customerName}`,
@@ -53,13 +40,13 @@ export async function syncBookingIntegrations(input: BookingSyncInput) {
       const res = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${googleToken}`,
+          Authorization: `Bearer ${google.access}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        results.push(gcal ? "google_calendar" : "meet");
+        results.push(google.provider);
       } else {
         console.error("[sync:google]", await res.text());
       }
@@ -69,7 +56,7 @@ export async function syncBookingIntegrations(input: BookingSyncInput) {
   }
 
   // Outlook calendar
-  const outlook = await tokensFor(input.siteId, "outlook");
+  const outlook = await ensureAccessToken(input.siteId, ["outlook"]);
   if (outlook) {
     try {
       const res = await fetch("https://graph.microsoft.com/v1.0/me/events", {

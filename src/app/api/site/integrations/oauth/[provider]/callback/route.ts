@@ -65,6 +65,16 @@ export async function GET(request: Request, context: Ctx) {
       return fail("token_exchange_failed");
     }
 
+    const expiresAt =
+      typeof tokens.expiresIn === "number"
+        ? Date.now() + tokens.expiresIn * 1000
+        : null;
+
+    const existing = await prisma.siteIntegration.findUnique({
+      where: { siteId_provider: { siteId: decoded.siteId, provider } },
+      select: { refreshTokenEncrypted: true },
+    });
+
     await prisma.siteIntegration.upsert({
       where: { siteId_provider: { siteId: decoded.siteId, provider } },
       create: {
@@ -78,17 +88,22 @@ export async function GET(request: Request, context: Ctx) {
         externalAccountEmail: tokens.email || null,
         meta: {
           expiresIn: tokens.expiresIn ?? null,
+          expiresAt,
         },
       },
       update: {
         status: "connected",
         accessTokenEncrypted: encryptSecret(tokens.accessToken),
-        refreshTokenEncrypted: tokens.refreshToken
-          ? encryptSecret(tokens.refreshToken)
-          : null,
+        // Google often omits refresh_token on re-consent — keep the existing one
+        ...(tokens.refreshToken
+          ? { refreshTokenEncrypted: encryptSecret(tokens.refreshToken) }
+          : existing?.refreshTokenEncrypted
+            ? {}
+            : { refreshTokenEncrypted: null }),
         externalAccountEmail: tokens.email || null,
         meta: {
           expiresIn: tokens.expiresIn ?? null,
+          expiresAt,
         },
       },
     });
