@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function createOwnerNotification(input: {
@@ -6,7 +7,7 @@ export async function createOwnerNotification(input: {
   title: string;
   body: string;
   href?: string | null;
-  meta?: Record<string, unknown> | null;
+  meta?: Prisma.InputJsonValue | null;
 }) {
   try {
     return await prisma.ownerNotification.create({
@@ -16,7 +17,7 @@ export async function createOwnerNotification(input: {
         title: input.title.slice(0, 160),
         body: input.body.slice(0, 400),
         href: input.href || null,
-        meta: input.meta ?? undefined,
+        ...(input.meta != null ? { meta: input.meta } : {}),
       },
     });
   } catch (e) {
