@@ -224,11 +224,25 @@ export function CalendarChat({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Booking failed");
       if (typeof data.checkoutUrl === "string" && data.checkoutUrl) {
-        const target = typeof window !== "undefined" ? window.top || window : window;
         try {
-          target.location.assign(data.checkoutUrl);
+          const a = document.createElement("a");
+          a.href = data.checkoutUrl;
+          a.target = "_top";
+          a.rel = "noopener noreferrer";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
         } catch {
-          window.location.assign(data.checkoutUrl);
+          /* ignore */
+        }
+        try {
+          if (window.top && window.top !== window) {
+            window.top.location.href = data.checkoutUrl;
+          } else {
+            window.location.href = data.checkoutUrl;
+          }
+        } catch {
+          window.location.href = data.checkoutUrl;
         }
         return;
       }

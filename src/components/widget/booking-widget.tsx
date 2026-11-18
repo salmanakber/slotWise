@@ -130,6 +130,7 @@ export function BookingWidget({
     meetingUrl: string | null;
     meetingProvider: string | null;
     meetingTools: Array<{ id: string; label: string }>;
+    checkoutUrl?: string | null;
   } | null>(null);
   const [meetingBusy, setMeetingBusy] = useState<string | null>(null);
   const [meetingError, setMeetingError] = useState<string | null>(null);
@@ -251,15 +252,43 @@ export function BookingWidget({
     return formatCustomerPrice(payCents, site.currency);
   }, [payCents, site]);
 
+  function goToCheckout(url: string) {
+    // Prefer _top so Webflow/iframe embeds leave the frame for Stripe Checkout
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_top";
+      a.rel = "noopener noreferrer";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      /* fall through */
+    }
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = url;
+        return;
+      }
+    } catch {
+      /* cross-origin frame */
+    }
+    window.location.href = url;
+  }
+
   async function confirm() {
     if (!service || !slotStart) return;
     setSubmitting(true);
     setError(null);
     let redirecting = false;
+    const ctrl = new AbortController();
+    const timeoutId = window.setTimeout(() => ctrl.abort(), 28_000);
     try {
       const res = await fetch(`/api/v1/sites/${publicKey}/bookings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
         body: JSON.stringify({
           serviceId,
           startsAt: slotStart,
@@ -269,24 +298,34 @@ export function BookingWidget({
           staffId: staffId || undefined,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Booking failed");
 
       const checkoutUrl =
         typeof data.checkoutUrl === "string" && data.checkoutUrl ? data.checkoutUrl : null;
       if (checkoutUrl) {
         redirecting = true;
-        // Break out of Webflow / embed iframes so Stripe Checkout loads full-page
-        const target = typeof window !== "undefined" ? window.top || window : window;
-        try {
-          target.location.assign(checkoutUrl);
-        } catch {
-          window.location.assign(checkoutUrl);
-        }
+        goToCheckout(checkoutUrl);
+        // If the browser/iframe blocks navigation, surface a Pay button after a short wait
+        window.setTimeout(() => {
+          setSubmitting(false);
+          setConfirmation({
+            reference: data.reference,
+            manageToken: data.manageToken,
+            startsAt: data.startsAt,
+            meetingUrl: null,
+            meetingProvider: null,
+            meetingTools: [],
+            checkoutUrl,
+          });
+          setStep("done");
+        }, 1600);
         return;
       }
       if (data.requiresPayment) {
-        throw new Error("Payment could not be started. Please try again.");
+        throw new Error(
+          data.error || "Payment could not be started. Check Stripe is ready in Payments.",
+        );
       }
 
       setMeetingSkipped(false);
@@ -301,8 +340,15 @@ export function BookingWidget({
       });
       setStep("done");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Booking failed");
+      const msg =
+        e instanceof Error && e.name === "AbortError"
+          ? "Payment is taking too long. Please try again — if this keeps happening, finish Stripe setup under Payments."
+          : e instanceof Error
+            ? e.message
+            : "Booking failed";
+      setError(msg);
     } finally {
+      window.clearTimeout(timeoutId);
       if (!redirecting) setSubmitting(false);
     }
   }
@@ -508,6 +554,22 @@ export function BookingWidget({
                 })}
               </p>
             </div>
+
+            {confirmation.checkoutUrl ? (
+              <a
+                href={confirmation.checkoutUrl}
+                target="_top"
+                rel="noopener noreferrer"
+                className="mx-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[13px] font-extrabold transition hover:brightness-105"
+                style={{
+                  background: accent,
+                  color: onAccent,
+                  borderRadius: Math.max(radius - 4, 10),
+                }}
+              >
+                Continue to payment{payLabel ? ` · ${payLabel}` : ""}
+              </a>
+            ) : null}
 
             {confirmation.meetingUrl ? (
               <a
@@ -875,6 +937,11 @@ export function BookingWidget({
                       : ""
                   : ""}
               </div>
+              {payCents > 0 && site.payment.chargesEnabled === false ? (
+                <p className="mb-0 mt-2 text-[12px] font-semibold" style={{ color: "#c0392b" }}>
+                  Card payments aren’t ready yet. The business needs to finish Stripe setup.
+                </p>
+              ) : null}
             </div>
             <h3 className="text-[15px] font-extrabold tracking-tight">Your details</h3>
             <Field
@@ -1039,10 +1106,19 @@ export function BookingWidget({
                   borderRadius: Math.max(radius - 4, 10),
                   boxShadow: `0 8px 18px color-mix(in srgb, ${accent} 28%, transparent)`,
                 }}
-                disabled={!name || !email || submitting}
+                disabled={
+                  !name ||
+                  !email ||
+                  submitting ||
+                  (payCents > 0 && site.payment.chargesEnabled === false)
+                }
                 onClick={confirm}
               >
-                {payLabel ? `Pay ${payLabel}` : "Confirm booking"}
+                {payCents > 0 && site.payment.chargesEnabled === false
+                  ? "Payments unavailable"
+                  : payLabel
+                    ? `Pay ${payLabel}`
+                    : "Confirm booking"}
               </button>
             </div>
           )}

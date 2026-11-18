@@ -209,13 +209,36 @@ export async function createBooking(input: {
         ? amountCents
         : Math.max(1, Math.round((amountCents * depositPercent) / 100));
   const depositCents = chargeCents;
-  const connectedId = site.stripeAccount?.stripeAccountId || null;
-  const chargesEnabled = Boolean(site.stripeAccount?.chargesEnabled);
+  let connectedId = site.stripeAccount?.stripeAccountId || null;
+  let chargesEnabled = Boolean(site.stripeAccount?.chargesEnabled);
   const needsOnlinePayment = chargeCents > 0;
+
+  // Live-refresh Connect readiness — stale chargesEnabled=false blocked Checkout forever
+  if (needsOnlinePayment && connectedId && !chargesEnabled) {
+    try {
+      const { getStripe } = await import("@/lib/stripe");
+      const stripe = await getStripe();
+      if (stripe) {
+        const remote = await stripe.accounts.retrieve(connectedId);
+        chargesEnabled = Boolean(remote.charges_enabled);
+        await prisma.stripeAccount.updateMany({
+          where: { stripeAccountId: connectedId },
+          data: {
+            chargesEnabled,
+            payoutsEnabled: Boolean(remote.payouts_enabled),
+          },
+        });
+      }
+    } catch (e) {
+      console.error("[booking:stripe-refresh]", e);
+    }
+  }
 
   if (needsOnlinePayment && (!connectedId || !chargesEnabled)) {
     throw new BookingError(
-      "Online payment isn’t ready for this event yet. Please choose another time or contact the business.",
+      !connectedId
+        ? "Online payment isn’t set up yet. The business needs to connect Stripe under Payments."
+        : "Stripe Connect isn’t finished — charges aren’t enabled yet. Open Payments and complete onboarding.",
       "INACTIVE",
     );
   }
@@ -291,22 +314,31 @@ export async function createBooking(input: {
   const businessName = site.branding?.businessName || site.name;
   const origin = appOrigin();
 
-  // Paid events: open Stripe Checkout before anything else. Fail hard — never leave a
-  // "deposit" booking without a payment URL (that caused the stuck / unpaid DEPOSIT bug).
+  // Paid events: create Checkout and return the URL immediately.
+  // Do NOT await calendar sync / email / Zapier first — that blocked the client on a
+  // skeleton forever while Google/email hung, so Stripe never opened.
   let checkoutUrl: string | null = null;
   if (needsOnlinePayment && connectedId) {
     try {
-      const session = await createBookingCheckoutSession({
-        amountCents: chargeCents,
-        currency: booking.currency || site.currency || "USD",
-        connectedAccountId: connectedId,
-        bookingId: booking.id,
-        bookingReference: booking.reference,
-        serviceName: booking.service.name,
-        customerEmail: booking.customerEmail,
-        successUrl: `${origin}/manage/${booking.manageToken}?paid=1`,
-        cancelUrl: `${origin}/manage/${booking.manageToken}?pay=canceled`,
-      });
+      const session = await Promise.race([
+        createBookingCheckoutSession({
+          amountCents: chargeCents,
+          currency: booking.currency || site.currency || "USD",
+          connectedAccountId: connectedId,
+          bookingId: booking.id,
+          bookingReference: booking.reference,
+          serviceName: booking.service.name,
+          customerEmail: booking.customerEmail,
+          successUrl: `${origin}/manage/${booking.manageToken}?paid=1`,
+          cancelUrl: `${origin}/manage/${booking.manageToken}?pay=canceled`,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Stripe Checkout timed out — check platform Stripe keys and Connect account")),
+            18_000,
+          ),
+        ),
+      ]);
       checkoutUrl = session.url;
     } catch (err) {
       console.error("booking checkout session failed", err);
@@ -316,8 +348,12 @@ export async function createBooking(input: {
           data: { status: BookingStatus.CANCELLED },
         })
         .catch(() => undefined);
+      const detail =
+        err instanceof Error && err.message
+          ? err.message.slice(0, 180)
+          : "Could not start Stripe payment";
       throw new BookingError(
-        "Could not start Stripe payment. Please try again in a moment.",
+        `Could not start Stripe payment: ${detail}`,
         "VALIDATION",
       );
     }
@@ -333,6 +369,76 @@ export async function createBooking(input: {
         "VALIDATION",
       );
     }
+
+    // Background only — response must not wait on these
+    void (async () => {
+      try {
+        await createOwnerNotification({
+          siteId: site.id,
+          type: "payment",
+          title: `Awaiting payment · ${booking.reference}`,
+          body: `${booking.customerName} started checkout for ${booking.service.name} · ${whenLabel}.`,
+          href: "/dashboard/bookings",
+          meta: {
+            bookingId: booking.id,
+            reference: booking.reference,
+            customerEmail: booking.customerEmail,
+            chargeCents,
+          },
+        });
+        if (ownerEmail && site.notificationSettings?.ownerEmailAlert !== false) {
+          const amountLabel =
+            booking.amountCents > 0
+              ? new Intl.NumberFormat(undefined, {
+                  style: "currency",
+                  currency: (booking.currency || "USD").toUpperCase(),
+                }).format(booking.amountCents / 100)
+              : null;
+          await sendOwnerBookingAlert({
+            to: ownerEmail,
+            reference: booking.reference,
+            serviceName: booking.service.name,
+            whenLabel,
+            dashboardUrl: `${appUrl}/dashboard/bookings`,
+            businessName,
+            customerName: booking.customerName,
+            customerEmail: booking.customerEmail,
+            customerPhone: booking.customerPhone,
+            amountLabel: `${amountLabel || ""} · awaiting payment`,
+            fromEmail: site.notificationSettings?.fromEmail || null,
+          });
+        }
+        await notifyZapierBooking({
+          siteId: site.id,
+          event: "booking.created",
+          payload: {
+            reference: booking.reference,
+            customerName: booking.customerName,
+            customerEmail: booking.customerEmail,
+            customerPhone: booking.customerPhone,
+            serviceName: booking.service.name,
+            startsAt: booking.startsAt.toISOString(),
+            endsAt: booking.endsAt.toISOString(),
+            amountCents: booking.amountCents,
+            currency: booking.currency,
+            manageUrl,
+            meetingUrl: null,
+            siteName: businessName,
+            awaitingPayment: true,
+          },
+        });
+      } catch (e) {
+        console.error("[booking:paid:side-effects]", e);
+      }
+    })();
+
+    return {
+      ...booking,
+      checkoutUrl,
+      meetingTools: [] as Awaited<ReturnType<typeof listMeetingTools>>,
+      chargeCents,
+      requiresPayment: true,
+    };
   }
 
   const sync = await syncBookingIntegrations({
@@ -351,8 +457,7 @@ export async function createBooking(input: {
     return { providers: [] as string[], meetingUrl: null as string | null };
   });
 
-  // For paid bookings, confirmation email waits until payment succeeds (webhook).
-  if (!needsOnlinePayment && site.notificationSettings?.emailConfirm !== false) {
+  if (site.notificationSettings?.emailConfirm !== false) {
     await sendBookingConfirmation({
       to: booking.customerEmail,
       reference: booking.reference,
@@ -386,9 +491,7 @@ export async function createBooking(input: {
       customerName: booking.customerName,
       customerEmail: booking.customerEmail,
       customerPhone: booking.customerPhone,
-      amountLabel: needsOnlinePayment
-        ? `${amountLabel || ""} · awaiting payment`
-        : amountLabel,
+      amountLabel,
       fromEmail: site.notificationSettings?.fromEmail || null,
       meetingUrl: sync.meetingUrl || booking.meetingUrl || null,
       meetingProvider: booking.meetingProvider || null,
@@ -397,13 +500,9 @@ export async function createBooking(input: {
 
   await createOwnerNotification({
     siteId: site.id,
-    type: needsOnlinePayment ? "payment" : "booking.created",
-    title: needsOnlinePayment
-      ? `Awaiting payment · ${booking.reference}`
-      : `New booking · ${booking.reference}`,
-    body: needsOnlinePayment
-      ? `${booking.customerName} started checkout for ${booking.service.name} · ${whenLabel}.`
-      : `${booking.customerName} booked ${booking.service.name} for ${whenLabel}.`,
+    type: "booking.created",
+    title: `New booking · ${booking.reference}`,
+    body: `${booking.customerName} booked ${booking.service.name} for ${whenLabel}.`,
     href: "/dashboard/bookings",
     meta: {
       bookingId: booking.id,
@@ -422,7 +521,6 @@ export async function createBooking(input: {
     .join(" ");
 
   if (
-    !needsOnlinePayment &&
     booking.customerPhone &&
     site.notificationSettings?.smsEnabled &&
     canUse(site.plan?.tier, "sms")
@@ -433,7 +531,6 @@ export async function createBooking(input: {
   }
 
   if (
-    !needsOnlinePayment &&
     booking.customerPhone &&
     site.notificationSettings?.whatsappEnabled &&
     canUse(site.plan?.tier, "sms")
@@ -459,19 +556,17 @@ export async function createBooking(input: {
       manageUrl,
       meetingUrl: sync.meetingUrl,
       siteName: businessName,
-      awaitingPayment: needsOnlinePayment,
+      awaitingPayment: false,
     },
   }).catch((err) => console.error("zapier notify failed", err));
 
-  const meetingTools = needsOnlinePayment
-    ? []
-    : await listMeetingTools(site.id).catch(() => []);
+  const meetingTools = await listMeetingTools(site.id).catch(() => []);
 
   return {
     ...booking,
-    checkoutUrl,
+    checkoutUrl: null,
     meetingTools,
     chargeCents,
-    requiresPayment: needsOnlinePayment,
+    requiresPayment: false,
   };
 }

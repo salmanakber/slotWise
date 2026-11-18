@@ -175,9 +175,17 @@ export async function createBookingPaymentIntent(input: {
   );
 }
 
+function stripeErrorMessage(err: unknown) {
+  if (err && typeof err === "object" && "message" in err) {
+    return String((err as { message: unknown }).message);
+  }
+  return err instanceof Error ? err.message : "Checkout session failed";
+}
+
 /**
- * Checkout Session for a booking deposit/full payment on the connected account.
- * Uses the site's currency so multi-currency bookings charge correctly in Stripe.
+ * Checkout Session for a booking deposit/full payment.
+ * 1) Direct charge on the connected account (SaaS / Express)
+ * 2) Fallback: destination charge on the platform → transfer to connected account
  */
 export async function createBookingCheckoutSession(input: {
   amountCents: number;
@@ -191,50 +199,91 @@ export async function createBookingCheckoutSession(input: {
   cancelUrl: string;
 }) {
   const client = await getStripe();
-  if (!client) throw new Error("Stripe not configured");
+  if (!client) throw new Error("Stripe not configured — add the secret key in Platform → Stripe");
   const feePercent = await getApplicationFeePercent();
   const applicationFeeAmount = feePercent > 0 ? Math.round((input.amountCents * feePercent) / 100) : 0;
   const currency = input.currency.toLowerCase();
 
-  const session = await client.checkout.sessions.create(
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     {
-      mode: "payment",
-      customer_email: input.customerEmail,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency,
-            unit_amount: input.amountCents,
-            product_data: {
-              name: input.serviceName,
-              description: `Booking ${input.bookingReference}`,
-            },
-          },
+      quantity: 1,
+      price_data: {
+        currency,
+        unit_amount: input.amountCents,
+        product_data: {
+          name: input.serviceName.slice(0, 120) || "Booking",
+          description: `Booking ${input.bookingReference}`.slice(0, 500),
         },
-      ],
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      metadata: {
-        bookingId: input.bookingId,
-        platform: "slotwise",
-      },
-      payment_intent_data: {
-        metadata: {
-          bookingId: input.bookingId,
-          platform: "slotwise",
-        },
-        ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
       },
     },
-    {
-      stripeAccount: input.connectedAccountId,
-      idempotencyKey: `booking_checkout_${input.bookingId}`,
-    },
-  );
+  ];
 
-  if (!session.url) {
-    throw new Error("Stripe Checkout did not return a payment URL");
+  const base: Stripe.Checkout.SessionCreateParams = {
+    mode: "payment",
+    customer_email: input.customerEmail,
+    line_items: lineItems,
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    metadata: {
+      bookingId: input.bookingId,
+      platform: "slotwise",
+    },
+  };
+
+  // Attempt 1 — direct charge on connected account
+  try {
+    const session = await client.checkout.sessions.create(
+      {
+        ...base,
+        payment_intent_data: {
+          metadata: {
+            bookingId: input.bookingId,
+            platform: "slotwise",
+          },
+          ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
+        },
+      },
+      {
+        stripeAccount: input.connectedAccountId,
+        idempotencyKey: `booking_checkout_direct_${input.bookingId}`,
+      },
+    );
+    if (!session.url) throw new Error("Stripe Checkout did not return a payment URL");
+    return session;
+  } catch (directErr) {
+    console.error("[stripe:checkout:direct]", stripeErrorMessage(directErr));
   }
-  return session;
+
+  // Attempt 2 — destination charge (platform Checkout → connected account)
+  try {
+    const session = await client.checkout.sessions.create(
+      {
+        ...base,
+        payment_intent_data: {
+          metadata: {
+            bookingId: input.bookingId,
+            platform: "slotwise",
+          },
+          transfer_data: {
+            destination: input.connectedAccountId,
+          },
+          ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
+        },
+      },
+      {
+        idempotencyKey: `booking_checkout_dest_${input.bookingId}`,
+      },
+    );
+    if (!session.url) throw new Error("Stripe Checkout did not return a payment URL");
+    return session;
+  } catch (destErr) {
+    const message = stripeErrorMessage(destErr);
+    console.error("[stripe:checkout:destination]", {
+      connectedAccountId: input.connectedAccountId,
+      amountCents: input.amountCents,
+      currency,
+      message,
+    });
+    throw new Error(message);
+  }
 }

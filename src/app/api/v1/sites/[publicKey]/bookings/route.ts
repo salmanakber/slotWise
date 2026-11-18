@@ -4,7 +4,7 @@ import { BookingError, createBooking } from "@/lib/booking/create";
 
 const bodySchema = z.object({
   serviceId: z.string().min(1),
-  startsAt: z.string().datetime(),
+  startsAt: z.string().min(10),
   customerName: z.string().min(1).max(120),
   customerEmail: z.string().min(3).max(200).refine((v) => v.includes("@"), "Invalid email"),
   customerPhone: z.string().max(40).optional(),
