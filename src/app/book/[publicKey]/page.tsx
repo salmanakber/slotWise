@@ -50,10 +50,10 @@ export default async function BookPage({
 
   if (isEmbed) {
     return (
-      <main className="sw-embed-shell box-border w-full max-w-full overflow-x-hidden bg-transparent px-0 pb-0 pt-2.5">
+      <main className="sw-embed-shell box-border w-full max-w-full overflow-x-hidden bg-transparent p-0">
         <style>{`
           html, body { margin: 0; padding: 0; overflow-x: hidden; background: transparent; }
-          .sw-embed-shell { width: 100%; max-width: 100%; min-width: 0; padding-top: 10px; box-sizing: border-box; }
+          .sw-embed-shell { width: 100%; max-width: 100%; min-width: 0; }
         `}</style>
         <BookingWidget publicKey={publicKey} embed />
       </main>

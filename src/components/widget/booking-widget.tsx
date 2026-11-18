@@ -328,7 +328,7 @@ export function BookingWidget({
         width: "100%",
         maxWidth: "min(100%, 33rem)",
         maxHeight: embed ? "min(92vh, 640px)" : "min(92vh, 720px)",
-        paddingTop: embed ? 10 : 0,
+        marginTop: embed ? 20 : 0,
         marginInline: "auto",
         display: "flex",
         flexDirection: "column",
@@ -374,7 +374,7 @@ export function BookingWidget({
       `}</style>
 
       <header
-        className="relative shrink-0 min-w-0 px-4 pb-3 pt-5"
+        className="relative shrink-0 min-w-0 px-4 pb-3 pt-4"
         style={{
           borderBottom: `1px solid ${line}`,
           background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, ${panel}), ${panel} 62%)`,
@@ -435,7 +435,7 @@ export function BookingWidget({
         </div>
       </header>
 
-      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 pb-4 pt-5">
+      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 py-4">
         {(loadingSlots || submitting) && branding?.showLoader !== false ? (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[3px]"
@@ -915,8 +915,19 @@ export function BookingWidget({
       ) : null}
 
       {branding?.showBadge !== false ? (
-        <div className="shrink-0 pb-2 pt-1 text-center text-[10px] font-semibold tracking-wide" style={{ color: mut }}>
-          Powered by Slotwise
+        <div
+          className="flex shrink-0 items-center justify-center gap-1.5 pb-2.5 pt-1 text-[10px] font-semibold tracking-wide"
+          style={{ color: mut }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt=""
+            width={14}
+            height={14}
+            className="h-3.5 w-3.5 rounded-[3px] object-contain"
+          />
+          <span>Powered by Slotwise</span>
         </div>
       ) : null}
     </div>
