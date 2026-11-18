@@ -25,7 +25,7 @@ export default async function BookPage({
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden px-4 py-8 sm:py-12">
+    <main className="relative min-h-screen overflow-x-hidden px-4 py-10 sm:py-14">
       <div
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
@@ -33,9 +33,9 @@ export default async function BookPage({
             "radial-gradient(70% 50% at 50% 0%, rgba(245,160,0,.12), transparent 60%), linear-gradient(180deg, #f7f8fb 0%, #eef1f6 100%)",
         }}
       />
-      <div className="mx-auto w-full max-w-[440px]">
+      <div className="mx-auto w-full max-w-[520px]">
         <BookingWidget publicKey={publicKey} />
-        <p className="mt-6 text-center text-[11px]" style={{ color: "var(--mut)" }}>
+        <p className="mt-8 text-center text-[11px]" style={{ color: "var(--mut)" }}>
           Powered by{" "}
           <Link href="/" className="font-semibold underline-offset-2 hover:underline">
             Slotwise

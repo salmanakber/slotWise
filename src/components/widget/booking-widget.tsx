@@ -296,15 +296,15 @@ export function BookingWidget({
   const panelNode = (
     <div
       ref={rootRef}
-      className="sw-widget mx-auto box-border w-full overflow-hidden"
+      className="sw-widget relative mx-auto box-border w-full overflow-hidden"
       style={{
         background: panel,
         color: ink,
         border: `1px solid ${line}`,
-        borderRadius: embed ? Math.min(radius, 16) : radius,
+        borderRadius: embed ? Math.min(radius, 18) : radius,
         width: "100%",
-        maxWidth: "min(100%, 24.5rem)",
-        maxHeight: embed ? "min(92vh, 560px)" : "min(92vh, 620px)",
+        maxWidth: "min(100%, 30rem)",
+        maxHeight: embed ? "min(92vh, 640px)" : "min(92vh, 720px)",
         marginInline: "auto",
         display: "flex",
         flexDirection: "column",
@@ -337,9 +337,12 @@ export function BookingWidget({
         .sw-w-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
         .sw-w-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 22%, transparent); border-radius: 99px; }
         .sw-widget *, .sw-widget *::before, .sw-widget *::after { box-sizing: border-box; }
-        .sw-w-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3rem; }
-        @container (min-width: 20rem) {
+        .sw-w-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+        @container (min-width: 22rem) {
           .sw-w-times { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @container (min-width: 28rem) {
+          .sw-w-times { grid-template-columns: repeat(5, minmax(0, 1fr)); }
         }
         @media (prefers-reduced-motion: reduce) {
           .sw-w-rise, .sw-w-check { animation: none !important; }
@@ -347,7 +350,7 @@ export function BookingWidget({
       `}</style>
 
       <header
-        className="relative shrink-0 min-w-0 px-3 pb-2.5 pt-3"
+        className="relative shrink-0 min-w-0 px-4 pb-3 pt-4"
         style={{
           borderBottom: `1px solid ${line}`,
           background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 14%, ${panel}), ${panel} 62%)`,
@@ -408,7 +411,7 @@ export function BookingWidget({
         </div>
       </header>
 
-      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3 overflow-x-hidden overflow-y-auto p-3">
+      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 py-4">
         {(loadingSlots || submitting) && branding?.showLoader !== false ? (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[3px]"
@@ -467,7 +470,7 @@ export function BookingWidget({
                   {site.services.length} available
                 </span>
               </div>
-              <div className="sw-w-scroll grid max-h-[112px] gap-1.5 overflow-y-auto pb-0.5">
+              <div className="sw-w-scroll grid max-h-[132px] gap-1.5 overflow-y-auto pb-0.5">
                 {site.services.map((s) => {
                   const on = s.id === serviceId;
                   const priceLabel =
@@ -555,7 +558,7 @@ export function BookingWidget({
                         key={d}
                         type="button"
                         onClick={() => setDate(d)}
-                        className="grid h-[44px] w-[44px] shrink-0 gap-0 border text-center transition"
+                        className="grid h-[48px] w-[48px] shrink-0 gap-0 border text-center transition"
                         style={{
                           borderRadius: Math.max(radius - 6, 10),
                           borderColor: on ? accent : line,
@@ -576,7 +579,7 @@ export function BookingWidget({
 
             <section className="min-w-0">
               <h3 className="mb-1.5 text-[13px] font-extrabold tracking-tight">Time</h3>
-              <div className="sw-w-scroll sw-w-times max-h-[132px] w-full min-w-0 overflow-y-auto pb-0.5">
+              <div className="sw-w-scroll sw-w-times max-h-[148px] w-full min-w-0 overflow-y-auto pb-0.5">
                 {slots.length === 0 && !loadingSlots ? (
                   <div
                     className="rounded-lg border border-dashed px-3 py-4 text-center text-[12px]"
@@ -699,7 +702,7 @@ export function BookingWidget({
 
       {step !== "done" ? (
         <footer
-          className="sticky bottom-0 z-[5] flex shrink-0 min-w-0 items-center justify-between gap-2 border-t px-3 py-2.5 backdrop-blur-md"
+          className="sticky bottom-0 z-[5] flex shrink-0 min-w-0 items-center justify-between gap-2 border-t px-4 py-3.5 backdrop-blur-md"
           style={{
             borderColor: line,
             background: `color-mix(in srgb, ${panel} 94%, transparent)`,
@@ -791,7 +794,7 @@ export function BookingWidget({
             className="absolute inset-0 cursor-default"
             onClick={() => setFloatingOpen(false)}
           />
-          <div className="relative z-[1] w-full max-w-[26.5rem]">{panelNode}</div>
+          <div className="relative z-[1] w-full max-w-[32rem]">{panelNode}</div>
         </div>
       ) : null}
       <button
