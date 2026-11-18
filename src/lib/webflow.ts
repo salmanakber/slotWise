@@ -277,6 +277,5 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
 
 /** Manual snippet — avoid for Marketplace installs; use Designer “Add booking” instead. */
 export function widgetInstallSnippet(publicKey: string) {
-  const appUrl = appOrigin();
   return `<!-- Prefer Designer canvas embed. Manual paste cannot be removed by the App on uninstall. -->\n<div data-slotwise-widget data-site="${publicKey}"></div>`;
 }
