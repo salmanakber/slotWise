@@ -1,11 +1,16 @@
 import { BookingsBoard } from "@/components/admin/bookings-board";
-import { getDemoSite, getSiteBookings } from "@/lib/sites";
+import { getDemoSite, getSiteBookings, getSiteOverviewStats } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";
 
 export default async function BookingsPage() {
   const site = await getDemoSite();
-  const rows = site ? await getSiteBookings(site.id).catch(() => []) : [];
+  const [rows, stats] = site
+    ? await Promise.all([
+        getSiteBookings(site.id, 500).catch(() => []),
+        getSiteOverviewStats(site.id).catch(() => null),
+      ])
+    : [[], null];
 
   const serialized = rows.map((b) => ({
     id: b.id,
@@ -29,5 +34,21 @@ export default async function BookingsPage() {
     staff: b.staff.map((s) => ({ staff: { name: s.staff.name } })),
   }));
 
-  return <BookingsBoard rows={serialized} currency={site?.currency ?? "USD"} />;
+  const summary = stats
+    ? {
+        total: stats.total,
+        upcoming: stats.bookingsUpcoming,
+        pending: stats.pending,
+        revenue: stats.revenueCents,
+        deposits: stats.depositCollectedCents,
+      }
+    : null;
+
+  return (
+    <BookingsBoard
+      rows={serialized}
+      currency={site?.currency ?? "USD"}
+      summary={summary}
+    />
+  );
 }

@@ -9,6 +9,8 @@ import { notifyZapierBooking } from "@/lib/zapier";
 import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
 import { sendSms } from "@/lib/sms";
+import { createBookingCheckoutSession } from "@/lib/stripe";
+import { appOrigin } from "@/lib/webflow";
 
 function refCode() {
   return `#${Math.floor(1000 + Math.random() * 9000)}`;
@@ -336,5 +338,32 @@ export async function createBooking(input: {
     },
   }).catch((err) => console.error("zapier notify failed", err));
 
-  return booking;
+  let checkoutUrl: string | null = null;
+  const connectedId = site.stripeAccount?.stripeAccountId;
+  const canCharge =
+    Boolean(connectedId) &&
+    Boolean(site.stripeAccount?.chargesEnabled) &&
+    depositCents > 0;
+
+  if (canCharge && connectedId) {
+    try {
+      const origin = appOrigin();
+      const session = await createBookingCheckoutSession({
+        amountCents: depositCents,
+        currency: booking.currency || site.currency || "USD",
+        connectedAccountId: connectedId,
+        bookingId: booking.id,
+        bookingReference: booking.reference,
+        serviceName: booking.service.name,
+        customerEmail: booking.customerEmail,
+        successUrl: `${origin}/manage/${booking.manageToken}?paid=1`,
+        cancelUrl: `${origin}/manage/${booking.manageToken}?pay=canceled`,
+      });
+      checkoutUrl = session.url;
+    } catch (err) {
+      console.error("booking checkout session failed", err);
+    }
+  }
+
+  return { ...booking, checkoutUrl };
 }

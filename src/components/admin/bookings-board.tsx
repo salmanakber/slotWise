@@ -52,12 +52,23 @@ function isSameDay(a: Date, b: Date) {
   );
 }
 
+export type BookingsSummary = {
+  total: number;
+  upcoming: number;
+  pending: number;
+  revenue: number;
+  deposits: number;
+};
+
 export function BookingsBoard({
   rows,
   currency = "USD",
+  summary: summaryProp,
 }: {
   rows: BookingRow[];
   currency?: string;
+  /** Live aggregates from the DB (preferred over summing loaded rows). */
+  summary?: BookingsSummary | null;
 }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
   const [q, setQ] = useState("");
@@ -113,6 +124,7 @@ export function BookingsBoard({
   }, [selectedId]);
 
   const summary = useMemo(() => {
+    if (summaryProp) return summaryProp;
     const active = rows.filter((b) => b.status !== "CANCELLED" && b.status !== "NO_SHOW");
     const upcoming = active.filter((b) => new Date(b.startsAt) >= now);
     const revenue = rows
@@ -123,7 +135,7 @@ export function BookingsBoard({
       .reduce((s, b) => s + b.depositCents, 0);
     const pending = rows.filter((b) => b.status === "PENDING").length;
     return { total: rows.length, upcoming: upcoming.length, revenue, deposits, pending };
-  }, [rows, now]);
+  }, [rows, now, summaryProp]);
 
   const from = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const to = Math.min(safePage * PAGE_SIZE, filtered.length);
@@ -146,10 +158,13 @@ export function BookingsBoard({
         ].map((k) => (
           <div key={k.label} className="sw-card !p-3.5">
             <div
-              className="text-[12px] font-semibold uppercase tracking-[0.04em]"
+              className="flex items-center justify-between gap-2 text-[12px] font-semibold uppercase tracking-[0.04em]"
               style={{ color: "var(--mut)" }}
             >
-              {k.label}
+              <span>{k.label}</span>
+              {summaryProp ? (
+                <em className="sw-tag sw-tag-ok !text-[10px] !normal-case !tracking-normal">Live</em>
+              ) : null}
             </div>
             <div className="mt-1 text-[24px] font-extrabold leading-none">{k.value}</div>
             {k.sub ? (

@@ -174,3 +174,62 @@ export async function createBookingPaymentIntent(input: {
     },
   );
 }
+
+/**
+ * Checkout Session for a booking deposit/full payment on the connected account.
+ * Uses the site's currency so multi-currency bookings charge correctly in Stripe.
+ */
+export async function createBookingCheckoutSession(input: {
+  amountCents: number;
+  currency: string;
+  connectedAccountId: string;
+  bookingId: string;
+  bookingReference: string;
+  serviceName: string;
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}) {
+  const client = await getStripe();
+  if (!client) throw new Error("Stripe not configured");
+  const feePercent = await getApplicationFeePercent();
+  const applicationFeeAmount = feePercent > 0 ? Math.round((input.amountCents * feePercent) / 100) : 0;
+  const currency = input.currency.toLowerCase();
+
+  return client.checkout.sessions.create(
+    {
+      mode: "payment",
+      customer_email: input.customerEmail,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency,
+            unit_amount: input.amountCents,
+            product_data: {
+              name: input.serviceName,
+              description: `Booking ${input.bookingReference}`,
+            },
+          },
+        },
+      ],
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
+      metadata: {
+        bookingId: input.bookingId,
+        platform: "slotwise",
+      },
+      payment_intent_data: {
+        metadata: {
+          bookingId: input.bookingId,
+          platform: "slotwise",
+        },
+        ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
+      },
+    },
+    {
+      stripeAccount: input.connectedAccountId,
+      idempotencyKey: `booking_checkout_${input.bookingId}`,
+    },
+  );
+}

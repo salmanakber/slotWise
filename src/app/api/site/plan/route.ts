@@ -41,7 +41,8 @@ export async function GET() {
         staffLimit: p.staffLimit,
         themesLimit: p.themesLimit,
         features: p.features,
-        hasCheckout: Boolean(p.stripePriceMoId),
+        // Paid plans always go through Checkout when Stripe is configured
+        hasCheckout: p.tier !== PlanTier.FREE && p.priceMonthly > 0,
       })),
     });
   } catch (e) {
@@ -54,8 +55,8 @@ export async function GET() {
 
 /**
  * Change site plan.
- * - If the Plan has a Stripe price ID, return a Checkout URL.
- * - Otherwise apply the plan immediately (platform-managed billing).
+ * - FREE (or free downgrade): apply immediately.
+ * - Paid tiers: always open Stripe Checkout (price ID or inline price_data).
  */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -77,12 +78,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, unchanged: true, tier: plan.tier });
     }
 
-    const stripe = await getStripe();
-    if (stripe && plan.stripePriceMoId && plan.tier !== PlanTier.FREE) {
+    const isPaid = plan.tier !== PlanTier.FREE && plan.priceMonthly > 0;
+
+    if (isPaid) {
+      const stripe = await getStripe();
+      if (!stripe) {
+        return NextResponse.json(
+          {
+            error:
+              "Stripe is not configured. Add platform Stripe keys in Platform → Stripe before upgrading.",
+          },
+          { status: 503 },
+        );
+      }
+
       const origin = appOrigin();
+      const lineItem = plan.stripePriceMoId
+        ? { price: plan.stripePriceMoId, quantity: 1 }
+        : {
+            price_data: {
+              currency: "usd",
+              unit_amount: plan.priceMonthly,
+              recurring: { interval: "month" as const },
+              product_data: {
+                name: `Slotwise ${plan.name}`,
+                description: `${plan.name} plan for ${site.name}`,
+              },
+            },
+            quantity: 1,
+          };
+
       const sessionCheckout = await stripe.checkout.sessions.create({
         mode: "subscription",
-        line_items: [{ price: plan.stripePriceMoId, quantity: 1 }],
+        line_items: [lineItem],
         success_url: `${origin}/dashboard/plans?upgraded=${plan.tier}`,
         cancel_url: `${origin}/dashboard/plans?canceled=1`,
         customer_email:
@@ -100,6 +128,14 @@ export async function POST(request: Request) {
           },
         },
       });
+
+      if (!sessionCheckout.url) {
+        return NextResponse.json(
+          { error: "Stripe Checkout did not return a URL" },
+          { status: 502 },
+        );
+      }
+
       return NextResponse.json({
         ok: true,
         checkoutUrl: sessionCheckout.url,
@@ -107,6 +143,7 @@ export async function POST(request: Request) {
       });
     }
 
+    // Free plan — apply immediately (no payment)
     await prisma.site.update({
       where: { id: site.id },
       data: { planId: plan.id },

@@ -132,7 +132,46 @@ export async function boot(root: HTMLElement) {
     const plan = state.bootstrap?.plan.tier || "FREE";
     const name = state.bootstrap?.site.name || "Slotwise";
     const showFab = state.tab !== "create" && Boolean(state.bootstrap);
-    root.innerHTML = `
+    const full = state.panelMode === "full";
+    const tabs = (Object.keys(TAB_META) as Tab[]).map(tabButton).join("");
+    const actions = `
+      <a class="link-upgrade" href="${upgradeUrl()}" target="_blank" rel="noreferrer">Upgrade</a>
+      <a class="btn btn-icon btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">
+        <span class="ico">${icons.grid}</span>
+      </a>
+      <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle theme">
+        ${state.theme === "light" ? icons.moon : icons.sun}
+      </button>
+      <button type="button" class="btn btn-icon btn-primary" id="publishBtn" title="Publish">
+        <span class="ico">${icons.rocket}</span>
+      </button>`;
+
+    root.innerHTML = full
+      ? `
+      <div class="app app-full">
+        <aside class="sidebar">
+          <div class="brand brand-side">
+            <div class="mark">S</div>
+            <div>
+              <strong>Slotwise</strong>
+              <small>${escapeHtml(name)} · ${escapeHtml(plan)}</small>
+            </div>
+          </div>
+          <nav class="side-nav" role="tablist">${tabs}</nav>
+          <div class="side-actions">${actions}</div>
+        </aside>
+        <div class="workspace">
+          ${modeBanner()}
+          <main class="main main-full">${body}</main>
+          <p id="status" class="status" data-tone="${state.statusOk ? "ok" : "bad"}">${state.status}</p>
+          <p class="footer-note">Support <a href="mailto:tidyflaw@gmail.com">tidyflaw@gmail.com</a></p>
+        </div>
+        <button type="button" class="fab${showFab ? "" : " is-hidden"}" id="fabNew" title="New event">
+          <span class="fab-plus"><span class="ico">${icons.plus}</span></span>
+          New event
+        </button>
+      </div>`
+      : `
       <div class="app">
         <header class="topnav">
           <div class="brand">
@@ -142,23 +181,10 @@ export async function boot(root: HTMLElement) {
               <small>${escapeHtml(name)} · ${escapeHtml(plan)}</small>
             </div>
           </div>
-          <div class="nav-actions">
-            <a class="link-upgrade" href="${upgradeUrl()}" target="_blank" rel="noreferrer">Upgrade</a>
-            <a class="btn btn-sm btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Payments, Stripe, calendars, and settings">
-              ${iconLabel(icons.grid, "Full dashboard")}
-            </a>
-            <button type="button" class="btn btn-icon btn-ghost" id="themeBtn" title="Toggle theme">
-              ${state.theme === "light" ? icons.moon : icons.sun}
-            </button>
-            <button type="button" class="btn btn-sm btn-primary" id="publishBtn" title="Publish site">
-              ${iconLabel(icons.publish, "Publish")}
-            </button>
-          </div>
+          <div class="nav-actions">${actions}</div>
         </header>
         ${modeBanner()}
-        <nav class="tabs" role="tablist">
-          ${(Object.keys(TAB_META) as Tab[]).map(tabButton).join("")}
-        </nav>
+        <nav class="tabs" role="tablist">${tabs}</nav>
         <main class="main">${body}</main>
         <p id="status" class="status" data-tone="${state.statusOk ? "ok" : "bad"}">${state.status}</p>
         <p class="footer-note">Support <a href="mailto:tidyflaw@gmail.com">tidyflaw@gmail.com</a></p>
@@ -166,8 +192,7 @@ export async function boot(root: HTMLElement) {
           <span class="fab-plus"><span class="ico">${icons.plus}</span></span>
           New event
         </button>
-      </div>
-    `;
+      </div>`;
     wireChrome();
   }
 
@@ -601,7 +626,14 @@ export async function boot(root: HTMLElement) {
           ];
     return `<section class="card">
       ${cardTitle(icons.palette, "Widget theme")}
-      <p class="lead">Applies to the live booking widget.</p>
+      <p class="lead">Accent + text color apply to the live booking widget and Dashboard branding.</p>
+      <div class="theme-live" id="themeLive" style="--live-bg:${escapeHtml(themes.find((t) => t.key === current)?.bg || "#fff")};--live-ink:${escapeHtml(ink)};--live-ac:${escapeHtml(accent)};--live-line:${escapeHtml(themes.find((t) => t.key === current)?.line || "#e1e6ee")};--live-r:${radius}px">
+        <div class="theme-live-card">
+          <b>Sample booking</b>
+          <small>Text uses your ink color</small>
+          <button type="button" class="theme-live-btn">Book now</button>
+        </div>
+      </div>
       <div class="theme-grid">
         ${themes
           .map((t) => {
@@ -618,7 +650,7 @@ export async function boot(root: HTMLElement) {
         <label class="color-field"><span>Accent</span>
           <input type="color" id="brandAccent" value="${escapeHtml(accent)}" />
         </label>
-        <label class="color-field"><span>Text / ink</span>
+        <label class="color-field"><span>Text color</span>
           <input type="color" id="brandInk" value="${escapeHtml(ink)}" />
         </label>
       </div>
@@ -802,9 +834,21 @@ export async function boot(root: HTMLElement) {
 
     const radiusEl = root.querySelector("#brandRadius") as HTMLInputElement | null;
     const radiusVal = root.querySelector("#radiusVal");
+    const accentElLive = root.querySelector("#brandAccent") as HTMLInputElement | null;
+    const inkElLive = root.querySelector("#brandInk") as HTMLInputElement | null;
+    const themeLive = root.querySelector("#themeLive") as HTMLElement | null;
+    const syncThemeLive = () => {
+      if (!themeLive) return;
+      if (accentElLive?.value) themeLive.style.setProperty("--live-ac", accentElLive.value);
+      if (inkElLive?.value) themeLive.style.setProperty("--live-ink", inkElLive.value);
+      if (radiusEl?.value) themeLive.style.setProperty("--live-r", `${radiusEl.value}px`);
+    };
     radiusEl?.addEventListener("input", () => {
       if (radiusVal) radiusVal.textContent = radiusEl.value;
+      syncThemeLive();
     });
+    accentElLive?.addEventListener("input", syncThemeLive);
+    inkElLive?.addEventListener("input", syncThemeLive);
 
     root.querySelectorAll("[data-theme-key]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -854,7 +898,10 @@ export async function boot(root: HTMLElement) {
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;
         document.documentElement.style.setProperty("--ac", res.branding.accent);
-        setStatus("Branding saved · synced with dashboard");
+        if (res.branding.inkColor) {
+          document.documentElement.style.setProperty("--brand-ink", res.branding.inkColor);
+        }
+        setStatus("Text & accent saved · open booking page to see it live");
         void render();
       } catch (e) {
         setStatus(e instanceof Error ? e.message : "Branding save failed", false);

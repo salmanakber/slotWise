@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { requireDemoSite } from "@/lib/site-admin";
 import { prisma } from "@/lib/prisma";
+import { isSupportedCurrency } from "@/lib/currencies";
 
 const bodySchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -40,6 +41,12 @@ export async function PATCH(request: Request) {
 
   try {
     const site = await requireDemoSite();
+    if (parsed.data.currency) {
+      const code = parsed.data.currency.toUpperCase();
+      if (!isSupportedCurrency(code)) {
+        return NextResponse.json({ error: "Unsupported currency" }, { status: 400 });
+      }
+    }
     const updated = await prisma.site.update({
       where: { id: site.id },
       data: {

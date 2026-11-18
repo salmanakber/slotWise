@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { SITE_CURRENCIES } from "@/lib/currencies";
 
 type Payments = {
   paymentMode: "FULL" | "DEPOSIT" | "PAY_ON_SITE";
@@ -111,10 +112,17 @@ function PaymentsClient() {
         noShowFeePercent: form.noShowFeePercent,
         saveCardForNoShow: form.saveCardForNoShow,
         taxMode: form.taxMode,
+        currency: form.currency || "USD",
       }),
     });
     setPending(false);
-    setMsg(res.ok ? "Payment policies saved" : "Could not save");
+    if (res.ok) {
+      const d = await res.json().catch(() => null);
+      if (d?.currency) setForm((f) => (f ? { ...f, currency: d.currency } : f));
+      setMsg("Payment policies saved");
+    } else {
+      setMsg("Could not save");
+    }
   }
 
   if (!form) {
@@ -158,9 +166,23 @@ function PaymentsClient() {
                 : "Connect Stripe account"}
           </button>
         </Row>
-        <Row label="Currency">
-          <em className="sw-tag sw-tag-muted">{form.currency || "USD"}</em>
+        <Row label="Booking currency">
+          <select
+            className="max-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+            value={(form.currency || "USD").toUpperCase()}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+          >
+            {SITE_CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
         </Row>
+        <p className="mb-2 text-[12px]" style={{ color: "var(--mut)" }}>
+          New bookings and Stripe charges use this currency. Existing bookings keep their original
+          currency. Ensure your Connect account can settle in the selected currency.
+        </p>
         <Row label="Collect payment">
           <select
             className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"

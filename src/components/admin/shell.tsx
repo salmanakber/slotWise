@@ -33,6 +33,14 @@ export function AdminShell({
   const pathname = usePathname();
   const { data: session } = useSession();
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [brand, setBrand] = useState<{
+    accent: string;
+    inkColor: string;
+    bg: string;
+    panel: string;
+    line: string;
+    font: string;
+  } | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("sw-theme");
@@ -40,14 +48,104 @@ export function AdminShell({
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const loadBrand = () => {
+      void fetch("/api/site/branding")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (cancelled || !d?.accent) return;
+          setBrand({
+            accent: d.accent,
+            inkColor: d.inkColor,
+            bg: d.bg,
+            panel: d.panel,
+            line: d.line,
+            font: d.font,
+          });
+        })
+        .catch(() => undefined);
+    };
+    loadBrand();
+    const onFocus = () => loadBrand();
+    const onBrand = () => loadBrand();
+    const onVis = () => {
+      if (document.visibilityState === "visible") loadBrand();
+    };
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("slotwise:branding", onBrand);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("slotwise:branding", onBrand);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
     document.documentElement.dataset.theme = theme === "dark" ? "dark" : "";
     window.localStorage.setItem("sw-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (!brand) return;
+    const root = document.documentElement;
+    const accent = brand.accent;
+    const hex = accent.replace("#", "");
+    let on = "#1a1203";
+    if (hex.length >= 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      on = lum > 0.62 ? "#1a1203" : "#ffffff";
+    }
+    // Only apply site branding colors in light mode so dark toggle still works
+    if (theme === "light") {
+      root.style.setProperty("--bg", brand.bg);
+      root.style.setProperty("--pn", brand.panel);
+      root.style.setProperty("--ink", brand.inkColor);
+      root.style.setProperty("--ln", brand.line);
+      root.style.setProperty("--ac", accent);
+      root.style.setProperty("--on", on);
+      root.style.setProperty("--at", accent);
+      root.style.setProperty("--sf", `color-mix(in srgb, ${accent} 16%, #ffffff)`);
+      if (brand.font && brand.font !== "Match my site") {
+        root.style.setProperty(
+          "font-family",
+          `${brand.font}, var(--font-figtree), Figtree, system-ui, sans-serif`,
+        );
+      }
+    } else {
+      root.style.setProperty("--ac", accent);
+      root.style.setProperty("--at", accent);
+      root.style.removeProperty("--bg");
+      root.style.removeProperty("--pn");
+      root.style.removeProperty("--ink");
+      root.style.removeProperty("--ln");
+      root.style.removeProperty("--on");
+      root.style.removeProperty("--sf");
+      root.style.removeProperty("font-family");
+    }
+    return () => {
+      [
+        "--bg",
+        "--pn",
+        "--ink",
+        "--ln",
+        "--ac",
+        "--on",
+        "--at",
+        "--sf",
+        "font-family",
+      ].forEach((k) => root.style.removeProperty(k));
+    };
+  }, [brand, theme]);
+
   return (
     <div className="grid min-h-screen lg:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="sticky top-0 flex h-auto flex-row gap-1 overflow-x-auto border-b border-[var(--ln)] bg-[var(--pn)] p-2.5 lg:h-screen lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r lg:p-3">
-        <Link href="/" className="mb-1.5 flex min-w-[140px] items-center gap-2 px-2 py-1 lg:mb-3">
+        <Link href="/dashboard" className="mb-1.5 flex min-w-[140px] items-center gap-2 px-2 py-1 lg:mb-3">
           <Image src="/logo.png" alt="" width={24} height={24} className="rounded-md" />
           <div>
             <div

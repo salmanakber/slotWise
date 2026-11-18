@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
 import { DEMO_PUBLIC_KEY } from "@/lib/constants";
 import { LOADER_STYLES, THEMES } from "@/lib/themes";
@@ -27,6 +27,36 @@ export default function BrandingPage() {
 
   const theme = useMemo(() => THEMES.find((t) => t.key === themeKey) ?? THEMES[0], [themeKey]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(`/api/v1/sites/${DEMO_PUBLIC_KEY}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.branding) return;
+        const b = data.branding;
+        if (b.themeKey) setThemeKey(b.themeKey);
+        if (b.accent) setAccent(b.accent);
+        if (b.inkColor) setInkColor(b.inkColor);
+        else if (b.theme?.ink) setInkColor(b.theme.ink);
+        if (typeof b.radius === "number") setRadius(b.radius);
+        if (b.font) setFont(b.font);
+        if (b.layout === "INLINE" || b.layout === "POPUP" || b.layout === "FLOATING") {
+          setLayout(b.layout);
+        }
+        if (b.businessName) setName(b.businessName);
+        if (typeof b.showLoader === "boolean") setShowLoader(b.showLoader);
+        if (b.loaderStyle) setLoaderStyle(b.loaderStyle);
+        if (typeof b.showPrice === "boolean") setShowPrice(b.showPrice);
+        if (typeof b.showDuration === "boolean") setShowDuration(b.showDuration);
+        if (typeof b.showStaff === "boolean") setShowStaff(b.showStaff);
+        if (typeof b.showBadge === "boolean") setShowBadge(b.showBadge);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function pickTheme(key: string) {
     const t = THEMES.find((x) => x.key === key);
     if (!t) return;
@@ -35,6 +65,15 @@ export default function BrandingPage() {
     setInkColor(t.ink);
     setRadius(t.radius);
     setFont(t.font);
+    // Preview workspace chrome immediately; Save persists for next visit
+    const root = document.documentElement;
+    root.style.setProperty("--bg", t.bg);
+    root.style.setProperty("--pn", t.panel);
+    root.style.setProperty("--ink", t.ink);
+    root.style.setProperty("--ln", t.line);
+    root.style.setProperty("--ac", t.accent);
+    root.style.setProperty("--at", t.accent);
+    root.style.setProperty("--sf", `color-mix(in srgb, ${t.accent} 16%, #ffffff)`);
   }
 
   function playLoader() {
@@ -67,7 +106,8 @@ export default function BrandingPage() {
         }),
       });
       if (!res.ok) throw new Error("Save failed — is Postgres running?");
-      setSavedMsg("Saved. Live on the public booking page.");
+      setSavedMsg("Saved. Live on the public booking page and workspace.");
+      window.dispatchEvent(new Event("slotwise:branding"));
     } catch (e) {
       setSavedMsg(e instanceof Error ? e.message : "Save failed");
     } finally {

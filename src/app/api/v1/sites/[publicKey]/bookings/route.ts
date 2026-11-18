@@ -47,6 +47,7 @@ export async function POST(
         depositCents: booking.depositCents,
         currency: booking.currency,
         service: booking.service.name,
+        checkoutUrl: booking.checkoutUrl ?? null,
       },
       { status: 201 },
     );

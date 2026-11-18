@@ -90,8 +90,11 @@ export default async function DashboardOverviewPage() {
       <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
           <div key={k.label} className="sw-card">
-            <div className="text-[13px]" style={{ color: "var(--mut)" }}>
-              {k.label}
+            <div className="flex items-center justify-between gap-2 text-[13px]" style={{ color: "var(--mut)" }}>
+              <span>{k.label}</span>
+              {stats ? (
+                <em className="sw-tag sw-tag-ok !text-[10px] !normal-case !tracking-normal">Live</em>
+              ) : null}
             </div>
             <div className="text-[29px] font-extrabold leading-tight">{k.value}</div>
             <div

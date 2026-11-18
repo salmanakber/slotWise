@@ -4,12 +4,35 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-export function formatMoney(cents: number, currency = "USD") {
+/** Stripe zero-decimal currencies — amounts are stored in whole units, not cents. */
+const ZERO_DECIMAL = new Set([
+  "BIF",
+  "CLP",
+  "DJF",
+  "GNF",
+  "JPY",
+  "KMF",
+  "KRW",
+  "MGA",
+  "PYG",
+  "RWF",
+  "UGX",
+  "VND",
+  "VUV",
+  "XAF",
+  "XOF",
+  "XPF",
+]);
+
+export function formatMoney(amountMinor: number, currency = "USD") {
+  const code = (currency || "USD").toUpperCase();
+  const zero = ZERO_DECIMAL.has(code);
+  const value = zero ? amountMinor : amountMinor / 100;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency,
-    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-  }).format(cents / 100);
+    currency: code,
+    maximumFractionDigits: zero || amountMinor % 100 === 0 ? 0 : 2,
+  }).format(value);
 }
 
 /** Price label for services/events — free offerings never show "$0". */

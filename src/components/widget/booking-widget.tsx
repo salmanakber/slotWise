@@ -203,6 +203,10 @@ export function BookingWidget({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Booking failed");
+      if (typeof data.checkoutUrl === "string" && data.checkoutUrl) {
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
       setConfirmation({
         reference: data.reference,
         manageToken: data.manageToken,

@@ -56,8 +56,14 @@ export async function POST(request: Request) {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as {
-        metadata?: { siteId?: string; planId?: string; planTier?: string };
+        metadata?: {
+          siteId?: string;
+          planId?: string;
+          planTier?: string;
+          bookingId?: string;
+        };
         mode?: string;
+        payment_intent?: string | { id?: string } | null;
       };
       if (session.mode === "subscription" && session.metadata?.siteId && session.metadata?.planId) {
         await prisma.site.update({
@@ -73,6 +79,26 @@ export async function POST(request: Request) {
               planId: session.metadata.planId,
               tier: session.metadata.planTier,
             },
+          },
+        });
+      }
+      if (session.mode === "payment" && session.metadata?.bookingId) {
+        const pi =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id || null;
+        await prisma.booking.update({
+          where: { id: session.metadata.bookingId },
+          data: {
+            status: "PAID",
+            ...(pi ? { stripePaymentId: pi } : {}),
+          },
+        });
+        await prisma.auditLog.create({
+          data: {
+            scope: "SITE",
+            action: "booking.paid",
+            meta: { bookingId: session.metadata.bookingId, checkout: true },
           },
         });
       }

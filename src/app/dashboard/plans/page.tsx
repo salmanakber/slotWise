@@ -147,12 +147,14 @@ function PlansInner() {
                 onClick={() => void choose(p.tier)}
               >
                 {busy === p.tier
-                  ? "Working…"
+                  ? p.priceMonthly > 0
+                    ? "Opening Stripe…"
+                    : "Working…"
                   : current
                     ? "Current plan"
                     : p.priceMonthly === 0
                       ? "Switch to Free"
-                      : "Upgrade"}
+                      : "Upgrade with Stripe"}
               </button>
             </section>
           );
