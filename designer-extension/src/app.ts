@@ -11,7 +11,7 @@ import {
 import { iconLabel, icons } from "./icons";
 import { brandLoader } from "./loader";
 
-type Tab = "home" | "events" | "create" | "theme" | "tools" | "settings";
+type Tab = "home" | "events" | "create" | "theme" | "chat" | "tools" | "settings";
 
 const THEME_KEY = "slotwise-designer-theme";
 const PANEL_MODE_KEY = "slotwise-panel-mode";
@@ -22,6 +22,7 @@ const TAB_META: Record<Tab, { label: string; icon: string }> = {
   events: { label: "Events", icon: icons.calendar },
   create: { label: "New", icon: icons.plus },
   theme: { label: "Theme", icon: icons.palette },
+  chat: { label: "AI", icon: icons.chat },
   tools: { label: "Tools", icon: icons.wrench },
   settings: { label: "More", icon: icons.settings },
 };
@@ -40,6 +41,7 @@ export async function boot(root: HTMLElement) {
     themes: [] as api.DesignerTheme[],
     branding: null as api.DesignerBranding | null,
     selectedBookingId: null as string | null,
+    calendarChat: null as api.CalendarChatPayload | null,
     status: "",
     statusOk: true,
     busy: false,
@@ -319,14 +321,27 @@ export async function boot(root: HTMLElement) {
         font: "Manrope",
       };
       applyBrandColors(state.branding.accent, state.branding.inkColor);
+      void loadCalendarChat().catch(() => undefined);
       const planLabel = state.bootstrap.entitlements?.label || state.bootstrap.plan.tier;
       setStatus(`Connected · ${state.bootstrap.site.name} · ${planLabel}`);
     } catch (e) {
       state.bootstrap = null;
+      state.calendarChat = null;
       setStatus(e instanceof Error ? e.message : "Not connected", false);
     } finally {
       state.loading = false;
     }
+  }
+
+  async function loadCalendarChat() {
+    if (!state.bootstrap) {
+      state.calendarChat = null;
+      return;
+    }
+    state.calendarChat = await api.getCalendarChat({
+      webflowSiteId: state.webflowSiteId,
+      publicKey: state.bootstrap.site.publicKey,
+    });
   }
 
   async function onPublish() {
@@ -564,9 +579,155 @@ export async function boot(root: HTMLElement) {
         ${bookingsPreview()}
         ${eventsPreview()}
       </div>
+      ${aiChatHomeCard()}
       ${paymentCard()}
       ${appsCard()}
       ${bookingDrawer()}
+    `;
+  }
+
+  function aiChatHomeCard() {
+    const allowed = gate("ai_calendar_chat")?.allowed;
+    const a = state.calendarChat?.analytics.totals;
+    const on = state.calendarChat?.enabled;
+    return `<section class="card ai-chat-card">
+      <div class="card-h-row">
+        ${cardTitle(icons.chat, "AI Calendar Chat")}
+        <em class="pill pill-ac">BETA</em>
+      </div>
+      <p class="lead">Visitors ask “What’s free this weekend?” and get answers from your events.</p>
+      ${
+        allowed
+          ? `<div class="stats stats-compact">
+        <div class="stat"><div class="top"><span class="label">7d chats</span></div><b>${a?.sessions7 ?? "—"}</b></div>
+        <div class="stat"><div class="top"><span class="label">Questions</span></div><b>${a?.messages7 ?? "—"}</b></div>
+      </div>`
+          : `${upgradeLock("ai_calendar_chat", "Business+ feature")}`
+      }
+      <div class="quiet-actions">
+        <button type="button" class="btn btn-quiet" id="gotoChat">${iconLabel(icons.spark, allowed ? (on ? "Analytics" : "Set up AI Chat") : "Preview AI Chat")}</button>
+        <a class="link-quiet" href="${api.APP_URL}/dashboard/ai-chat" target="_blank" rel="noreferrer">Dashboard →</a>
+      </div>
+    </section>`;
+  }
+
+  function viewChat() {
+    if (!state.bootstrap) {
+      return `<section class="card">
+        ${cardTitle(icons.chat, "AI Calendar Chat")}
+        <p class="lead">Connect a site to enable chat and analytics.</p>
+      </section>`;
+    }
+    const allowed = Boolean(gate("ai_calendar_chat")?.allowed || state.calendarChat?.allowed);
+    const chat = state.calendarChat;
+    const t = chat?.analytics.totals;
+    const questions = chat?.analytics.popularQuestions || [];
+    const sessions = chat?.analytics.recentSessions || [];
+    const daily = chat?.analytics.daily || [];
+    const maxDaily = Math.max(1, ...daily.map((d) => Math.max(d.sessions, d.questions)), 1);
+    const maxQ = Math.max(1, ...questions.map((q) => q.count), 1);
+    const upgrade = chat?.upgradeLabel || gate("ai_calendar_chat")?.upgradeLabel || "Business";
+
+    if (!allowed) {
+      return `
+        <section class="card ai-chat-hero">
+          <div class="card-h-row">
+            ${cardTitle(icons.chat, "AI Chat for Your Calendar")}
+            <em class="pill pill-ac">BETA</em>
+          </div>
+          <p class="lead">Natural answers trained on your live events, hours, and open slots — plus owner analytics.</p>
+        </section>
+        <section class="card chat-lock">
+          <div class="chat-lock-body">
+            <div class="chat-lock-icon">${icons.crown}</div>
+            <h3>Business & Agency only</h3>
+            <p>You’re on ${escapeHtml(state.bootstrap.entitlements.label)}. Upgrade to unlock visitor chat, graphs, and conversation analytics for site owners.</p>
+            <a class="btn btn-primary btn-block" href="${upgradeUrl()}" target="_blank" rel="noreferrer">${iconLabel(icons.spark, `Upgrade to ${escapeHtml(upgrade)}`)}</a>
+          </div>
+          <div class="chat-lock-preview" aria-hidden="true">
+            <div class="stats stats-compact blurish">
+              <div class="stat"><div class="top"><span class="label">Sessions 7d</span></div><b>—</b></div>
+              <div class="stat"><div class="top"><span class="label">Questions</span></div><b>—</b></div>
+            </div>
+            <div class="chat-mini-chart blurish">
+              ${Array.from({ length: 10 })
+                .map((_, i) => `<i style="height:${20 + ((i * 17) % 60)}%"></i>`)
+                .join("")}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="card ai-chat-hero">
+        <div class="card-h-row">
+          ${cardTitle(icons.chat, "AI Chat for Your Calendar")}
+          <em class="pill pill-ac">BETA</em>
+        </div>
+        <p class="lead">Natural answers from your calendar — events, hours, and open times.</p>
+        <label class="toggle-row">
+          <input type="checkbox" id="chatEnabled" ${chat?.enabled ? "checked" : ""} />
+          <span>${chat?.enabled ? "Chat live on booking widget" : "Chat is off"}</span>
+        </label>
+        <a class="link-quiet" href="${api.APP_URL}/book/${escapeHtml(state.bootstrap.site.publicKey)}" target="_blank" rel="noreferrer">Preview visitor chat →</a>
+      </section>
+      <section class="card">
+        <div class="stats stats-compact">
+          <div class="stat"><div class="top"><span class="label">Sessions 7d</span></div><b>${t?.sessions7 ?? 0}</b></div>
+          <div class="stat"><div class="top"><span class="label">Questions 7d</span></div><b>${t?.messages7 ?? 0}</b></div>
+          <div class="stat"><div class="top"><span class="label">Avg depth</span></div><b>${t?.avgMessagesPerSession ?? 0}</b></div>
+          <div class="stat"><div class="top"><span class="label">All time</span></div><b>${t?.sessionsAll ?? 0}</b></div>
+        </div>
+        <div class="chat-mini-chart" title="Last 14 days">
+          ${daily
+            .map((d) => {
+              const h = Math.max(8, (Math.max(d.sessions, d.questions) / maxDaily) * 100);
+              return `<i style="height:${h}%" title="${escapeHtml(d.label)}: ${d.sessions} sessions / ${d.questions} questions"></i>`;
+            })
+            .join("")}
+        </div>
+        <button type="button" class="btn btn-sm btn-block" id="refreshChat" style="margin-top:8px">${iconLabel(icons.zap, "Refresh analytics")}</button>
+      </section>
+      <section class="card">
+        ${cardTitle(icons.spark, "Popular questions")}
+        ${
+          questions.length
+            ? `<div class="chat-bars">
+          ${questions
+            .slice(0, 6)
+            .map(
+              (q) => `<div class="chat-bar">
+              <div class="chat-bar-meta"><b>${escapeHtml(q.question)}</b><span>${q.count}</span></div>
+              <i style="width:${Math.max(10, (q.count / maxQ) * 100)}%"></i>
+            </div>`,
+            )
+            .join("")}
+        </div>`
+            : `<div class="empty">No visitor questions yet.</div>`
+        }
+      </section>
+      <section class="card">
+        ${cardTitle(icons.users, "Recent chats")}
+        ${
+          sessions.length
+            ? `<div class="home-list">
+          ${sessions
+            .slice(0, 8)
+            .map(
+              (s) => `<div class="home-booking">
+              <div class="mini-meta">
+                <b>${escapeHtml(s.preview)}</b>
+                <small>${escapeHtml(s.visitorKey)} · ${s.messageCount} msgs · ${escapeHtml(s.source)}</small>
+              </div>
+            </div>`,
+            )
+            .join("")}
+        </div>`
+            : `<div class="empty">Chats will appear when visitors use Ask the calendar.</div>`
+        }
+        <a class="btn btn-quiet btn-block" style="margin-top:8px" href="${api.APP_URL}/dashboard/ai-chat" target="_blank" rel="noreferrer">${iconLabel(icons.external, "Open full analytics")}</a>
+      </section>
     `;
   }
 
@@ -877,9 +1038,11 @@ export async function boot(root: HTMLElement) {
             ? viewCreate()
             : state.tab === "theme"
               ? viewTheme()
-              : state.tab === "tools"
-                ? viewTools()
-                : viewSettings();
+              : state.tab === "chat"
+                ? viewChat()
+                : state.tab === "tools"
+                  ? viewTools()
+                  : viewSettings();
     shell(body);
 
     root.querySelector("#embedBtn")?.addEventListener("click", () => void onEmbed());
@@ -900,6 +1063,41 @@ export async function boot(root: HTMLElement) {
     root.querySelector("#gotoEvents")?.addEventListener("click", () => {
       state.tab = "events";
       void render();
+    });
+    root.querySelector("#gotoChat")?.addEventListener("click", () => {
+      state.tab = "chat";
+      void render();
+    });
+    root.querySelector("#refreshChat")?.addEventListener("click", () => {
+      void (async () => {
+        try {
+          setStatus("Refreshing chat analytics…");
+          await loadCalendarChat();
+          setStatus("Chat analytics updated");
+          void render();
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Refresh failed", false);
+        }
+      })();
+    });
+    root.querySelector("#chatEnabled")?.addEventListener("change", (ev) => {
+      const enabled = (ev.target as HTMLInputElement).checked;
+      void (async () => {
+        if (!state.bootstrap) return;
+        try {
+          setStatus(enabled ? "Enabling chat…" : "Turning chat off…");
+          state.calendarChat = await api.patchCalendarChat({
+            webflowSiteId: state.webflowSiteId,
+            publicKey: state.bootstrap.site.publicKey,
+            enabled,
+          });
+          setStatus(enabled ? "Calendar chat is live" : "Calendar chat disabled");
+          void render();
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Could not update chat", false);
+          void render();
+        }
+      })();
     });
     root.querySelector("#lightBtn")?.addEventListener("click", () => {
       setTheme("light");

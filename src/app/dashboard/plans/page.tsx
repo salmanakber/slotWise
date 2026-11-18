@@ -22,8 +22,20 @@ type PlanCard = {
 const FALLBACK_FEATURES: Record<string, string[]> = {
   FREE: ["1 staff, 1 location", "25 bookings a month", "Email reminders", "2 themes"],
   PRO: ["500 bookings a month", "3 staff", "Calendar sync", "4 themes"],
-  BUSINESS: ["15 staff, multi-location", "Unlimited bookings", "Packages and waitlist", "All 8 themes"],
-  AGENCY: ["Unlimited client sites", "White-label", "Priority support", "Custom themes"],
+  BUSINESS: [
+    "15 staff, multi-location",
+    "Unlimited bookings",
+    "AI Calendar Chat + analytics",
+    "Packages and waitlist",
+    "All 8 themes",
+  ],
+  AGENCY: [
+    "Unlimited client sites",
+    "AI Calendar Chat + analytics",
+    "White-label",
+    "Priority support",
+    "Custom themes",
+  ],
 };
 
 function featureList(p: PlanCard): string[] {

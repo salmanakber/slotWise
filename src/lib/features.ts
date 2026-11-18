@@ -106,10 +106,10 @@ export const FEATURE_FLAGS = [
   },
   {
     key: "ai",
-    label: "AI owner assistant",
-    description: "Plain-language booking insights",
-    phase: "P2",
-    enabled: false,
+    label: "AI calendar chat (BETA)",
+    description: "Visitors ask the calendar; owners get chat analytics",
+    phase: "P1",
+    enabled: true,
   },
   {
     key: "smart_slots",

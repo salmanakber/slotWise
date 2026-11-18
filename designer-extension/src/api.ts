@@ -216,3 +216,56 @@ export function patchBranding(body: {
     body: JSON.stringify(body),
   });
 }
+
+export type CalendarChatAnalytics = {
+  totals: {
+    sessionsAll: number;
+    sessions7: number;
+    sessions30: number;
+    messagesAll: number;
+    messages7: number;
+    avgMessagesPerSession: number;
+  };
+  daily?: Array<{ date: string; label: string; sessions: number; questions: number }>;
+  bySource?: Array<{ source: string; count: number }>;
+  popularQuestions: Array<{ question: string; count: number }>;
+  recentSessions: Array<{
+    id: string;
+    visitorKey: string;
+    messageCount: number;
+    startedAt: string;
+    lastMessageAt: string;
+    source: string;
+    preview: string;
+    lastAssistant: string | null;
+  }>;
+};
+
+export type CalendarChatPayload = {
+  enabled: boolean;
+  publicKey: string;
+  analytics: CalendarChatAnalytics;
+  allowed?: boolean;
+  planTier?: string;
+  planLabel?: string;
+  upgradeUrl?: string;
+  upgradeLabel?: string;
+};
+
+export function getCalendarChat(params: { webflowSiteId?: string | null; publicKey?: string | null }) {
+  const qs = new URLSearchParams();
+  if (params.webflowSiteId) qs.set("webflowSiteId", params.webflowSiteId);
+  if (params.publicKey) qs.set("publicKey", params.publicKey);
+  return req<CalendarChatPayload>(`/api/designer/calendar-chat?${qs}`);
+}
+
+export function patchCalendarChat(body: {
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+  enabled: boolean;
+}) {
+  return req<CalendarChatPayload>("/api/designer/calendar-chat", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}

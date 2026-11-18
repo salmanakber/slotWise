@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { BookingError, loadSiteBundle } from "@/lib/booking/create";
+import { canUse } from "@/lib/plan-entitlements";
 import { getTheme } from "@/lib/themes";
 
 export async function GET(
@@ -16,6 +17,9 @@ export async function GET(
       name: site.name,
       timezone: site.timezone,
       currency: site.currency,
+      calendarChatEnabled: Boolean(
+        site.calendarChatEnabled && canUse(site.plan?.tier, "ai_calendar_chat"),
+      ),
       branding: {
         ...site.branding,
         inkColor,

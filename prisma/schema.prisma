@@ -155,9 +155,41 @@ model Site {
   bookings        Booking[]
   intakeFields    IntakeField[]
   notificationSettings NotificationSettings?
+  calendarChats   CalendarChatSession[]
+  /** Visitors can ask the calendar AI assistant (BETA). */
+  calendarChatEnabled Boolean @default(true)
 
   @@index([workspaceId])
   @@index([status])
+}
+
+model CalendarChatSession {
+  id            String   @id @default(cuid())
+  siteId        String
+  site          Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  visitorKey    String
+  startedAt     DateTime @default(now())
+  lastMessageAt DateTime @default(now())
+  messageCount  Int      @default(0)
+  helpfulVotes  Int      @default(0)
+  source        String   @default("widget") // widget | book_page | designer_preview
+  userAgent     String?
+  messages      CalendarChatMessage[]
+
+  @@index([siteId, lastMessageAt])
+  @@index([siteId, visitorKey])
+}
+
+model CalendarChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   CalendarChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String // user | assistant
+  content   String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
 }
 
 model Branding {

@@ -81,6 +81,9 @@ export default async function DashboardOverviewPage() {
           <Link href="/dashboard/bookings" className="sw-btn">
             All bookings
           </Link>
+          <Link href="/dashboard/ai-chat" className="sw-btn">
+            AI Chat
+          </Link>
           <Link href="/dashboard/branding" className="sw-btn sw-btn-primary">
             Style widget
           </Link>

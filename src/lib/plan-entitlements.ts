@@ -3,6 +3,7 @@ import { PlanTier } from "@prisma/client";
 export type EntitlementKey =
   | "events"
   | "ai_descriptions"
+  | "ai_calendar_chat"
   | "import_export"
   | "categories"
   | "featured_events"
@@ -33,6 +34,7 @@ type TierLimits = {
 const ALL_FEATURES: EntitlementKey[] = [
   "events",
   "ai_descriptions",
+  "ai_calendar_chat",
   "import_export",
   "categories",
   "featured_events",
@@ -95,6 +97,7 @@ const TIER: Record<PlanTier, TierLimits> = {
       "publish",
       "themes",
       "ai_descriptions",
+      "ai_calendar_chat",
       "import_export",
       "categories",
       "featured_events",
@@ -123,19 +126,36 @@ const TIER: Record<PlanTier, TierLimits> = {
   },
 };
 
+const TIER_ORDER: PlanTier[] = [
+  PlanTier.FREE,
+  PlanTier.PRO,
+  PlanTier.BUSINESS,
+  PlanTier.AGENCY,
+];
+
+function lowestTierForFeature(feature: EntitlementKey): PlanTier {
+  for (const t of TIER_ORDER) {
+    if (TIER[t].features.includes(feature)) return t;
+  }
+  return PlanTier.AGENCY;
+}
+
 export function entitlementsForTier(tier: PlanTier | string | null | undefined) {
   const key = (tier as PlanTier) in TIER ? (tier as PlanTier) : PlanTier.FREE;
   const cfg = TIER[key];
   const allowed = new Set(cfg.features);
   const gates = Object.fromEntries(
-    ALL_FEATURES.map((f) => [
-      f,
-      {
-        allowed: allowed.has(f),
-        upgradeTo: cfg.upgradeTo,
-        upgradeLabel: TIER[cfg.upgradeTo].label,
-      },
-    ]),
+    ALL_FEATURES.map((f) => {
+      const needed = lowestTierForFeature(f);
+      return [
+        f,
+        {
+          allowed: allowed.has(f),
+          upgradeTo: needed,
+          upgradeLabel: TIER[needed].label,
+        },
+      ];
+    }),
   ) as Record<
     EntitlementKey,
     { allowed: boolean; upgradeTo: PlanTier; upgradeLabel: string }

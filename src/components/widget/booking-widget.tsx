@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
+import { CalendarChat } from "@/components/widget/calendar-chat";
 import { formatCustomerPrice } from "@/lib/utils";
 
 type Service = {
@@ -19,6 +20,7 @@ type SitePayload = {
   name: string;
   timezone: string;
   currency: string;
+  calendarChatEnabled?: boolean;
   branding: {
     themeKey: string;
     accent: string;
@@ -203,7 +205,7 @@ export function BookingWidget({
     const ro = new ResizeObserver(post);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [embed, publicKey, step, site, slots, loadingSlots, submitting]);
+  }, [embed, publicKey, step, site, slots, loadingSlots, submitting, serviceId]);
 
   const service = useMemo(
     () => site?.services.find((s) => s.id === serviceId) ?? null,
@@ -677,6 +679,23 @@ export function BookingWidget({
           </p>
         ) : null}
       </div>
+
+      {step === "pick" ? (
+        <CalendarChat
+          publicKey={publicKey}
+          currency={site.currency}
+          accent={accent}
+          onAccent={onAccent}
+          ink={ink}
+          line={line}
+          panel={panel}
+          mut={mut}
+          radius={radius}
+          enabled={site.calendarChatEnabled !== false}
+          source={embed ? "widget" : "book_page"}
+          onPickEvent={(id) => setServiceId(id)}
+        />
+      ) : null}
 
       {step !== "done" ? (
         <footer
