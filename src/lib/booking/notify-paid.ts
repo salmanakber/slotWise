@@ -1,12 +1,13 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { Role } from "@prisma/client";
 import { sendBookingConfirmation, sendOwnerBookingAlert } from "@/lib/email";
+import { syncBookingIntegrations } from "@/lib/integrations-sync";
 import { createOwnerNotification } from "@/lib/owner-notifications";
 import { canUse } from "@/lib/plan-entitlements";
 import { prisma } from "@/lib/prisma";
 import { sendSms, sendWhatsApp } from "@/lib/sms";
 
-/** After Stripe marks a booking PAID — send customer + owner confirmation. */
+/** After Stripe marks a booking PAID — sync calendars + send confirmations. */
 export async function notifyBookingPaid(bookingId: string) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
@@ -45,6 +46,20 @@ export async function notifyBookingPaid(bookingId: string) {
     site.notificationSettings?.replyToEmail ||
     site.workspace?.memberships?.[0]?.user?.email ||
     null;
+
+  // Push to Google Calendar / Outlook now that payment succeeded
+  await syncBookingIntegrations({
+    siteId: site.id,
+    reference: booking.reference,
+    customerName: booking.customerName,
+    customerEmail: booking.customerEmail,
+    serviceName: booking.service.name,
+    startsAt: booking.startsAt,
+    endsAt: booking.endsAt,
+    timezone: booking.timezone || site.timezone,
+    manageUrl,
+    locationType: booking.service.locationType,
+  }).catch((err) => console.error("[paid:calendar-sync]", err));
 
   if (site.notificationSettings?.emailConfirm !== false) {
     await sendBookingConfirmation({

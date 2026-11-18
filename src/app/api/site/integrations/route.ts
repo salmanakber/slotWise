@@ -45,13 +45,27 @@ export async function GET() {
     const webflowReady = Boolean(settings.webflowClientId && settings.webflowClientSecretSet);
     const stripeReady = settings.stripeSecretKeySet;
 
+    // Heal stale "error" rows that still have tokens so Meet/Calendar show as connected
+    for (const row of rows) {
+      if (row.status === "error" && row.accessTokenEncrypted) {
+        await prisma.siteIntegration
+          .update({
+            where: { id: row.id },
+            data: { status: "connected" },
+          })
+          .catch(() => undefined);
+        row.status = "connected";
+      }
+    }
+
     const providers = INTEGRATION_PROVIDERS.map((provider) => {
       const row = byProvider.get(provider);
       const platformConfigured = keysReadyFor(provider, settings);
+      const connected = row?.status === "connected" || row?.status === "error";
       return {
         provider,
         status: row?.status || "disconnected",
-        connected: row?.status === "connected",
+        connected: Boolean(connected && row?.accessTokenEncrypted),
         externalAccountEmail: row?.externalAccountEmail || null,
         webhookUrl: row?.webhookUrl || null,
         lastSyncAt: row?.lastSyncAt?.toISOString() || null,

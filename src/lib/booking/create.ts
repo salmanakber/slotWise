@@ -441,126 +441,131 @@ export async function createBooking(input: {
     };
   }
 
-  const sync = await syncBookingIntegrations({
-    siteId: site.id,
-    reference: booking.reference,
-    customerName: booking.customerName,
-    customerEmail: booking.customerEmail,
-    serviceName: booking.service.name,
-    startsAt: booking.startsAt,
-    endsAt: booking.endsAt,
-    timezone: site.timezone,
-    manageUrl,
-    locationType: booking.service.locationType,
-  }).catch((err) => {
-    console.error("integrations sync failed", err);
-    return { providers: [] as string[], meetingUrl: null as string | null };
-  });
-
-  if (site.notificationSettings?.emailConfirm !== false) {
-    await sendBookingConfirmation({
-      to: booking.customerEmail,
-      reference: booking.reference,
-      serviceName: booking.service.name,
-      whenLabel,
-      manageUrl,
-      businessName,
-      fromEmail: site.notificationSettings?.fromEmail || null,
-      replyToEmail: ownerEmail,
-      customerName: booking.customerName,
-      meetingUrl: sync.meetingUrl || booking.meetingUrl || null,
-      meetingProvider: booking.meetingProvider || null,
-    }).catch((err) => console.error("confirmation email failed", err));
-  }
-
-  if (ownerEmail && site.notificationSettings?.ownerEmailAlert !== false) {
-    const amountLabel =
-      booking.amountCents > 0
-        ? new Intl.NumberFormat(undefined, {
-            style: "currency",
-            currency: (booking.currency || "USD").toUpperCase(),
-          }).format(booking.amountCents / 100)
-        : null;
-    await sendOwnerBookingAlert({
-      to: ownerEmail,
-      reference: booking.reference,
-      serviceName: booking.service.name,
-      whenLabel,
-      dashboardUrl: `${appUrl}/dashboard/bookings`,
-      businessName,
-      customerName: booking.customerName,
-      customerEmail: booking.customerEmail,
-      customerPhone: booking.customerPhone,
-      amountLabel,
-      fromEmail: site.notificationSettings?.fromEmail || null,
-      meetingUrl: sync.meetingUrl || booking.meetingUrl || null,
-      meetingProvider: booking.meetingProvider || null,
-    }).catch((err) => console.error("owner booking alert email failed", err));
-  }
-
-  await createOwnerNotification({
-    siteId: site.id,
-    type: "booking.created",
-    title: `New booking · ${booking.reference}`,
-    body: `${booking.customerName} booked ${booking.service.name} for ${whenLabel}.`,
-    href: "/dashboard/bookings",
-    meta: {
-      bookingId: booking.id,
-      reference: booking.reference,
-      customerEmail: booking.customerEmail,
-      chargeCents,
-    },
-  });
-
-  const smsBody = [
-    `${businessName}: booking ${booking.reference} confirmed for ${whenLabel}.`,
-    sync.meetingUrl ? `Join: ${sync.meetingUrl}` : null,
-    `Manage: ${manageUrl}`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  if (
-    booking.customerPhone &&
-    site.notificationSettings?.smsEnabled &&
-    canUse(site.plan?.tier, "sms")
-  ) {
-    await sendSms({ to: booking.customerPhone, body: smsBody }).catch((err) =>
-      console.error("sms failed", err),
-    );
-  }
-
-  if (
-    booking.customerPhone &&
-    site.notificationSettings?.whatsappEnabled &&
-    canUse(site.plan?.tier, "sms")
-  ) {
-    await sendWhatsApp({ to: booking.customerPhone, body: smsBody }).catch((err) =>
-      console.error("whatsapp failed", err),
-    );
-  }
-
-  await notifyZapierBooking({
-    siteId: site.id,
-    event: "booking.created",
-    payload: {
-      reference: booking.reference,
-      customerName: booking.customerName,
-      customerEmail: booking.customerEmail,
-      customerPhone: booking.customerPhone,
-      serviceName: booking.service.name,
-      startsAt: booking.startsAt.toISOString(),
-      endsAt: booking.endsAt.toISOString(),
-      amountCents: booking.amountCents,
-      currency: booking.currency,
-      manageUrl,
-      meetingUrl: sync.meetingUrl,
-      siteName: businessName,
-      awaitingPayment: false,
-    },
-  }).catch((err) => console.error("zapier notify failed", err));
-
+  // Meeting tools for the confirmation UI — do this before slow calendar sync
   const meetingTools = await listMeetingTools(site.id).catch(() => []);
+
+  // Calendar sync + notifications in background so Meet options aren't delayed/blocked
+  void (async () => {
+    const sync = await syncBookingIntegrations({
+      siteId: site.id,
+      reference: booking.reference,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      serviceName: booking.service.name,
+      startsAt: booking.startsAt,
+      endsAt: booking.endsAt,
+      timezone: site.timezone,
+      manageUrl,
+      locationType: booking.service.locationType,
+    }).catch((err) => {
+      console.error("integrations sync failed", err);
+      return { providers: [] as string[], meetingUrl: null as string | null };
+    });
+
+    if (site.notificationSettings?.emailConfirm !== false) {
+      await sendBookingConfirmation({
+        to: booking.customerEmail,
+        reference: booking.reference,
+        serviceName: booking.service.name,
+        whenLabel,
+        manageUrl,
+        businessName,
+        fromEmail: site.notificationSettings?.fromEmail || null,
+        replyToEmail: ownerEmail,
+        customerName: booking.customerName,
+        meetingUrl: sync.meetingUrl || booking.meetingUrl || null,
+        meetingProvider: booking.meetingProvider || null,
+      }).catch((err) => console.error("confirmation email failed", err));
+    }
+
+    if (ownerEmail && site.notificationSettings?.ownerEmailAlert !== false) {
+      const amountLabel =
+        booking.amountCents > 0
+          ? new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: (booking.currency || "USD").toUpperCase(),
+            }).format(booking.amountCents / 100)
+          : null;
+      await sendOwnerBookingAlert({
+        to: ownerEmail,
+        reference: booking.reference,
+        serviceName: booking.service.name,
+        whenLabel,
+        dashboardUrl: `${appUrl}/dashboard/bookings`,
+        businessName,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        customerPhone: booking.customerPhone,
+        amountLabel,
+        fromEmail: site.notificationSettings?.fromEmail || null,
+        meetingUrl: sync.meetingUrl || booking.meetingUrl || null,
+        meetingProvider: booking.meetingProvider || null,
+      }).catch((err) => console.error("owner booking alert email failed", err));
+    }
+
+    await createOwnerNotification({
+      siteId: site.id,
+      type: "booking.created",
+      title: `New booking · ${booking.reference}`,
+      body: `${booking.customerName} booked ${booking.service.name} for ${whenLabel}.`,
+      href: "/dashboard/bookings",
+      meta: {
+        bookingId: booking.id,
+        reference: booking.reference,
+        customerEmail: booking.customerEmail,
+        chargeCents,
+        calendarProviders: sync.providers,
+      },
+    });
+
+    const smsBody = [
+      `${businessName}: booking ${booking.reference} confirmed for ${whenLabel}.`,
+      sync.meetingUrl ? `Join: ${sync.meetingUrl}` : null,
+      `Manage: ${manageUrl}`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (
+      booking.customerPhone &&
+      site.notificationSettings?.smsEnabled &&
+      canUse(site.plan?.tier, "sms")
+    ) {
+      await sendSms({ to: booking.customerPhone, body: smsBody }).catch((err) =>
+        console.error("sms failed", err),
+      );
+    }
+
+    if (
+      booking.customerPhone &&
+      site.notificationSettings?.whatsappEnabled &&
+      canUse(site.plan?.tier, "sms")
+    ) {
+      await sendWhatsApp({ to: booking.customerPhone, body: smsBody }).catch((err) =>
+        console.error("whatsapp failed", err),
+      );
+    }
+
+    await notifyZapierBooking({
+      siteId: site.id,
+      event: "booking.created",
+      payload: {
+        reference: booking.reference,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        customerPhone: booking.customerPhone,
+        serviceName: booking.service.name,
+        startsAt: booking.startsAt.toISOString(),
+        endsAt: booking.endsAt.toISOString(),
+        amountCents: booking.amountCents,
+        currency: booking.currency,
+        manageUrl,
+        meetingUrl: sync.meetingUrl,
+        siteName: businessName,
+        awaitingPayment: false,
+      },
+    }).catch((err) => console.error("zapier notify failed", err));
+  })();
 
   return {
     ...booking,

@@ -31,7 +31,14 @@ async function loadTokens(siteId: string, provider: string): Promise<TokenBundle
   const row = await prisma.siteIntegration.findUnique({
     where: { siteId_provider: { siteId, provider } },
   });
-  if (!row || row.status !== "connected" || !row.accessTokenEncrypted) return null;
+  // Keep serving tokens for "error" too — a failed refresh must not hide Meet/Calendar in the booking UI
+  if (
+    !row ||
+    (row.status !== "connected" && row.status !== "error") ||
+    !row.accessTokenEncrypted
+  ) {
+    return null;
+  }
   const access = decryptSecret(row.accessTokenEncrypted);
   if (!access) return null;
   return {
@@ -79,11 +86,11 @@ export async function ensureAccessToken(
     const bundle = await loadTokens(siteId, provider);
     if (!bundle) continue;
 
-    // Refresh when expiry is unknown (legacy rows) or within 90s of expiring
-    const needsRefresh =
-      !bundle.expiresAt || bundle.expiresAt < Date.now() + 90_000;
+    // Refresh only when we know expiry and it's near — unknown expiry: try access first
+    const knownExpired =
+      typeof bundle.expiresAt === "number" && bundle.expiresAt < Date.now() + 90_000;
 
-    if (bundle.refresh && needsRefresh) {
+    if (bundle.refresh && knownExpired) {
       const normalized = normalizeIntegrationProvider(provider);
       if (normalized) {
         try {
@@ -95,12 +102,13 @@ export async function ensureAccessToken(
           return { access, provider };
         } catch (e) {
           console.error(`[oauth:refresh:${provider}]`, e);
+          // Soft-fail: keep status usable and fall through to existing access token
           await prisma.siteIntegration
             .update({
               where: { id: bundle.rowId },
               data: {
-                status: "error",
                 meta: {
+                  expiresAt: bundle.expiresAt,
                   lastError:
                     e instanceof Error ? e.message.slice(0, 200) : "Token refresh failed",
                   needsReconnect: true,
@@ -108,10 +116,17 @@ export async function ensureAccessToken(
               },
             })
             .catch(() => undefined);
-          continue;
         }
       }
     }
+
+    // Heal "error" → connected when we still have a token so Meet stays visible
+    await prisma.siteIntegration
+      .updateMany({
+        where: { id: bundle.rowId, status: "error" },
+        data: { status: "connected" },
+      })
+      .catch(() => undefined);
 
     return { access: bundle.access, provider };
   }
@@ -124,11 +139,17 @@ export async function listMeetingTools(siteId: string): Promise<MeetingTool[]> {
   const zoom = await loadTokens(siteId, "zoom");
   if (zoom) tools.push({ id: "zoom", label: "Zoom" });
 
+  // Either Google Meet or Google Calendar unlocks Meet links for customers
   const meet = await loadTokens(siteId, "meet");
   const gcal = await loadTokens(siteId, "google_calendar");
   if (meet || gcal) tools.push({ id: "meet", label: "Google Meet" });
 
   return tools;
+}
+
+/** Whether Google Calendar sync is available for this site. */
+export async function hasGoogleCalendar(siteId: string) {
+  return Boolean(await loadTokens(siteId, "google_calendar") || await loadTokens(siteId, "meet"));
 }
 
 async function googleFetchWithRetry(
