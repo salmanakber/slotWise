@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  provider: z.enum(["zoom", "meet"]),
+  provider: z.enum(["zoom", "meet", "google_calendar"]),
 });
 
 export async function GET(
@@ -44,7 +44,10 @@ export async function POST(
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Pick Zoom or Google Meet" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Pick Zoom, Google Meet, or Google Calendar" },
+      { status: 400 },
+    );
   }
 
   const booking = await prisma.booking.findUnique({
@@ -86,11 +89,17 @@ export async function POST(
       select: { meetingUrl: true, meetingProvider: true, reference: true },
     });
 
+    const providerLabel =
+      created.provider === "zoom"
+        ? "Zoom"
+        : created.provider === "google_calendar"
+          ? "Google Calendar"
+          : "Google Meet";
     await createOwnerNotification({
       siteId: booking.siteId,
       type: "meeting",
-      title: `${created.provider === "zoom" ? "Zoom" : "Google Meet"} added`,
-      body: `${booking.customerName} added a meeting link to ${booking.reference}.`,
+      title: `${providerLabel} added`,
+      body: `${booking.customerName} added ${providerLabel} to ${booking.reference}.`,
       href: "/dashboard/bookings",
       meta: {
         bookingId: booking.id,

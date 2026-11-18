@@ -132,7 +132,7 @@ export async function buildAuthorizeUrl(siteId: string, provider: IntegrationPro
     return url.toString();
   }
 
-  // zoom
+  // zoom — scopes must also be enabled on the Zoom Marketplace app
   const clientId = secrets.zoomClientId?.trim();
   if (!clientId || !secrets.zoomClientSecret?.trim()) {
     throw new Error("Zoom Client ID/Secret missing");
@@ -142,6 +142,8 @@ export async function buildAuthorizeUrl(siteId: string, provider: IntegrationPro
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
+  // Classic Zoom scopes (must match what’s enabled on the Marketplace app)
+  url.searchParams.set("scope", "meeting:write user:read");
   url.searchParams.set("state", state);
   return url.toString();
 }

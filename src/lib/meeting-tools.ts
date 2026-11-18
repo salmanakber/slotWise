@@ -1,3 +1,4 @@
+import { formatInTimeZone } from "date-fns-tz";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import {
   normalizeIntegrationProvider,
@@ -6,7 +7,7 @@ import {
 } from "@/lib/integrations-oauth";
 import { prisma } from "@/lib/prisma";
 
-export type MeetingToolId = "zoom" | "meet";
+export type MeetingToolId = "zoom" | "meet" | "google_calendar";
 
 export type MeetingTool = {
   id: MeetingToolId;
@@ -31,7 +32,6 @@ async function loadTokens(siteId: string, provider: string): Promise<TokenBundle
   const row = await prisma.siteIntegration.findUnique({
     where: { siteId_provider: { siteId, provider } },
   });
-  // Keep serving tokens for "error" too — a failed refresh must not hide Meet/Calendar in the booking UI
   if (
     !row ||
     (row.status !== "connected" && row.status !== "error") ||
@@ -76,7 +76,6 @@ async function persistRefreshed(
 
 /**
  * Return a usable access token, refreshing when expired or about to expire.
- * Marks the integration as error if refresh fails (owner must reconnect).
  */
 export async function ensureAccessToken(
   siteId: string,
@@ -86,11 +85,14 @@ export async function ensureAccessToken(
     const bundle = await loadTokens(siteId, provider);
     if (!bundle) continue;
 
-    // Refresh only when we know expiry and it's near — unknown expiry: try access first
     const knownExpired =
       typeof bundle.expiresAt === "number" && bundle.expiresAt < Date.now() + 90_000;
 
-    if (bundle.refresh && knownExpired) {
+    // Proactively refresh Zoom whenever we have a refresh token (Zoom access tokens are short-lived)
+    const shouldRefresh =
+      Boolean(bundle.refresh) && (knownExpired || provider === "zoom" || !bundle.expiresAt);
+
+    if (bundle.refresh && shouldRefresh) {
       const normalized = normalizeIntegrationProvider(provider);
       if (normalized) {
         try {
@@ -102,7 +104,6 @@ export async function ensureAccessToken(
           return { access, provider };
         } catch (e) {
           console.error(`[oauth:refresh:${provider}]`, e);
-          // Soft-fail: keep status usable and fall through to existing access token
           await prisma.siteIntegration
             .update({
               where: { id: bundle.rowId },
@@ -120,7 +121,6 @@ export async function ensureAccessToken(
       }
     }
 
-    // Heal "error" → connected when we still have a token so Meet stays visible
     await prisma.siteIntegration
       .updateMany({
         where: { id: bundle.rowId, status: "error" },
@@ -133,23 +133,31 @@ export async function ensureAccessToken(
   return null;
 }
 
-/** Meeting tools the site owner has connected and ready for customers. */
+/** Partner apps shown after booking (video + calendar). */
 export async function listMeetingTools(siteId: string): Promise<MeetingTool[]> {
   const tools: MeetingTool[] = [];
   const zoom = await loadTokens(siteId, "zoom");
   if (zoom) tools.push({ id: "zoom", label: "Zoom" });
 
-  // Either Google Meet or Google Calendar unlocks Meet links for customers
   const meet = await loadTokens(siteId, "meet");
   const gcal = await loadTokens(siteId, "google_calendar");
-  if (meet || gcal) tools.push({ id: "meet", label: "Google Meet" });
+
+  // Show Google Calendar whenever Calendar or Meet OAuth is connected
+  if (gcal || meet) {
+    tools.push({ id: "google_calendar", label: "Google Calendar" });
+  }
+  // Meet video link (same Google OAuth scopes)
+  if (meet || gcal) {
+    tools.push({ id: "meet", label: "Google Meet" });
+  }
 
   return tools;
 }
 
-/** Whether Google Calendar sync is available for this site. */
 export async function hasGoogleCalendar(siteId: string) {
-  return Boolean(await loadTokens(siteId, "google_calendar") || await loadTokens(siteId, "meet"));
+  return Boolean(
+    (await loadTokens(siteId, "google_calendar")) || (await loadTokens(siteId, "meet")),
+  );
 }
 
 async function googleFetchWithRetry(
@@ -157,7 +165,7 @@ async function googleFetchWithRetry(
   init: RequestInit & { url: string },
 ): Promise<Response> {
   const token = await ensureAccessToken(siteId, ["meet", "google_calendar"]);
-  if (!token) throw new Error("Google Meet is not connected");
+  if (!token) throw new Error("Google Calendar is not connected");
 
   let res = await fetch(init.url, {
     ...init,
@@ -167,7 +175,6 @@ async function googleFetchWithRetry(
     },
   });
 
-  // Access token rejected — force refresh once and retry
   if (res.status === 401) {
     const bundle = await loadTokens(siteId, token.provider);
     if (bundle?.refresh) {
@@ -184,20 +191,192 @@ async function googleFetchWithRetry(
             },
           });
         } catch (e) {
-          console.error("[meeting:meet:refresh]", e);
+          console.error("[meeting:google:refresh]", e);
           throw new Error(
-            "Google Meet session expired. Ask the site owner to reconnect Google Meet in Integrations.",
+            "Google session expired. Ask the site owner to reconnect Google Calendar in Integrations.",
           );
         }
       }
     } else {
       throw new Error(
-        "Google Meet session expired. Ask the site owner to reconnect Google Meet in Integrations.",
+        "Google session expired. Ask the site owner to reconnect Google Calendar in Integrations.",
       );
     }
   }
 
   return res;
+}
+
+function zoomLocalStart(startsAt: Date, timezone: string) {
+  // Zoom wants local wall time when `timezone` is set (no trailing Z)
+  try {
+    return formatInTimeZone(startsAt, timezone, "yyyy-MM-dd'T'HH:mm:ss");
+  } catch {
+    return startsAt.toISOString().replace(/\.\d{3}Z$/, "");
+  }
+}
+
+async function createZoomMeeting(input: {
+  siteId: string;
+  reference: string;
+  customerName: string;
+  serviceName: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+}): Promise<{ meetingUrl: string; provider: "zoom" }> {
+  const duration = Math.max(
+    15,
+    Math.round((input.endsAt.getTime() - input.startsAt.getTime()) / 60000),
+  );
+
+  const token = await ensureAccessToken(input.siteId, ["zoom"]);
+  if (!token) {
+    throw new Error("Zoom is not connected. Connect Zoom under Integrations, then try again.");
+  }
+
+  const payload = {
+    topic: `${input.serviceName} · ${input.customerName}`.slice(0, 200),
+    type: 2 as const,
+    start_time: zoomLocalStart(input.startsAt, input.timezone),
+    duration,
+    timezone: input.timezone || "UTC",
+    settings: {
+      join_before_host: true,
+      waiting_room: false,
+    },
+  };
+
+  async function post(access: string) {
+    return fetch("https://api.zoom.us/v2/users/me/meetings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  let res = await post(token.access);
+
+  if (res.status === 401) {
+    const bundle = await loadTokens(input.siteId, "zoom");
+    if (!bundle?.refresh) {
+      throw new Error(
+        "Zoom session expired. Ask the site owner to reconnect Zoom in Integrations.",
+      );
+    }
+    try {
+      const refreshed = await refreshOAuthAccessToken("zoom", bundle.refresh);
+      const access = await persistRefreshed(bundle, refreshed);
+      res = await post(access);
+    } catch (e) {
+      console.error("[meeting:zoom:refresh]", e);
+      throw new Error(
+        "Zoom session expired. Ask the site owner to reconnect Zoom in Integrations.",
+      );
+    }
+  }
+
+  if (!res.ok) {
+    const raw = await res.text();
+    console.error("[meeting:zoom]", raw);
+    let detail = "Could not create Zoom meeting";
+    try {
+      const parsed = JSON.parse(raw) as { message?: string; reason?: string; code?: number };
+      detail = parsed.message || parsed.reason || detail;
+      if (res.status === 4701 || /scope|permission|authorize/i.test(detail)) {
+        detail =
+          "Zoom app is missing meeting permissions. Reconnect Zoom in Integrations after updating Zoom app scopes (meeting:write).";
+      }
+    } catch {
+      /* keep default */
+    }
+    if (res.status === 401) {
+      detail = "Zoom session expired. Ask the site owner to reconnect Zoom in Integrations.";
+    }
+    throw new Error(detail);
+  }
+
+  const data = (await res.json()) as { join_url?: string };
+  if (!data.join_url) throw new Error("Zoom did not return a join link");
+  return { meetingUrl: data.join_url, provider: "zoom" };
+}
+
+async function createGoogleCalendarEvent(input: {
+  siteId: string;
+  reference: string;
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  manageUrl: string;
+  withMeet: boolean;
+}): Promise<{ meetingUrl: string; provider: "meet" | "google_calendar" }> {
+  const body: Record<string, unknown> = {
+    summary: `${input.serviceName} · ${input.customerName}`,
+    description: [
+      `Booking ${input.reference}`,
+      `Customer: ${input.customerName} <${input.customerEmail}>`,
+      `Manage: ${input.manageUrl}`,
+    ].join("\n"),
+    start: { dateTime: input.startsAt.toISOString(), timeZone: input.timezone },
+    end: { dateTime: input.endsAt.toISOString(), timeZone: input.timezone },
+    attendees: [{ email: input.customerEmail }],
+  };
+
+  if (input.withMeet) {
+    body.conferenceData = {
+      createRequest: {
+        requestId: `slotwise-${input.reference.replace(/\W/g, "")}-${Date.now()}`,
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      },
+    };
+  }
+
+  const url = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
+  if (input.withMeet) url.searchParams.set("conferenceDataVersion", "1");
+  url.searchParams.set("sendUpdates", "all");
+
+  const res = await googleFetchWithRetry(input.siteId, {
+    url: url.toString(),
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const raw = await res.text();
+    console.error("[meeting:google]", raw);
+    throw new Error(
+      res.status === 401
+        ? "Google session expired. Ask the site owner to reconnect Google Calendar in Integrations."
+        : input.withMeet
+          ? "Could not create Google Meet"
+          : "Could not add Google Calendar event",
+    );
+  }
+
+  const data = (await res.json()) as {
+    htmlLink?: string;
+    hangoutLink?: string;
+    conferenceData?: { entryPoints?: Array<{ entryPointType?: string; uri?: string }> };
+  };
+
+  if (input.withMeet) {
+    const meetingUrl =
+      data.hangoutLink ||
+      data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
+      null;
+    if (!meetingUrl) throw new Error("Google Meet link was not created");
+    return { meetingUrl, provider: "meet" };
+  }
+
+  if (!data.htmlLink) throw new Error("Google Calendar did not return an event link");
+  return { meetingUrl: data.htmlLink, provider: "google_calendar" };
 }
 
 export async function createMeetingLink(input: {
@@ -212,112 +391,13 @@ export async function createMeetingLink(input: {
   timezone: string;
   manageUrl: string;
 }): Promise<{ meetingUrl: string; provider: MeetingToolId }> {
-  const duration = Math.max(
-    15,
-    Math.round((input.endsAt.getTime() - input.startsAt.getTime()) / 60000),
-  );
-
   if (input.provider === "zoom") {
-    const token = await ensureAccessToken(input.siteId, ["zoom"]);
-    if (!token) throw new Error("Zoom is not connected");
-
-    let res = await fetch("https://api.zoom.us/v2/users/me/meetings", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token.access}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        topic: `${input.serviceName} · ${input.customerName}`,
-        type: 2,
-        start_time: input.startsAt.toISOString(),
-        duration,
-        timezone: input.timezone,
-        settings: { join_before_host: true },
-      }),
-    });
-
-    if (res.status === 401) {
-      const bundle = await loadTokens(input.siteId, "zoom");
-      if (bundle?.refresh) {
-        const refreshed = await refreshOAuthAccessToken("zoom", bundle.refresh);
-        const access = await persistRefreshed(bundle, refreshed);
-        res = await fetch("https://api.zoom.us/v2/users/me/meetings", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${access}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            topic: `${input.serviceName} · ${input.customerName}`,
-            type: 2,
-            start_time: input.startsAt.toISOString(),
-            duration,
-            timezone: input.timezone,
-            settings: { join_before_host: true },
-          }),
-        });
-      }
-    }
-
-    if (!res.ok) {
-      console.error("[meeting:zoom]", await res.text());
-      throw new Error(
-        res.status === 401
-          ? "Zoom session expired. Ask the site owner to reconnect Zoom in Integrations."
-          : "Could not create Zoom meeting",
-      );
-    }
-    const data = (await res.json()) as { join_url?: string };
-    if (!data.join_url) throw new Error("Zoom did not return a join link");
-    return { meetingUrl: data.join_url, provider: "zoom" };
+    return createZoomMeeting(input);
   }
 
-  // Google Meet via Calendar event
-  const body: Record<string, unknown> = {
-    summary: `${input.serviceName} · ${input.customerName}`,
-    description: [
-      `Booking ${input.reference}`,
-      `Customer: ${input.customerName} <${input.customerEmail}>`,
-      `Manage: ${input.manageUrl}`,
-    ].join("\n"),
-    start: { dateTime: input.startsAt.toISOString(), timeZone: input.timezone },
-    end: { dateTime: input.endsAt.toISOString(), timeZone: input.timezone },
-    attendees: [{ email: input.customerEmail }],
-    conferenceData: {
-      createRequest: {
-        requestId: `slotwise-${input.reference.replace(/\W/g, "")}-${Date.now()}`,
-        conferenceSolutionKey: { type: "hangoutsMeet" },
-      },
-    },
-  };
-
-  const url = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
-  url.searchParams.set("conferenceDataVersion", "1");
-
-  const res = await googleFetchWithRetry(input.siteId, {
-    url: url.toString(),
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    console.error("[meeting:meet]", await res.text());
-    throw new Error(
-      res.status === 401
-        ? "Google Meet session expired. Ask the site owner to reconnect Google Meet in Integrations."
-        : "Could not create Google Meet",
-    );
+  if (input.provider === "google_calendar") {
+    return createGoogleCalendarEvent({ ...input, withMeet: false });
   }
-  const data = (await res.json()) as {
-    hangoutLink?: string;
-    conferenceData?: { entryPoints?: Array<{ entryPointType?: string; uri?: string }> };
-  };
-  const meetingUrl =
-    data.hangoutLink ||
-    data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
-    null;
-  if (!meetingUrl) throw new Error("Google Meet link was not created");
-  return { meetingUrl, provider: "meet" };
+
+  return createGoogleCalendarEvent({ ...input, withMeet: true });
 }

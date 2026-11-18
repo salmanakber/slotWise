@@ -584,7 +584,11 @@ export function BookingWidget({
                 }}
               >
                 <MeetingBrandIcon id={confirmation.meetingProvider || "meet"} />
-                Join {confirmation.meetingProvider === "zoom" ? "Zoom" : "Google Meet"}
+                {confirmation.meetingProvider === "google_calendar"
+                  ? "Open in Google Calendar"
+                  : confirmation.meetingProvider === "zoom"
+                    ? "Join Zoom"
+                    : "Join Google Meet"}
               </a>
             ) : !meetingSkipped && confirmation.meetingTools.length > 0 ? (
               <div
@@ -594,9 +598,9 @@ export function BookingWidget({
                   background: `color-mix(in srgb, ${accent} 8%, ${panel})`,
                 }}
               >
-                <div className="text-[13px] font-extrabold">Add a video call</div>
+                <div className="text-[13px] font-extrabold">Add calendar or video</div>
                 <p className="m-0 mt-1 text-[11.5px] leading-snug" style={{ color: mut }}>
-                  Optional — choose a partner app, or skip if you don’t need video.
+                  Optional — pick a partner app, or skip if you don’t need one.
                 </p>
                 <div
                   className="mt-3 grid gap-2"
@@ -659,7 +663,9 @@ export function BookingWidget({
                           background:
                             tool.id === "zoom"
                               ? "color-mix(in srgb, #2D8CFF 14%, transparent)"
-                              : "color-mix(in srgb, #00897B 14%, transparent)",
+                              : tool.id === "google_calendar"
+                                ? "color-mix(in srgb, #4285F4 14%, transparent)"
+                                : "color-mix(in srgb, #00897B 14%, transparent)",
                         }}
                       >
                         <MeetingBrandIcon id={tool.id} size={22} />
@@ -1246,6 +1252,21 @@ function MeetingBrandIcon({ id, size = 18 }: { id: string; size?: number }) {
           fill="#fff"
           d="M6.2 8.2h6.1c.9 0 1.6.7 1.6 1.6v4.4c0 .9-.7 1.6-1.6 1.6H6.2c-.9 0-1.6-.7-1.6-1.6V9.8c0-.9.7-1.6 1.6-1.6zm8.3 1.5 3.6-2.1c.4-.2.9.1.9.5v7.8c0 .5-.5.8-.9.5l-3.6-2.1v-4.6z"
         />
+      </svg>
+    );
+  }
+  if (id === "google_calendar") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+        <rect width="24" height="24" rx="6" fill="#fff" stroke="#DADCE0" />
+        <path fill="#4285F4" d="M6 4h12v3H6z" />
+        <path fill="#EA4335" d="M17 7h3v12a2 2 0 0 1-2 2h-1V7z" />
+        <path fill="#34A853" d="M4 7h3v14H6a2 2 0 0 1-2-2V7z" />
+        <path fill="#FBBC04" d="M7 17h10v4H7z" />
+        <rect x="7" y="9" width="10" height="7" fill="#F1F3F4" />
+        <text x="12" y="15.5" textAnchor="middle" fontSize="7" fontWeight="800" fill="#1a73e8">
+          31
+        </text>
       </svg>
     );
   }

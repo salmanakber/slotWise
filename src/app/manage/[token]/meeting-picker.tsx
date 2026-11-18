@@ -16,6 +16,18 @@ function BrandIcon({ id }: { id: string }) {
       </svg>
     );
   }
+  if (id === "google_calendar") {
+    return (
+      <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden>
+        <rect width="24" height="24" rx="6" fill="#fff" stroke="#DADCE0" />
+        <path fill="#4285F4" d="M6 4h12v3H6z" />
+        <path fill="#EA4335" d="M17 7h3v12a2 2 0 0 1-2 2h-1V7z" />
+        <path fill="#34A853" d="M4 7h3v14H6a2 2 0 0 1-2-2V7z" />
+        <path fill="#FBBC04" d="M7 17h10v4H7z" />
+        <rect x="7" y="9" width="10" height="7" fill="#F1F3F4" />
+      </svg>
+    );
+  }
   return (
     <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden>
       <rect width="24" height="24" rx="6" fill="#00897B" />
@@ -25,6 +37,18 @@ function BrandIcon({ id }: { id: string }) {
       />
     </svg>
   );
+}
+
+function providerTitle(provider: string | null) {
+  if (provider === "zoom") return "Zoom ready";
+  if (provider === "google_calendar") return "Added to Google Calendar";
+  return "Google Meet ready";
+}
+
+function providerCta(provider: string | null) {
+  if (provider === "google_calendar") return "Open in Google Calendar";
+  if (provider === "zoom") return "Join Zoom";
+  return "Join meeting";
 }
 
 export function MeetingPicker({
@@ -84,7 +108,7 @@ export function MeetingPicker({
       <div className="mt-4 rounded-xl border border-[var(--ln)] px-3.5 py-3">
         <div className="flex items-center gap-2 text-[13px] font-extrabold">
           <BrandIcon id={provider || "meet"} />
-          {provider === "zoom" ? "Zoom" : "Google Meet"} ready
+          {providerTitle(provider)}
         </div>
         <a
           href={meetingUrl}
@@ -92,7 +116,7 @@ export function MeetingPicker({
           rel="noreferrer"
           className="sw-btn sw-btn-primary mt-2.5 inline-flex text-[12.5px]"
         >
-          Join meeting
+          {providerCta(provider)}
         </a>
       </div>
     );
@@ -102,7 +126,7 @@ export function MeetingPicker({
     return (
       <div className="mt-4 rounded-xl border border-[var(--ln)] px-3.5 py-3">
         <p className="m-0 text-[12.5px]" style={{ color: "var(--mut)" }}>
-          No video call added — you’re all set.
+          No calendar or video added — you’re all set.
         </p>
       </div>
     );
@@ -112,9 +136,9 @@ export function MeetingPicker({
 
   return (
     <div className="mt-4 rounded-xl border border-[var(--ln)] px-3.5 py-3.5">
-      <div className="text-[13px] font-extrabold">Add a video call</div>
+      <div className="text-[13px] font-extrabold">Add calendar or video</div>
       <p className="m-0 mt-1 text-[12.5px]" style={{ color: "var(--mut)" }}>
-        Optional — choose a partner app, or skip if you don’t need video.
+        Optional — choose a partner app, or skip if you don’t need one.
       </p>
       <div
         className="mt-3 grid gap-2"
@@ -136,7 +160,9 @@ export function MeetingPicker({
                 background:
                   t.id === "zoom"
                     ? "color-mix(in srgb, #2D8CFF 14%, transparent)"
-                    : "color-mix(in srgb, #00897B 14%, transparent)",
+                    : t.id === "google_calendar"
+                      ? "color-mix(in srgb, #4285F4 14%, transparent)"
+                      : "color-mix(in srgb, #00897B 14%, transparent)",
               }}
             >
               <BrandIcon id={t.id} />
