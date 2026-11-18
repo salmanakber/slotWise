@@ -37,7 +37,7 @@ const TITLES: Record<string, [string, string]> = {
   "/dashboard/bookings": ["Bookings", "Customer details, deposits and status"],
   "/dashboard/services": ["Events", "Edit events, pricing, and performance reports"],
   "/dashboard/ai-chat": ["AI Chat", "Visitor calendar Q&A analytics (BETA)"],
-  "/dashboard/availability": ["Availability", "Working hours and time off"],
+  "/dashboard/availability": ["Availability", "Weekly hours and blocked date/time ranges"],
   "/dashboard/notifications": ["Notifications", "Reminders by email, SMS and WhatsApp"],
   "/dashboard/payments": ["Payments", "Deposits, fees and refunds"],
   "/dashboard/branding": ["Branding and install", "Pick a theme, style the widget, then install it on your site"],

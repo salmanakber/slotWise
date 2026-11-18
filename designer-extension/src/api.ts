@@ -269,3 +269,67 @@ export function patchCalendarChat(body: {
     body: JSON.stringify(body),
   });
 }
+
+export type AvailabilityDay = {
+  dayOfWeek: number;
+  enabled: boolean;
+  startTime: string;
+  endTime: string;
+};
+
+export type TimeOffRow = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  reason: string | null;
+};
+
+export type AvailabilityPayload = {
+  timezone: string;
+  days: AvailabilityDay[];
+  timeOff: TimeOffRow[];
+};
+
+export function getAvailability(params: { webflowSiteId?: string | null; publicKey?: string | null }) {
+  const qs = new URLSearchParams();
+  if (params.webflowSiteId) qs.set("webflowSiteId", params.webflowSiteId);
+  if (params.publicKey) qs.set("publicKey", params.publicKey);
+  return req<AvailabilityPayload>(`/api/designer/availability?${qs}`);
+}
+
+export function saveAvailabilityHours(body: {
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+  days: AvailabilityDay[];
+}) {
+  return req<{ days: AvailabilityDay[]; timezone: string }>("/api/designer/availability", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export function createAvailabilityBlock(body: {
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+  date: string;
+  startTime: string;
+  endTime: string;
+  reason?: string | null;
+  allDay?: boolean;
+}) {
+  return req<{ timeOff: TimeOffRow }>("/api/designer/availability", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteAvailabilityBlock(params: {
+  id: string;
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+}) {
+  const qs = new URLSearchParams({ id: params.id });
+  if (params.webflowSiteId) qs.set("webflowSiteId", params.webflowSiteId);
+  if (params.publicKey) qs.set("publicKey", params.publicKey);
+  return req<{ ok: boolean }>(`/api/designer/availability?${qs}`, { method: "DELETE" });
+}

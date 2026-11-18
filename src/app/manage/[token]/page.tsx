@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/utils";
 import { CancelBookingButton } from "./cancel-button";
+import { MeetingPicker } from "./meeting-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -44,15 +45,38 @@ export default async function ManageBookingPage({
           />
           <Row label="Amount" value={formatMoney(booking.amountCents, booking.currency)} />
           <Row label="Status" value={booking.status} />
+          {booking.meetingUrl ? (
+            <Row
+              label="Meeting"
+              value={booking.meetingProvider === "zoom" ? "Zoom" : "Google Meet"}
+            />
+          ) : null}
         </div>
 
         {!cancelled ? (
-          <div className="mt-5 flex flex-wrap gap-2">
-            <CancelBookingButton token={token} />
-            <Link href={`/book/${booking.site.publicKey}`} className="sw-btn">
-              Book again
-            </Link>
-          </div>
+          <>
+            <MeetingPicker
+              token={token}
+              initialUrl={booking.meetingUrl}
+              initialProvider={booking.meetingProvider}
+            />
+            <div className="mt-5 flex flex-wrap gap-2">
+              {booking.meetingUrl ? (
+                <a
+                  href={booking.meetingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="sw-btn sw-btn-primary"
+                >
+                  Join meeting
+                </a>
+              ) : null}
+              <CancelBookingButton token={token} />
+              <Link href={`/book/${booking.site.publicKey}`} className="sw-btn">
+                Book again
+              </Link>
+            </div>
+          </>
         ) : (
           <div className="mt-5">
             <Link href={`/book/${booking.site.publicKey}`} className="sw-btn sw-btn-primary">

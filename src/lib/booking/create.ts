@@ -9,6 +9,7 @@ import { notifyZapierBooking } from "@/lib/zapier";
 import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
 import { sendSms } from "@/lib/sms";
+import { listMeetingTools } from "@/lib/meeting-tools";
 import { createBookingCheckoutSession } from "@/lib/stripe";
 import { appOrigin } from "@/lib/webflow";
 
@@ -365,5 +366,7 @@ export async function createBooking(input: {
     }
   }
 
-  return { ...booking, checkoutUrl };
+  const meetingTools = await listMeetingTools(site.id).catch(() => []);
+
+  return { ...booking, checkoutUrl, meetingTools };
 }

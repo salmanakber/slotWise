@@ -42,6 +42,7 @@ export async function boot(root: HTMLElement) {
     branding: null as api.DesignerBranding | null,
     selectedBookingId: null as string | null,
     calendarChat: null as api.CalendarChatPayload | null,
+    availability: null as api.AvailabilityPayload | null,
     status: "",
     statusOk: true,
     busy: false,
@@ -322,11 +323,13 @@ export async function boot(root: HTMLElement) {
       };
       applyBrandColors(state.branding.accent, state.branding.inkColor);
       void loadCalendarChat().catch(() => undefined);
+      void loadAvailability().catch(() => undefined);
       const planLabel = state.bootstrap.entitlements?.label || state.bootstrap.plan.tier;
       setStatus(`Connected · ${state.bootstrap.site.name} · ${planLabel}`);
     } catch (e) {
       state.bootstrap = null;
       state.calendarChat = null;
+      state.availability = null;
       setStatus(e instanceof Error ? e.message : "Not connected", false);
     } finally {
       state.loading = false;
@@ -339,6 +342,17 @@ export async function boot(root: HTMLElement) {
       return;
     }
     state.calendarChat = await api.getCalendarChat({
+      webflowSiteId: state.webflowSiteId,
+      publicKey: state.bootstrap.site.publicKey,
+    });
+  }
+
+  async function loadAvailability() {
+    if (!state.bootstrap) {
+      state.availability = null;
+      return;
+    }
+    state.availability = await api.getAvailability({
       webflowSiteId: state.webflowSiteId,
       publicKey: state.bootstrap.site.publicKey,
     });
@@ -912,7 +926,70 @@ export async function boot(root: HTMLElement) {
 
   function viewTools() {
     const locked = !gate("import_export")?.allowed;
-    return `<section class="card">
+    const days = state.availability?.days || [];
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const blocks = state.availability?.timeOff || [];
+    const today = new Date().toISOString().slice(0, 10);
+    return `
+    <section class="card">
+      ${cardTitle(icons.calendar, "Hours & blocked slots")}
+      <p class="lead">Enable days, set open hours, or block a date/time range so customers can’t book it.</p>
+      <div class="hours-list">
+        ${
+          days.length
+            ? days
+                .map(
+                  (d) => `<label class="hours-row">
+            <input type="checkbox" data-day="${d.dayOfWeek}" data-hours-enabled ${d.enabled ? "checked" : ""} />
+            <b>${dayNames[d.dayOfWeek] || d.dayOfWeek}</b>
+            <input type="time" data-day="${d.dayOfWeek}" data-hours-start value="${escapeHtml(d.startTime)}" ${d.enabled ? "" : "disabled"} />
+            <span class="muted">to</span>
+            <input type="time" data-day="${d.dayOfWeek}" data-hours-end value="${escapeHtml(d.endTime)}" ${d.enabled ? "" : "disabled"} />
+          </label>`,
+                )
+                .join("")
+            : `<div class="empty">Connect a site to edit hours.</div>`
+        }
+      </div>
+      <button type="button" class="btn btn-primary btn-block" id="saveHours" ${days.length ? "" : "disabled"} style="margin-top:8px">${iconLabel(icons.check, "Save weekly hours")}</button>
+      <div class="block-form">
+        <div class="eyebrow" style="margin-top:12px">Block specific range</div>
+        <label class="field"><span>Date</span><input type="date" id="blockDate" value="${today}" /></label>
+        <div class="tools-row">
+          <label class="field" style="flex:1"><span>From</span><input type="time" id="blockStart" value="12:00" /></label>
+          <label class="field" style="flex:1"><span>To</span><input type="time" id="blockEnd" value="13:00" /></label>
+        </div>
+        <label class="toggle-row" style="margin-top:0"><input type="checkbox" id="blockAllDay" /><span>Entire day</span></label>
+        <label class="field"><span>Reason</span><input id="blockReason" placeholder="Lunch, holiday…" maxlength="200" /></label>
+        <button type="button" class="btn btn-quiet btn-block" id="addBlock">${iconLabel(icons.plus, "Block this range")}</button>
+      </div>
+      ${
+        blocks.length
+          ? `<div class="home-list" style="margin-top:10px">
+        ${blocks
+          .slice(0, 8)
+          .map((t) => {
+            const label = new Date(t.startsAt).toLocaleString(undefined, {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            });
+            return `<div class="home-booking">
+            <div class="mini-meta">
+              <b>${escapeHtml(t.reason || "Blocked")}</b>
+              <small>${escapeHtml(label)} · disabled</small>
+            </div>
+            <button type="button" class="btn btn-sm" data-unblock="${escapeHtml(t.id)}">Enable</button>
+          </div>`;
+          })
+          .join("")}
+      </div>`
+          : `<div class="empty" style="margin-top:8px">No blocked ranges yet.</div>`
+      }
+      <a class="link-quiet" href="${api.APP_URL}/dashboard/availability" target="_blank" rel="noreferrer">Open full availability →</a>
+    </section>
+    <section class="card">
       ${cardTitle(icons.upload, "Import & export")}
       <p class="lead">JSON / CSV for agency clones.</p>
       ${upgradeLock("import_export", "Import / export")}
@@ -1079,6 +1156,107 @@ export async function boot(root: HTMLElement) {
           setStatus(e instanceof Error ? e.message : "Refresh failed", false);
         }
       })();
+    });
+
+    root.querySelector("#saveHours")?.addEventListener("click", () => {
+      void (async () => {
+        if (!state.bootstrap || !state.availability) return;
+        const days = state.availability.days.map((d) => {
+          const enabledEl = root.querySelector(
+            `[data-hours-enabled][data-day="${d.dayOfWeek}"]`,
+          ) as HTMLInputElement | null;
+          const startEl = root.querySelector(
+            `[data-hours-start][data-day="${d.dayOfWeek}"]`,
+          ) as HTMLInputElement | null;
+          const endEl = root.querySelector(
+            `[data-hours-end][data-day="${d.dayOfWeek}"]`,
+          ) as HTMLInputElement | null;
+          return {
+            dayOfWeek: d.dayOfWeek,
+            enabled: Boolean(enabledEl?.checked),
+            startTime: startEl?.value || d.startTime,
+            endTime: endEl?.value || d.endTime,
+          };
+        });
+        try {
+          setStatus("Saving hours…");
+          const res = await api.saveAvailabilityHours({
+            webflowSiteId: state.webflowSiteId,
+            publicKey: state.bootstrap.site.publicKey,
+            days,
+          });
+          if (state.availability) {
+            state.availability = { ...state.availability, days: res.days, timezone: res.timezone };
+          }
+          setStatus("Weekly hours saved");
+          void render();
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Could not save hours", false);
+        }
+      })();
+    });
+
+    root.querySelector("#addBlock")?.addEventListener("click", () => {
+      void (async () => {
+        if (!state.bootstrap) return;
+        const date = (root.querySelector("#blockDate") as HTMLInputElement | null)?.value;
+        const startTime = (root.querySelector("#blockStart") as HTMLInputElement | null)?.value || "12:00";
+        const endTime = (root.querySelector("#blockEnd") as HTMLInputElement | null)?.value || "13:00";
+        const reason = (root.querySelector("#blockReason") as HTMLInputElement | null)?.value || "";
+        const allDay = Boolean((root.querySelector("#blockAllDay") as HTMLInputElement | null)?.checked);
+        if (!date) return setStatus("Pick a date to block", false);
+        try {
+          setStatus("Blocking range…");
+          await api.createAvailabilityBlock({
+            webflowSiteId: state.webflowSiteId,
+            publicKey: state.bootstrap.site.publicKey,
+            date,
+            startTime,
+            endTime,
+            reason,
+            allDay,
+          });
+          await loadAvailability();
+          setStatus("Slots blocked for that range");
+          void render();
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Could not block range", false);
+        }
+      })();
+    });
+
+    root.querySelectorAll("[data-unblock]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        void (async () => {
+          if (!state.bootstrap) return;
+          const id = (btn as HTMLElement).dataset.unblock;
+          if (!id) return;
+          try {
+            setStatus("Re-enabling slots…");
+            await api.deleteAvailabilityBlock({
+              id,
+              webflowSiteId: state.webflowSiteId,
+              publicKey: state.bootstrap.site.publicKey,
+            });
+            await loadAvailability();
+            setStatus("Slots enabled again");
+            void render();
+          } catch (e) {
+            setStatus(e instanceof Error ? e.message : "Could not enable slots", false);
+          }
+        })();
+      });
+    });
+
+    root.querySelectorAll("[data-hours-enabled]").forEach((el) => {
+      el.addEventListener("change", () => {
+        const day = Number((el as HTMLElement).dataset.day);
+        const on = (el as HTMLInputElement).checked;
+        root.querySelectorAll(`[data-day="${day}"]`).forEach((input) => {
+          if ((input as HTMLElement).hasAttribute("data-hours-enabled")) return;
+          (input as HTMLInputElement).disabled = !on;
+        });
+      });
     });
     root.querySelector("#chatEnabled")?.addEventListener("change", (ev) => {
       const enabled = (ev.target as HTMLInputElement).checked;

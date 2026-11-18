@@ -48,6 +48,9 @@ export async function POST(
         currency: booking.currency,
         service: booking.service.name,
         checkoutUrl: booking.checkoutUrl ?? null,
+        meetingUrl: booking.meetingUrl ?? null,
+        meetingProvider: booking.meetingProvider ?? null,
+        meetingTools: booking.meetingTools ?? [],
       },
       { status: 201 },
     );

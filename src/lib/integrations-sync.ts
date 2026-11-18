@@ -24,76 +24,32 @@ async function tokensFor(siteId: string, provider: string) {
   return { access, refresh: row.refreshTokenEncrypted ? decryptSecret(row.refreshTokenEncrypted) : null, row };
 }
 
-/** Create calendar / meeting links for a new booking when apps are connected. */
+/**
+ * Sync booking onto connected calendars.
+ * Meeting links (Zoom / Meet) are created on demand when the customer picks a tool.
+ */
 export async function syncBookingIntegrations(input: BookingSyncInput) {
   const results: string[] = [];
-  let meetingUrl: string | null = null;
+  const meetingUrl: string | null = null;
 
-  // Zoom meeting for online-ish bookings
-  const zoom = await tokensFor(input.siteId, "zoom");
-  if (zoom) {
-    try {
-      const res = await fetch("https://api.zoom.us/v2/users/me/meetings", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${zoom.access}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          topic: `${input.serviceName} · ${input.customerName}`,
-          type: 2,
-          start_time: input.startsAt.toISOString(),
-          duration: Math.max(
-            15,
-            Math.round((input.endsAt.getTime() - input.startsAt.getTime()) / 60000),
-          ),
-          timezone: input.timezone,
-          settings: { join_before_host: true },
-        }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { join_url?: string };
-        meetingUrl = data.join_url || null;
-        results.push("zoom");
-      } else {
-        console.error("[sync:zoom]", await res.text());
-      }
-    } catch (e) {
-      console.error("[sync:zoom]", e);
-    }
-  }
-
-  // Google Calendar (+ optional Meet)
+  // Google Calendar (event only — Meet is customer-opt-in)
   const gcal = await tokensFor(input.siteId, "google_calendar");
   const meet = await tokensFor(input.siteId, "meet");
   const googleToken = gcal?.access || meet?.access;
   if (googleToken) {
     try {
-      const wantsMeet = Boolean(meet) && !meetingUrl;
       const body: Record<string, unknown> = {
         summary: `${input.serviceName} · ${input.customerName}`,
         description: [
           `Booking ${input.reference}`,
           `Customer: ${input.customerName} <${input.customerEmail}>`,
-          meetingUrl ? `Meeting: ${meetingUrl}` : null,
           `Manage: ${input.manageUrl}`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        ].join("\n"),
         start: { dateTime: input.startsAt.toISOString(), timeZone: input.timezone },
         end: { dateTime: input.endsAt.toISOString(), timeZone: input.timezone },
         attendees: [{ email: input.customerEmail }],
       };
-      if (wantsMeet) {
-        body.conferenceData = {
-          createRequest: {
-            requestId: `slotwise-${input.reference.replace(/\W/g, "")}-${Date.now()}`,
-            conferenceSolutionKey: { type: "hangoutsMeet" },
-          },
-        };
-      }
       const url = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
-      if (wantsMeet) url.searchParams.set("conferenceDataVersion", "1");
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -103,16 +59,6 @@ export async function syncBookingIntegrations(input: BookingSyncInput) {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        const data = (await res.json()) as {
-          hangoutLink?: string;
-          conferenceData?: { entryPoints?: Array<{ entryPointType?: string; uri?: string }> };
-        };
-        if (!meetingUrl) {
-          meetingUrl =
-            data.hangoutLink ||
-            data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
-            null;
-        }
         results.push(gcal ? "google_calendar" : "meet");
       } else {
         console.error("[sync:google]", await res.text());

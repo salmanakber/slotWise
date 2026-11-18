@@ -192,7 +192,7 @@ export function CalendarChat({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="sw-chat-fab absolute bottom-[4.6rem] right-3 z-[20] flex items-center gap-2 px-3 py-2 text-left"
+        className="sw-chat-fab absolute right-3 top-[4.85rem] z-[20] flex items-center gap-2 px-3 py-2 text-left"
         style={{
           borderRadius: Math.max(radius, 999),
           background: panel,

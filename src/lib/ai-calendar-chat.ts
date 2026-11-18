@@ -41,8 +41,8 @@ async function llmChat(opts: {
     },
     body: JSON.stringify({
       model: opts.model,
-      temperature: 0.65,
-      max_tokens: 520,
+      temperature: 0.55,
+      max_tokens: 140,
       messages: [{ role: "system", content: opts.system }, ...opts.messages],
     }),
   });
@@ -100,7 +100,7 @@ function rulesAnswer(input: {
 
   if (!input.events.length) {
     return {
-      reply: `Hey — ${input.siteName} doesn’t have anything bookable published yet. Check back soon, or reach out to the host if you need something specific.`,
+      reply: `Nothing bookable is published yet — check back soon.`,
       source: "rules",
       suggestedEventIds: [],
       suggestedQuestions: ["What services do you offer?", "How do I book?"],
@@ -109,7 +109,7 @@ function rulesAnswer(input: {
 
   if (/how (do|can) i book|book(ing)?/i.test(input.question)) {
     return {
-      reply: `Super easy: pick an event that fits, choose a day and time (times are in ${input.timezone}), then drop in your name and email. You’ll get a confirmation right away.${availBit ? ` ${availBit}` : ""}`,
+      reply: `Pick an event, choose a time (${input.timezone}), then enter your details — you’re set.`,
       source: "rules",
       suggestedEventIds: pool.map((e) => e.id),
       suggestedQuestions: [
@@ -120,26 +120,24 @@ function rulesAnswer(input: {
     };
   }
 
-  const lines = pool.map((e) => {
-    const price = formatCustomerPrice(e.priceCents, input.currency);
-    const priceBit = price ? ` · ${price}` : " · free";
-    const cat = e.category ? ` (${e.category})` : "";
-    return `• ${e.name}${cat} — ${e.durationMin} min${priceBit}`;
-  });
-
   if (freeHint(input.question)) {
     const frees = input.events.filter((e) => e.priceCents <= 0);
     if (!frees.length) {
       return {
-        reply: `I don’t see any free events on the calendar right now. Closest paid options:\n${lines.join("\n")}${availBit ? `\n\n${availBit}` : ""}`,
+        reply: `No free events right now. Try: ${pool
+          .slice(0, 2)
+          .map((e) => e.name)
+          .join(" or ")}.`,
         source: "rules",
         suggestedEventIds: pool.map((e) => e.id),
         suggestedQuestions: ["What’s popular?", "Show short sessions", "How do I book?"],
       };
     }
-    const freeLines = frees.slice(0, 4).map((e) => `• ${e.name} — ${e.durationMin} min`);
     return {
-      reply: `Yes — these are free on the calendar:\n${freeLines.join("\n")}\n\nTap one in the widget and I’ll help you grab a time.${availBit ? ` ${availBit}` : ""}`,
+      reply: `Yes — free options: ${frees
+        .slice(0, 3)
+        .map((e) => e.name)
+        .join(", ")}. Tap one to book.`,
       source: "rules",
       suggestedEventIds: frees.slice(0, 4).map((e) => e.id),
       suggestedQuestions: ["What’s happening this weekend?", "How do I book?", "Any workshops?"],
@@ -147,27 +145,24 @@ function rulesAnswer(input: {
   }
 
   if (shortHint(input.question)) {
-    const shorts = [...input.events].sort((a, b) => a.durationMin - b.durationMin).slice(0, 4);
+    const shorts = [...input.events].sort((a, b) => a.durationMin - b.durationMin).slice(0, 3);
     return {
-      reply: `If you want something quick, start here:\n${shorts
-        .map((e) => {
-          const price = formatCustomerPrice(e.priceCents, input.currency);
-          return `• ${e.name} — ${e.durationMin} min${price ? ` · ${price}` : ""}`;
-        })
-        .join("\n")}`,
+      reply: `Quickest: ${shorts.map((e) => `${e.name} (${e.durationMin}m)`).join(", ")}.`,
       source: "rules",
       suggestedEventIds: shorts.map((e) => e.id),
       suggestedQuestions: ["Any free options?", "What’s this weekend?", "How do I book?"],
     };
   }
 
-  let intro = `Here’s what I’d point you to on ${input.siteName}'s calendar:`;
-  if (weekendHint(input.question)) {
-    intro = `For this weekend, these are solid picks (open the day picker for Sat/Sun times in ${input.timezone}):`;
-  }
+  let intro = weekendHint(input.question)
+    ? `This weekend, try:`
+    : `Good matches:`;
 
   return {
-    reply: `${intro}\n${lines.join("\n")}${availBit ? `\n\n${availBit}` : ""}\n\nWant me to narrow it by free, short, or a specific topic?`,
+    reply: `${intro} ${pool
+      .slice(0, 3)
+      .map((e) => e.name)
+      .join(", ")}.${availBit ? ` ${availBit}` : ""}`,
     source: "rules",
     suggestedEventIds: pool.map((e) => e.id),
     suggestedQuestions: [
@@ -311,23 +306,20 @@ export async function answerCalendarQuestion(input: {
     .join("\n");
 
   const system = `You are the friendly front-desk assistant for "${siteName}" (Slotwise Calendar Chat, BETA).
-Speak naturally like a helpful human host — warm, clear, concise (2–5 short sentences or a tight bullet list). No corporate fluff, no markdown headings, no emoji spam.
+Keep replies SHORT: 1–2 sentences, or at most 3 tight bullets. Aim under ~220 characters unless listing 2–3 event names. No fluff, no markdown headings, no emoji spam.
 
-You are fully grounded in THIS calendar only:
-- Business timezone: ${site.timezone}
-- Local now: ${nowLocal}
+Grounded in THIS calendar only:
+- Timezone: ${site.timezone} · Now: ${nowLocal}
 - Currency: ${site.currency}
-- Weekly hours: ${hoursSummary}
-- Staff (if relevant): ${staffNames.length ? staffNames.join(", ") : "not listed"}
+- Hours: ${hoursSummary}
+- Staff: ${staffNames.length ? staffNames.join(", ") : "not listed"}
 ${timeOffNote ? `- ${timeOffNote}` : ""}
 
 Rules:
-1) Use ONLY the event catalog + availability snapshot. Never invent events, prices, times, or policies.
-2) When asked about weekends / free / workshops / short sessions, filter the catalog honestly.
-3) Mention exact event names so the visitor can tap them in the booking widget.
-4) If openings look thin, say so and suggest the next best day or event.
-5) If unsure, ask one short clarifying question.
-6) End with a light next step when it helps (“Want me to point you at the shortest free option?”).`;
+1) ONLY use the catalog + availability. Never invent events, prices, or times.
+2) Name events exactly so visitors can tap them.
+3) Prefer one clear recommendation over long lists.
+4) If unsure, ask one short question.`;
 
   const contextBlock = `EVENT CATALOG:\n${catalog || "(no active events)"}\n\nAVAILABILITY SNAPSHOT (next ~10 days, open slot counts):\n${openByDay.join("\n")}\n\nNOTES:\n${availabilityNotes.join("\n") || "none"}`;
 

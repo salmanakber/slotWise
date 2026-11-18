@@ -387,6 +387,8 @@ model Booking {
   currency        String        @default("USD")
   stripePaymentId String?
   manageToken     String        @unique @default(cuid())
+  meetingUrl      String?
+  meetingProvider String? // zoom | meet | outlook
   cancelledAt     DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
