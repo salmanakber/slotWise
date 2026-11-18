@@ -182,13 +182,39 @@ function IntegrationsClient() {
               : data.webflow.hint || "Ask your Slotwise admin to finish Webflow setup"
           }
         >
-          {data.webflow.platformConfigured && data.webflow.installUrl ? (
-            <a href={data.webflow.installUrl} className="sw-btn sw-btn-primary">
-              Reconnect Webflow
-            </a>
-          ) : (
-            <em className="sw-tag sw-tag-muted">Not ready yet</em>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {data.webflow.platformConfigured && data.webflow.installUrl ? (
+              <a href={data.webflow.installUrl} className="sw-btn sw-btn-primary">
+                Reconnect Webflow
+              </a>
+            ) : (
+              <em className="sw-tag sw-tag-muted">Not ready yet</em>
+            )}
+            <button
+              type="button"
+              className="sw-btn"
+              onClick={() => {
+                void (async () => {
+                  const res = await fetch("/api/webflow/uninstall", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                  });
+                  // Resolve site from session on server — pass empty and fix API
+                  const json = await res.json().catch(() => ({}));
+                  setMsg(
+                    res.ok
+                      ? json.message ||
+                          "Disconnected. Publish your Webflow site. Delete leftover booking blocks on the canvas if they remain."
+                      : json.error || "Could not disconnect",
+                  );
+                  void load();
+                })();
+              }}
+            >
+              Disconnect & hide widget
+            </button>
+          </div>
         </Row>
       </section>
 

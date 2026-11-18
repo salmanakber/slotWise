@@ -212,6 +212,14 @@ export function BookingWidget({
     return () => ro.disconnect();
   }, [embed, publicKey, step, site, slots, loadingSlots, submitting, serviceId]);
 
+  useEffect(() => {
+    if (!embed || typeof window === "undefined" || !error) return;
+    window.parent.postMessage(
+      { source: "slotwise", type: "resize", publicKey, height: 0 },
+      "*",
+    );
+  }, [embed, error, publicKey]);
+
   const service = useMemo(
     () => site?.services.find((s) => s.id === serviceId) ?? null,
     [site, serviceId],
@@ -269,6 +277,13 @@ export function BookingWidget({
   }
 
   if (!site) {
+    if (embed && error) {
+      return (
+        <div ref={rootRef} className="h-0 w-full overflow-hidden p-0" aria-hidden>
+          <span className="sr-only">Booking unavailable</span>
+        </div>
+      );
+    }
     return (
       <div
         ref={rootRef}

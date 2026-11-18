@@ -159,3 +159,70 @@ export async function insertBookingIframe(publicKey: string) {
 
   await notify("Success", "Booking widget placed on the canvas");
 }
+
+/**
+ * Remove leftover Slotwise booking blocks from the current Designer page.
+ * Call after uninstall — Webflow keeps canvas elements even when the app is removed.
+ */
+export async function removeSlotwiseEmbedsFromCanvas() {
+  const api = wf();
+  if (!api?.getAllElements) {
+    throw new Error("Open this from Webflow Designer to clean the canvas");
+  }
+  const { ok } = await canDesignOnCanvas();
+  if (!ok) {
+    throw new Error("Switch to Design mode to remove booking widgets from the page");
+  }
+
+  const all = (await api.getAllElements()) as Array<{
+    type?: string;
+    remove?: () => Promise<unknown>;
+    getAttribute?: (name: string) => Promise<string | null>;
+    getAttributes?: () => Promise<Record<string, string> | Array<{ name: string; value: string }>>;
+  }>;
+
+  let removed = 0;
+  for (const el of all) {
+    let isSlotwise = false;
+    try {
+      if (typeof el.getAttribute === "function") {
+        const mark =
+          (await el.getAttribute("data-slotwise-widget")) ||
+          (await el.getAttribute("data-site")) ||
+          (await el.getAttribute("src"));
+        if (
+          mark &&
+          (/slotwise/i.test(String(mark)) ||
+            /\/book\//i.test(String(mark)) ||
+            String(mark).startsWith("sw_"))
+        ) {
+          isSlotwise = true;
+        }
+      } else if (typeof el.getAttributes === "function") {
+        const attrs = await el.getAttributes();
+        const flat = Array.isArray(attrs)
+          ? Object.fromEntries(attrs.map((a) => [a.name, a.value]))
+          : attrs || {};
+        const blob = `${flat["data-slotwise-widget"] || ""} ${flat["data-site"] || ""} ${flat.src || ""}`;
+        if (/slotwise|\/book\/|sw_/i.test(blob)) isSlotwise = true;
+      }
+    } catch {
+      /* ignore attribute read failures */
+    }
+
+    if (!isSlotwise) continue;
+    try {
+      if (typeof el.remove === "function") {
+        await el.remove();
+        removed += 1;
+      }
+    } catch {
+      /* ignore single element failures */
+    }
+  }
+
+  if (removed > 0) {
+    await notify("Success", `Removed ${removed} Slotwise block${removed === 1 ? "" : "s"} from this page`);
+  }
+  return removed;
+}

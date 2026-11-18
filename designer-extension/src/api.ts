@@ -5,19 +5,21 @@ const APP_URL =
 export { APP_URL };
 
 export type Bootstrap = {
+  uninstalled?: boolean;
+  reason?: string;
   site: {
     id: string;
     publicKey: string;
     name: string;
-    timezone: string;
-    currency: string;
+    timezone?: string;
+    currency?: string;
     webflowSiteId: string | null;
-    accent: string;
-    themeKey: string;
+    accent?: string;
+    themeKey?: string;
   };
-  counts: { services: number; staff: number; bookings: number; bookingsThisMonth?: number };
-  plan: { tier: string; name: string; priceMonthly: number };
-  entitlements: {
+  counts?: { services: number; staff: number; bookings: number; bookingsThisMonth?: number };
+  plan?: { tier: string; name: string; priceMonthly: number };
+  entitlements?: {
     tier: string;
     label: string;
     priceLabel: string;
@@ -112,6 +114,19 @@ export function bootstrap(params: { webflowSiteId?: string | null; publicKey?: s
   if (params.webflowSiteId) qs.set("webflowSiteId", params.webflowSiteId);
   if (params.publicKey) qs.set("publicKey", params.publicKey);
   return req<Bootstrap>(`/api/designer/bootstrap?${qs}`);
+}
+
+export function uninstallWebflow(body: {
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+}) {
+  return req<{ ok: boolean; message?: string; customCodeCleared?: boolean }>(
+    "/api/webflow/uninstall",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 export function listServices(params: { webflowSiteId?: string | null; publicKey?: string | null }) {

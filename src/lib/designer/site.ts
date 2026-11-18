@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { entitlementsForTier } from "@/lib/plan-entitlements";
 import { getPlatformPublicSettings } from "@/lib/platform-config";
+import { validateWebflowConnection } from "@/lib/webflow-uninstall";
 
 const siteInclude = {
   plan: true,
@@ -66,6 +67,23 @@ export async function findSiteForDesigner(opts: {
 export async function siteBootstrapPayload(
   site: NonNullable<Awaited<ReturnType<typeof findSiteForDesigner>>>,
 ) {
+  const auth = await validateWebflowConnection(site.id).catch(() => ({
+    connected: true as const,
+    reason: "skip",
+  }));
+  if (!auth.connected) {
+    return {
+      uninstalled: true as const,
+      reason: auth.reason,
+      site: {
+        id: site.id,
+        publicKey: site.publicKey,
+        name: site.branding?.businessName || site.name,
+        webflowSiteId: site.webflowSiteId,
+      },
+    };
+  }
+
   const tier = site.plan?.tier ?? "FREE";
   const entitlements = entitlementsForTier(tier);
   const platform = await getPlatformPublicSettings();

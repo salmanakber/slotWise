@@ -5,6 +5,7 @@ import {
   getDesignerMode,
   insertBookingIframe,
   notify,
+  removeSlotwiseEmbedsFromCanvas,
   setExtensionLarge,
   subscribeMode,
 } from "./canvas";
@@ -298,6 +299,18 @@ export async function boot(root: HTMLElement) {
         webflowSiteId: state.webflowSiteId,
         publicKey: null,
       });
+      if (state.bootstrap.uninstalled) {
+        state.services = [];
+        state.calendarChat = null;
+        state.availability = null;
+        setStatus("Webflow app was uninstalled — remove leftover widgets, then republish", false);
+        try {
+          await removeSlotwiseEmbedsFromCanvas();
+        } catch {
+          /* canvas may be in build mode */
+        }
+        return;
+      }
       document.documentElement.style.setProperty("--ac", state.bootstrap.site.accent || "#f5a000");
       const [list, themesRes, brandingRes] = await Promise.all([
         api.listServices({
@@ -315,8 +328,8 @@ export async function boot(root: HTMLElement) {
       state.services = list.services;
       state.themes = themesRes.themes;
       state.branding = brandingRes?.branding ?? {
-        themeKey: state.bootstrap.site.themeKey,
-        accent: state.bootstrap.site.accent,
+        themeKey: state.bootstrap.site.themeKey || "amber-light",
+        accent: state.bootstrap.site.accent || "#f5a000",
         inkColor: "#0f1b2d",
         radius: 14,
         font: "Manrope",
@@ -324,7 +337,7 @@ export async function boot(root: HTMLElement) {
       applyBrandColors(state.branding.accent, state.branding.inkColor);
       void loadCalendarChat().catch(() => undefined);
       void loadAvailability().catch(() => undefined);
-      const planLabel = state.bootstrap.entitlements?.label || state.bootstrap.plan.tier;
+      const planLabel = state.bootstrap.entitlements?.label || state.bootstrap.plan?.tier;
       setStatus(`Connected · ${state.bootstrap.site.name} · ${planLabel}`);
     } catch (e) {
       state.bootstrap = null;
@@ -551,6 +564,14 @@ export async function boot(root: HTMLElement) {
   }
 
   function viewHome() {
+    if (state.bootstrap?.uninstalled) {
+      return `<section class="card">
+        ${cardTitle(icons.alert, "App uninstalled")}
+        <p class="lead">Webflow access was revoked. Leftover booking blocks can stay on the canvas — remove them here, then <b>publish</b> the site.</p>
+        <button type="button" class="btn btn-primary btn-block" id="removeEmbedsBtn">${iconLabel(icons.trash, "Remove widgets from this page")}</button>
+        <button type="button" class="btn btn-quiet btn-block" id="installBtn" style="margin-top:8px">${iconLabel(icons.external, "Reinstall Slotwise")}</button>
+      </section>`;
+    }
     if (!state.bootstrap) {
       return `<section class="card">
         ${cardTitle(icons.layout, "Connect Slotwise")}
@@ -1014,6 +1035,9 @@ export async function boot(root: HTMLElement) {
       <button type="button" class="btn btn-quiet btn-block" id="embedBtn2" ${!state.canDesign ? "disabled" : ""} style="margin-top:8px">
         ${iconLabel(icons.layout, state.canDesign ? "Add booking to page" : "Switch to Design mode first")}
       </button>
+      <button type="button" class="btn btn-block" id="removeEmbedsBtn" style="margin-top:8px">${iconLabel(icons.trash, "Remove widgets from this page")}</button>
+      <button type="button" class="btn btn-block" id="disconnectBtn" style="margin-top:6px">${iconLabel(icons.alert, "Disconnect & clean uninstall")}</button>
+      <p class="lead" style="margin-top:8px">Disconnect strips App custom code and deactivates booking so leftovers stop showing after publish.</p>
     </section>`;
   }
 
@@ -1124,6 +1148,47 @@ export async function boot(root: HTMLElement) {
 
     root.querySelector("#embedBtn")?.addEventListener("click", () => void onEmbed());
     root.querySelector("#embedBtn2")?.addEventListener("click", () => void onEmbed());
+    root.querySelector("#removeEmbedsBtn")?.addEventListener("click", () => {
+      void (async () => {
+        try {
+          setStatus("Removing booking widgets…");
+          const n = await removeSlotwiseEmbedsFromCanvas();
+          setStatus(n ? `Removed ${n} widget(s) — publish the site` : "No Slotwise widgets found on this page");
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Could not remove widgets", false);
+        }
+      })();
+    });
+    root.querySelector("#disconnectBtn")?.addEventListener("click", () => {
+      void (async () => {
+        if (!state.bootstrap) return;
+        try {
+          setStatus("Disconnecting Slotwise…");
+          const res = await api.uninstallWebflow({
+            webflowSiteId: state.webflowSiteId,
+            publicKey: state.bootstrap.site.publicKey,
+          });
+          try {
+            await removeSlotwiseEmbedsFromCanvas();
+          } catch {
+            /* ignore */
+          }
+          state.bootstrap = {
+            uninstalled: true,
+            site: {
+              id: state.bootstrap.site.id,
+              publicKey: state.bootstrap.site.publicKey,
+              name: state.bootstrap.site.name,
+              webflowSiteId: state.bootstrap.site.webflowSiteId,
+            },
+          } as api.Bootstrap;
+          setStatus(res.message || "Disconnected — publish your Webflow site");
+          void render();
+        } catch (e) {
+          setStatus(e instanceof Error ? e.message : "Disconnect failed", false);
+        }
+      })();
+    });
     root.querySelector("#installBtn")?.addEventListener("click", () => {
       // New browser window — leave Designer / extension panel open
       window.open(

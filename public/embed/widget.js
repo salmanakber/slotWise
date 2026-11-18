@@ -20,63 +20,86 @@
       "background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);" +
       "animation:slotwise-shimmer 1.4s ease-in-out infinite}" +
       "@keyframes slotwise-shimmer{0%{transform:translateX(-40%)}100%{transform:translateX(40%)}}" +
-      ".slotwise-host.is-ready .slotwise-skel{opacity:0;visibility:hidden;transition:opacity .35s ease}";
+      ".slotwise-host.is-ready .slotwise-skel{opacity:0;visibility:hidden;transition:opacity .35s ease}" +
+      ".slotwise-host.is-gone{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}";
     document.head.appendChild(css);
   }
 
+  function hide(el) {
+    el.classList.add("is-gone");
+    el.innerHTML = "";
+    el.setAttribute("data-slotwise-mounted", "0");
+  }
+
   function mount(el, base) {
-    if (el.getAttribute("data-slotwise-mounted")) return;
+    if (el.getAttribute("data-slotwise-mounted") === "1") return;
     el.setAttribute("data-slotwise-mounted", "1");
     var site = el.getAttribute("data-site");
     if (!site) return;
 
     ensureStyles();
     el.classList.add("slotwise-host");
-    el.style.width = "100%";
-    el.style.maxWidth = "100%";
-    el.style.minWidth = "0";
-    el.style.overflow = "hidden";
-    el.style.boxSizing = "border-box";
 
-    var skel = document.createElement("div");
-    skel.className = "slotwise-skel";
-    skel.setAttribute("aria-hidden", "true");
+    // If Slotwise was uninstalled / site deactivated, don't show a dead widget
+    fetch(base + "/api/v1/sites/" + encodeURIComponent(site), { credentials: "omit" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("unavailable");
+        return r.json();
+      })
+      .then(function () {
+        el.style.width = "100%";
+        el.style.maxWidth = "100%";
+        el.style.minWidth = "0";
+        el.style.overflow = "hidden";
+        el.style.boxSizing = "border-box";
 
-    var iframe = document.createElement("iframe");
-    iframe.className = "slotwise-frame";
-    iframe.title = "Slotwise booking";
-    iframe.src = base + "/book/" + encodeURIComponent(site) + "?embed=1";
-    iframe.setAttribute("loading", "lazy");
-    iframe.setAttribute("allow", "payment *");
-    iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-    iframe.setAttribute("scrolling", "no");
+        var skel = document.createElement("div");
+        skel.className = "slotwise-skel";
+        skel.setAttribute("aria-hidden", "true");
 
-    var minH = parseInt(el.getAttribute("data-min-height") || "640", 10);
-    iframe.style.minHeight = minH + "px";
-    iframe.style.width = "100%";
-    iframe.style.maxWidth = "100%";
-    iframe.style.overflow = "hidden";
+        var iframe = document.createElement("iframe");
+        iframe.className = "slotwise-frame";
+        iframe.title = "Slotwise booking";
+        iframe.src = base + "/book/" + encodeURIComponent(site) + "?embed=1";
+        iframe.setAttribute("loading", "lazy");
+        iframe.setAttribute("allow", "payment *");
+        iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+        iframe.setAttribute("scrolling", "no");
 
-    function onMessage(ev) {
-      var data = ev && ev.data;
-      if (!data || data.source !== "slotwise" || data.publicKey !== site) return;
-      if (data.type === "resize" && typeof data.height === "number") {
-        var next = Math.max(minH, Math.ceil(data.height) + 8);
-        iframe.style.minHeight = next + "px";
-        iframe.style.height = next + "px";
-      }
-      if (data.type === "ready") {
-        el.classList.add("is-ready");
-      }
-    }
+        var minH = parseInt(el.getAttribute("data-min-height") || "640", 10);
+        iframe.style.minHeight = minH + "px";
+        iframe.style.width = "100%";
+        iframe.style.maxWidth = "100%";
+        iframe.style.overflow = "hidden";
 
-    window.addEventListener("message", onMessage);
-    iframe.addEventListener("load", function () {
-      el.classList.add("is-ready");
-    });
+        function onMessage(ev) {
+          var data = ev && ev.data;
+          if (!data || data.source !== "slotwise" || data.publicKey !== site) return;
+          if (data.type === "resize" && typeof data.height === "number") {
+            if (data.height <= 1) {
+              hide(el);
+              return;
+            }
+            var next = Math.max(minH, Math.ceil(data.height) + 8);
+            iframe.style.minHeight = next + "px";
+            iframe.style.height = next + "px";
+          }
+          if (data.type === "ready") {
+            el.classList.add("is-ready");
+          }
+        }
 
-    el.appendChild(skel);
-    el.appendChild(iframe);
+        window.addEventListener("message", onMessage);
+        iframe.addEventListener("load", function () {
+          el.classList.add("is-ready");
+        });
+
+        el.appendChild(skel);
+        el.appendChild(iframe);
+      })
+      .catch(function () {
+        hide(el);
+      });
   }
 
   function boot() {
@@ -85,7 +108,7 @@
     var script = document.currentScript;
     var base =
       (script && script.src && script.src.replace(/\/embed\/widget\.js.*$/, "")) ||
-      window.location.origin;
+      "https://slotwise.hindaralabs.com";
 
     for (var i = 0; i < nodes.length; i++) mount(nodes[i], base);
   }

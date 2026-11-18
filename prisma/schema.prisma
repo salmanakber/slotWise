@@ -223,6 +223,8 @@ model WebflowToken {
   refreshTokenEncrypted String?
   expiresAt             DateTime?
   scopes                String[] @default([])
+  /** Last successful Webflow API check — used to detect uninstall/revoke. */
+  lastValidatedAt       DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

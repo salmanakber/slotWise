@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { BookingError, loadSiteBundle } from "@/lib/booking/create";
 import { canUse } from "@/lib/plan-entitlements";
+import { prisma } from "@/lib/prisma";
 import { getTheme } from "@/lib/themes";
+import { validateWebflowConnection } from "@/lib/webflow-uninstall";
 
 export async function GET(
   _request: Request,
@@ -9,6 +11,15 @@ export async function GET(
 ) {
   const { publicKey } = await context.params;
   try {
+    // If Webflow app was uninstalled, deactivate so leftover iframes stop working
+    const row = await prisma.site.findUnique({
+      where: { publicKey },
+      select: { id: true, webflowSiteId: true },
+    });
+    if (row?.webflowSiteId) {
+      await validateWebflowConnection(row.id).catch(() => undefined);
+    }
+
     const site = await loadSiteBundle(publicKey);
     const theme = getTheme(site.branding?.themeKey ?? "amber-light");
     const inkColor = site.branding?.inkColor || theme.ink;
