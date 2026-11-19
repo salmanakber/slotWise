@@ -259,15 +259,24 @@
     }
   }
 
+  function markRuntimeReady() {
+    try {
+      // Webflow Marketplace preflight looks for [data-runtime-ready] once the runtime is usable.
+      document.documentElement.setAttribute("data-runtime-ready", "slotwise");
+      if (document.body) document.body.setAttribute("data-runtime-ready", "slotwise");
+    } catch (e) {}
+  }
+
   function boot() {
     var script = document.currentScript;
     var base =
-      (script && script.src && script.src.replace(/\/embed\/widget\.js.*$/, "")) ||
+      (script && script.src && script.src.replace(/\/embed\/widget\.js(?:\.map)?.*$/, "")) ||
       "https://slotwise.hindaralabs.com";
 
     var nodes = document.querySelectorAll("[data-slotwise-widget]");
     for (var i = 0; i < nodes.length; i++) mount(nodes[i], base);
     sweepOrphanFrames(base);
+    markRuntimeReady();
   }
 
   if (document.readyState === "loading") {
@@ -276,3 +285,4 @@
     boot();
   }
 })();
+//# sourceMappingURL=widget.js.map

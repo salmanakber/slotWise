@@ -263,7 +263,7 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
       hostedLocation,
       integrityHash,
       canCopy: false,
-      version: "0.2.0",
+      version: "0.3.0",
       displayName: "Slotwise Widget",
     }),
   });
@@ -275,7 +275,25 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
   return res.json();
 }
 
-/** Manual snippet — avoid for Marketplace installs; use Designer “Add booking” instead. */
+/** Script tag + mount node for Marketplace runtime tests (SRI required). */
 export function widgetInstallSnippet(publicKey: string) {
-  return `<!-- Prefer Designer canvas embed. Manual paste cannot be removed by the App on uninstall. -->\n<div data-slotwise-widget data-site="${publicKey}"></div>`;
+  const appUrl = appOrigin();
+  // Prefer on-disk bytes so the integrity matches what we ship in /public/embed/widget.js
+  let integrity = "";
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require("fs") as typeof import("fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createHash } = require("crypto") as typeof import("crypto");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { join } = require("path") as typeof import("path");
+    const body = readFileSync(join(process.cwd(), "public/embed/widget.js"));
+    integrity = `sha256-${createHash("sha256").update(body).digest("base64")}`;
+  } catch {
+    integrity = "";
+  }
+  const script = integrity
+    ? `<script src="${appUrl}/embed/widget.js" integrity="${integrity}" crossorigin="anonymous"></script>`
+    : `<script src="${appUrl}/embed/widget.js" crossorigin="anonymous"></script>`;
+  return `${script}\n<div data-slotwise-widget data-site="${publicKey}"></div>`;
 }

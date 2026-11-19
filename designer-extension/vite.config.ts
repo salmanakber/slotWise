@@ -2,6 +2,11 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   base: "./",
+  css: {
+    // Helps local/dev; production CSS maps are ensured in prepare-review-artifacts.mjs
+    // because Vite often omits .css.map even when build.sourcemap is true.
+    devSourcemap: true,
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

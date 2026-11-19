@@ -25,7 +25,7 @@ That writes next to this README:
 | File | Use |
 |------|-----|
 | **`bundle.zip`** | Public Designer Extension upload (must be under **5 MB**) |
-| **`source-maps.zip`** | **Private** source-map artifact for Marketplace review (do **not** put inside `bundle.zip`) |
+| **`source-maps.zip`** | **Private** review artifact: version-3 maps + `package.json` + `package-lock.json` from this build (do **not** put inside `bundle.zip`) |
 
 `npm run bundle` already sets `VITE_SLOTWISE_URL` to `https://slotwise.hindaralabs.com`. Override if needed:
 
@@ -53,7 +53,8 @@ Then in Designer: Apps → Slotwise → **Launch App** (not “Launch developmen
 Review fails with *“Generated code is not traceable…”* if maps are missing or from a different build.
 
 - Maps are **version 3**, produced by the same `npm run bundle` that creates `bundle.zip`
-- Upload `source-maps.zip` as the **private** source-map artifact
+- `source-maps.zip` also includes **`package.json`** and **`package-lock.json`** from that build
+- Upload `source-maps.zip` as the **private** source-map / review artifact
 - Do **not** ship `.map` files inside the public `bundle.zip` (the prepare script strips them)
 
 ### Marketplace preflight — runtime files to pin
@@ -64,16 +65,29 @@ A **runtime** is JS your app loads on the **published Webflow site**, outside `b
 
 | Runtime URL | Notes |
 |-------------|--------|
-| `https://slotwise.hindaralabs.com/embed/widget.js` | Host-page embed loader. Registers via Webflow hosted scripts API with integrity. **No child scripts** — it only creates an iframe. |
+| `https://slotwise.hindaralabs.com/embed/widget.js` | Host-page embed loader + `widget.js.map`. Sets `[data-runtime-ready]` when usable. **No child scripts** — it only creates an iframe. |
 
-**How to verify on your published test page**
+**Preflight test page must actually load `widget.js`**
+
+A canvas-only iframe does **not** request `widget.js`, so preflight reports “Declared runtime did not load”. On the published test page, include both:
+
+```html
+<script
+  src="https://slotwise.hindaralabs.com/embed/widget.js"
+  integrity="sha256-…use public/embed/widget.sri.txt…"
+  crossorigin="anonymous"
+></script>
+<div data-slotwise-widget data-site="sw_YOUR_PUBLIC_KEY"></div>
+```
+
+Then **Publish** the Webflow site, confirm Network shows `widget.js`, and re-run the test.
+
+**How to verify**
 
 1. Open the published test page in a new tab  
-2. DevTools → **Network** → filter **JS** → reload and open the booking widget once  
-3. You should see `widget.js` as the host-page entry (if Custom Code / registered script is applied)  
-4. Inside the booking **iframe** you will also see Next.js chunks from `slotwise.hindaralabs.com` (`/_next/static/...`). Those run **inside the iframe document**, not as host-page children of `widget.js`. If the review form asks only for host-page runtimes created by your install script, pin **`widget.js` only**. If it asks for every JS the visitor loads while using the app, list the iframe Next chunks from that Network panel as separate runtime URLs for that test package.
-
-**Install path note:** Preferred Marketplace install places a canvas **iframe** (`/book/{publicKey}?embed=1`) and does not require pasting a script. `widget.js` is the runtime when the hosted/registered script path is used.
+2. DevTools → **Network** → filter **JS** → reload  
+3. Confirm `widget.js` loads with `200`, and Elements shows `data-runtime-ready` on `<html>`  
+4. Confirm `widget.js.map` is reachable at `https://slotwise.hindaralabs.com/embed/widget.js.map`
 
 #### Why `scp` looked like the “same” old bundle
 
