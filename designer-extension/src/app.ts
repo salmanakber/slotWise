@@ -44,6 +44,7 @@ export async function boot(root: HTMLElement) {
     themes: [] as api.DesignerTheme[],
     branding: null as api.DesignerBranding | null,
     selectedBookingId: null as string | null,
+    calMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     calendarChat: null as api.CalendarChatPayload | null,
     availability: null as api.AvailabilityPayload | null,
     inbox: null as { unread: number; items: api.InboxItem[] } | null,
@@ -533,41 +534,101 @@ export async function boot(root: HTMLElement) {
     </section>`;
   }
 
+  function monthCalendar() {
+    const bookings = (state.bootstrap?.recentBookings || []).filter(
+      (b) => b.status !== "CANCELLED" && b.status !== "NO_SHOW",
+    );
+    const cursor = state.calMonth;
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    const first = new Date(year, month, 1);
+    const startPad = (first.getDay() + 6) % 7;
+    const gridStart = new Date(year, month, 1 - startPad);
+    const today = new Date();
+    const label = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const palette = ["#3b82f6", "#8b5cf6", "#22c55e", "#f59e0b", "#ec4899", "#14b8a6"];
+    const soft = ["#e8f1ff", "#f3e8ff", "#e7f8ef", "#fff4e5", "#ffe8f0", "#e6f7f7"];
+    const ink = ["#1e3a8a", "#4c1d95", "#14532d", "#7c2d12", "#9d174d", "#115e59"];
+    const tone = (key: string) => {
+      let h = 0;
+      for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+      const i = h % palette.length;
+      return { solid: palette[i], soft: soft[i], text: ink[i] };
+    };
+    const sameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+    const cells: string[] = [];
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(gridStart);
+      date.setDate(gridStart.getDate() + i);
+      const inMonth = date.getMonth() === month;
+      const isToday = sameDay(date, today);
+      const dayItems = bookings
+        .filter((b) => sameDay(new Date(b.startsAt), date))
+        .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
+      const visible = dayItems.slice(0, 2);
+      const more = dayItems.length - visible.length;
+      cells.push(`<div class="cal-cell ${inMonth ? "" : "is-out"}">
+        <div class="cal-date ${isToday ? "is-today" : ""}">${date.getDate()}</div>
+        <div class="cal-events">
+          ${visible
+            .map((ev, idx) => {
+              const t = tone(ev.serviceName || ev.id);
+              if (idx === 0 && dayItems.length === 1) {
+                return `<button type="button" class="cal-banner" style="background:${t.solid}" data-booking-id="${escapeHtml(ev.id)}" title="${escapeHtml(ev.customerName)}">${escapeHtml(ev.serviceName)}</button>`;
+              }
+              return `<button type="button" class="cal-chip" style="background:${t.soft};color:${t.text}" data-booking-id="${escapeHtml(ev.id)}"><i style="background:${t.solid}"></i><span>${escapeHtml(ev.customerName)}</span></button>`;
+            })
+            .join("")}
+          ${more > 0 ? `<span class="cal-more">+${more}</span>` : ""}
+        </div>
+      </div>`);
+    }
+
+    const tz = state.bootstrap?.site.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
+
+    return `<section class="card cal-card">
+      <div class="cal-toolbar">
+        <div class="cal-nav">
+          <button type="button" class="btn btn-sm" id="calToday">Today</button>
+          <button type="button" class="btn btn-icon btn-sm" id="calPrev" aria-label="Previous month">‹</button>
+          <button type="button" class="btn btn-icon btn-sm" id="calNext" aria-label="Next month">›</button>
+          <h3 class="cal-title">${escapeHtml(label)}</h3>
+        </div>
+        <div class="cal-modes">
+          <span class="is-on">Month</span>
+          <span>Week</span>
+        </div>
+      </div>
+      <div class="cal-weekdays">${weekdays.map((d) => `<div>${d}</div>`).join("")}</div>
+      <div class="cal-grid">${cells.join("")}</div>
+      <div class="cal-foot">
+        <span class="cal-tz">🌐 ${escapeHtml(tz)}</span>
+        <a class="link-quiet" href="${api.APP_URL}/dashboard/bookings" target="_blank" rel="noreferrer">Open workspace →</a>
+      </div>
+    </section>`;
+  }
+
   function bookingsPreview() {
-    const bookings = (state.bootstrap?.recentBookings || []).slice(0, 6);
+    const bookings = (state.bootstrap?.recentBookings || []).slice(0, 4);
     return `<section class="card home-bookings-card">
       <div class="card-h-row">
-        ${cardTitle(icons.check, "Bookings")}
-        <a class="link-quiet" href="${api.APP_URL}/dashboard/bookings" target="_blank" rel="noreferrer">Open</a>
+        ${cardTitle(icons.check, "Recent")}
+        <a class="link-quiet" href="${api.APP_URL}/dashboard/bookings" target="_blank" rel="noreferrer">All</a>
       </div>
       ${
         bookings.length
           ? `<div class="home-list">
         ${bookings
           .map((b) => {
-            const meet =
-              b.meetingProvider === "zoom"
-                ? "Zoom"
-                : b.meetingProvider === "teams"
-                  ? "Teams"
-                  : b.meetingProvider === "google_calendar"
-                    ? "Calendar"
-                    : b.meetingProvider === "meet"
-                      ? "Meet"
-                      : null;
             return `<div class="home-booking">
             <div class="mini-meta">
               <b title="${escapeHtml(b.customerName)}">${escapeHtml(b.customerName)}</b>
-              <small title="${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}">${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}${
-                meet ? ` · ${meet}` : ""
-              }</small>
+              <small title="${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}">${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}</small>
             </div>
             <div class="home-booking-actions">
-              ${
-                b.meetingUrl
-                  ? `<a class="btn btn-sm btn-soft" href="${escapeHtml(b.meetingUrl)}" target="_blank" rel="noreferrer" title="Open meeting">${icons.video}</a>`
-                  : ""
-              }
               <em class="pill pill-muted">${escapeHtml(b.status)}</em>
               <button type="button" class="btn btn-sm" data-booking-id="${escapeHtml(b.id)}">Details</button>
             </div>
@@ -709,6 +770,7 @@ export async function boot(root: HTMLElement) {
           <a class="btn btn-ghost-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer">${iconLabel(icons.grid, "Dashboard")}</a>
         </div>
       </section>
+      ${monthCalendar()}
       <div class="home-columns">
         ${bookingsPreview()}
         ${eventsPreview()}
@@ -1315,6 +1377,19 @@ export async function boot(root: HTMLElement) {
         "noopener,noreferrer,width=520,height=720",
       );
       setStatus("Authorize in the new window — Designer stays open");
+    });
+    root.querySelector("#calToday")?.addEventListener("click", () => {
+      const n = new Date();
+      state.calMonth = new Date(n.getFullYear(), n.getMonth(), 1);
+      void render();
+    });
+    root.querySelector("#calPrev")?.addEventListener("click", () => {
+      state.calMonth = new Date(state.calMonth.getFullYear(), state.calMonth.getMonth() - 1, 1);
+      void render();
+    });
+    root.querySelector("#calNext")?.addEventListener("click", () => {
+      state.calMonth = new Date(state.calMonth.getFullYear(), state.calMonth.getMonth() + 1, 1);
+      void render();
     });
     root.querySelector("#gotoCreate")?.addEventListener("click", () => {
       state.tab = "create";

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { CalendarDays, List, X } from "lucide-react";
+import { BookingsMonthCalendar } from "@/components/admin/bookings-month-calendar";
 import { formatMoney } from "@/lib/utils";
 
 export type BookingRow = {
@@ -76,6 +77,7 @@ export function BookingsBoard({
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<"calendar" | "list">("calendar");
   const now = useMemo(() => new Date(), []);
 
   const filtered = useMemo(() => {
@@ -178,6 +180,42 @@ export function BookingsBoard({
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex rounded-full border border-[var(--ln)] bg-[var(--sf)] p-0.5">
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition ${
+              view === "calendar" ? "bg-[var(--pn)] shadow-sm" : ""
+            }`}
+            style={view !== "calendar" ? { color: "var(--mut)" } : undefined}
+            onClick={() => setView("calendar")}
+          >
+            <CalendarDays size={14} />
+            Calendar
+          </button>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition ${
+              view === "list" ? "bg-[var(--pn)] shadow-sm" : ""
+            }`}
+            style={view !== "list" ? { color: "var(--mut)" } : undefined}
+            onClick={() => setView("list")}
+          >
+            <List size={14} />
+            List
+          </button>
+        </div>
+      </div>
+
+      {view === "calendar" ? (
+        <BookingsMonthCalendar
+          rows={rows}
+          timezone={rows[0]?.timezone}
+          onSelect={(b) => setSelectedId(b.id)}
+        />
+      ) : null}
+
+      {view === "list" ? (
       <section className="sw-card overflow-hidden !p-0">
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--ln)] px-4 py-3">
           <div className="flex flex-wrap gap-1.5">
@@ -359,6 +397,7 @@ export function BookingsBoard({
           </div>
         </div>
       </section>
+      ) : null}
 
       {selected ? (
         <BookingDrawer booking={selected} onClose={() => setSelectedId(null)} />

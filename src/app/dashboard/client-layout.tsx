@@ -38,7 +38,7 @@ const NAV_BASE = [
 
 const TITLES: Record<string, [string, string]> = {
   "/dashboard": ["Overview", "Bookings, revenue and what’s coming up"],
-  "/dashboard/bookings": ["Bookings", "Customer details, deposits, Meet & Zoom links"],
+  "/dashboard/bookings": ["Bookings", "Month calendar, customer details, deposits & meeting links"],
   "/dashboard/services": ["Events", "Edit events, pricing, and performance reports"],
   "/dashboard/staff": ["Team", "People shown under Who on your booking calendar"],
   "/dashboard/ai-chat": ["Chat", "Visitor calendar Q&A analytics (BETA)"],

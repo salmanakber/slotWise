@@ -50,8 +50,13 @@ export function AdminShell({
   const { data: session } = useSession();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [brand, setBrand] = useState<SiteThemeTokens | null>(null);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const sigRef = useRef("");
   const previewingRef = useRef(false);
+
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("sw-theme");
@@ -99,7 +104,8 @@ export function AdminShell({
     };
 
     if (!onBrandingPage) loadBrand();
-    const poll = window.setInterval(loadBrand, 5000);
+    // Light poll — was 5s and competed with every navigation; theme rarely changes
+    const poll = window.setInterval(loadBrand, 60_000);
     const onFocus = () => loadBrand();
     const onBrand = (e: Event) => {
       const raw = (e as CustomEvent).detail as
@@ -201,8 +207,17 @@ export function AdminShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 aria-current={active ? "page" : undefined}
-                className={cn("sw-nav-item", active && "is-active")}
+                aria-busy={pendingHref === item.href}
+                className={cn(
+                  "sw-nav-item",
+                  active && "is-active",
+                  pendingHref === item.href && "opacity-70",
+                )}
+                onClick={() => {
+                  if (!active) setPendingHref(item.href);
+                }}
               >
                 <span className="sw-nav-ico" aria-hidden>
                   {item.icon}

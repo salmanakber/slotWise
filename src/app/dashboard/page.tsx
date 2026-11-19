@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { formatMoney } from "@/lib/utils";
 import { DEMO_PUBLIC_KEY } from "@/lib/constants";
-import { getDemoSite, getSiteOverviewStats } from "@/lib/sites";
+import { getOwnerSiteOrNull } from "@/lib/site-admin";
+import { getSiteBookings, getSiteOverviewStats } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,13 @@ function statusClass(status: string) {
 }
 
 export default async function DashboardOverviewPage() {
-  const site = await getDemoSite();
-  const stats = site ? await getSiteOverviewStats(site.id).catch(() => null) : null;
+  const site = await getOwnerSiteOrNull();
+  const [stats, recentBookings] = site
+    ? await Promise.all([
+        getSiteOverviewStats(site.id).catch(() => null),
+        getSiteBookings(site.id, 40).catch(() => []),
+      ])
+    : [null, []];
   const currency = site?.currency ?? "USD";
 
   const kpis = stats
@@ -56,17 +62,16 @@ export default async function DashboardOverviewPage() {
   const maxDay = Math.max(1, ...(stats?.last14Days.map((d) => d.bookings) ?? [1]));
   const maxService = Math.max(1, ...(stats?.topServices.map((s) => s.revenueCents) ?? [1]));
 
-  const today =
-    site?.bookings.filter((b) => {
-      const d = new Date(b.startsAt);
-      const now = new Date();
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate() &&
-        b.status !== "CANCELLED"
-      );
-    }) ?? [];
+  const today = recentBookings.filter((b) => {
+    const d = new Date(b.startsAt);
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate() &&
+      b.status !== "CANCELLED"
+    );
+  });
 
   return (
     <div className="grid gap-3.5">

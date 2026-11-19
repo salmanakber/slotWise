@@ -24,7 +24,7 @@ const siteInclude = {
   },
   bookings: {
     orderBy: { startsAt: "desc" as const },
-    take: 8,
+    take: 120,
     select: {
       id: true,
       reference: true,

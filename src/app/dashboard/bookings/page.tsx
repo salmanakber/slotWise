@@ -1,10 +1,11 @@
 import { BookingsBoard } from "@/components/admin/bookings-board";
-import { getDemoSite, getSiteBookings, getSiteOverviewStats } from "@/lib/sites";
+import { getOwnerSiteOrNull } from "@/lib/site-admin";
+import { getSiteBookings, getSiteOverviewStats } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";
 
 export default async function BookingsPage() {
-  const site = await getDemoSite();
+  const site = await getOwnerSiteOrNull();
   const [rows, stats] = site
     ? await Promise.all([
         getSiteBookings(site.id, 500).catch(() => []),
