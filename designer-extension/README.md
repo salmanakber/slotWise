@@ -20,7 +20,12 @@ npm install
 npm run bundle
 ```
 
-That writes **`designer-extension/bundle.zip`** next to this README (must be under **5 MB**).
+That writes next to this README:
+
+| File | Use |
+|------|-----|
+| **`bundle.zip`** | Public Designer Extension upload (must be under **5 MB**) |
+| **`source-maps.zip`** | **Private** source-map artifact for Marketplace review (do **not** put inside `bundle.zip`) |
 
 `npm run bundle` already sets `VITE_SLOTWISE_URL` to `https://slotwise.hindaralabs.com`. Override if needed:
 
@@ -38,9 +43,37 @@ VITE_SLOTWISE_URL=https://slotwise.hindaralabs.com npm run bundle
 2. Select **Slotwise**
 3. Click **Publish extension version**
 4. Upload **`designer-extension/bundle.zip`** from your project (not from Downloads unless you copied it there yourself)
-5. Add short release notes → confirm
+5. When the form asks for **source maps**, upload **`designer-extension/source-maps.zip`** as the private artifact (same build as the bundle)
+6. Add short release notes → confirm
 
 Then in Designer: Apps → Slotwise → **Launch App** (not “Launch development app”).
+
+### Marketplace preflight — source maps
+
+Review fails with *“Generated code is not traceable…”* if maps are missing or from a different build.
+
+- Maps are **version 3**, produced by the same `npm run bundle` that creates `bundle.zip`
+- Upload `source-maps.zip` as the **private** source-map artifact
+- Do **not** ship `.map` files inside the public `bundle.zip` (the prepare script strips them)
+
+### Marketplace preflight — runtime files to pin
+
+A **runtime** is JS your app loads on the **published Webflow site**, outside `bundle.zip`.
+
+**Pin this entry runtime** (hosted Custom Code / install script):
+
+| Runtime URL | Notes |
+|-------------|--------|
+| `https://slotwise.hindaralabs.com/embed/widget.js` | Host-page embed loader. Registers via Webflow hosted scripts API with integrity. **No child scripts** — it only creates an iframe. |
+
+**How to verify on your published test page**
+
+1. Open the published test page in a new tab  
+2. DevTools → **Network** → filter **JS** → reload and open the booking widget once  
+3. You should see `widget.js` as the host-page entry (if Custom Code / registered script is applied)  
+4. Inside the booking **iframe** you will also see Next.js chunks from `slotwise.hindaralabs.com` (`/_next/static/...`). Those run **inside the iframe document**, not as host-page children of `widget.js`. If the review form asks only for host-page runtimes created by your install script, pin **`widget.js` only**. If it asks for every JS the visitor loads while using the app, list the iframe Next chunks from that Network panel as separate runtime URLs for that test package.
+
+**Install path note:** Preferred Marketplace install places a canvas **iframe** (`/book/{publicKey}?embed=1`) and does not require pasting a script. `widget.js` is the runtime when the hosted/registered script path is used.
 
 #### Why `scp` looked like the “same” old bundle
 

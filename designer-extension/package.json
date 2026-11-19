@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "bundle": "VITE_SLOTWISE_URL=${VITE_SLOTWISE_URL:-https://slotwise.hindaralabs.com} vite build && npx --yes @webflow/webflow-cli extension bundle",
+    "bundle": "VITE_SLOTWISE_URL=${VITE_SLOTWISE_URL:-https://slotwise.hindaralabs.com} vite build && node ./scripts/prepare-review-artifacts.mjs && npx --yes @webflow/webflow-cli extension bundle",
     "serve": "npx --yes @webflow/webflow-cli extension serve"
   },
   "dependencies": {
