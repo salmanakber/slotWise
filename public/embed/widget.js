@@ -30,18 +30,32 @@
   function applyFrameWidth(iframe, calendarStyle) {
     if (!iframe) return;
     var wide = calendarStyle === "HORIZONTAL";
+    var heightMatch = (iframe.getAttribute("style") || "").match(
+      /(?:^|;)\s*height\s*:\s*([^;]+)/i,
+    );
+    var height =
+      iframe.style.height ||
+      (heightMatch && heightMatch[1] ? heightMatch[1] : "") ||
+      (wide ? "720px" : "640px");
+    height = String(height).trim() || (wide ? "720px" : "640px");
     if (wide) {
       iframe.classList.add("is-wide");
-      iframe.style.width = "70%";
-      iframe.style.maxWidth = "70%";
-      iframe.style.marginLeft = "auto";
-      iframe.style.marginRight = "auto";
+      iframe.setAttribute(
+        "style",
+        "display:block;width:70%;max-width:70%;margin-left:auto;margin-right:auto;height:" +
+          height +
+          ";min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;",
+      );
+      iframe.setAttribute("data-calendar-style", "HORIZONTAL");
     } else {
       iframe.classList.remove("is-wide");
-      iframe.style.width = "100%";
-      iframe.style.maxWidth = "29.2rem";
-      iframe.style.marginLeft = "auto";
-      iframe.style.marginRight = "auto";
+      iframe.setAttribute(
+        "style",
+        "display:block;width:100%;max-width:29.2rem;margin-left:auto;margin-right:auto;height:" +
+          height +
+          ";min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;",
+      );
+      if (calendarStyle) iframe.setAttribute("data-calendar-style", calendarStyle);
     }
   }
 

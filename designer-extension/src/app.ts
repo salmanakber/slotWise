@@ -432,8 +432,14 @@ export async function boot(root: HTMLElement) {
     await refreshMode();
     void render();
     try {
-      await insertBookingIframe(state.bootstrap.site.publicKey);
-      setStatus("Widget placed on canvas");
+      const calendarStyle =
+        state.branding?.calendarStyle || state.bootstrap.site?.calendarStyle || undefined;
+      await insertBookingIframe(state.bootstrap.site.publicKey, { calendarStyle });
+      setStatus(
+        calendarStyle === "HORIZONTAL"
+          ? "Widget placed at 70% width (Wide board)"
+          : "Widget placed on canvas",
+      );
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Embed failed", false);
       await refreshMode();
@@ -1341,11 +1347,16 @@ export async function boot(root: HTMLElement) {
     </section>
     <section class="card">
       ${cardTitle(icons.layout, "Canvas")}
-      <p class="lead">Insert a live booking iframe.</p>
+      <p class="lead">Insert a live booking iframe. Width follows Branding → Calendar style (Wide board = 70%).</p>
       <div class="seg" id="canvasWideSeg">
-        <button type="button" class="btn ${!state.canvasWide ? "btn-primary" : ""}" data-canvas-wide="0">${iconLabel(icons.phone, "Mobile width")}</button>
-        <button type="button" class="btn ${state.canvasWide ? "btn-primary" : ""}" data-canvas-wide="1">${iconLabel(icons.expand, "Full width")}</button>
+        <button type="button" class="btn ${!state.canvasWide && state.branding?.calendarStyle !== "HORIZONTAL" ? "btn-primary" : ""}" data-canvas-wide="0">${iconLabel(icons.phone, "Mobile width")}</button>
+        <button type="button" class="btn ${state.canvasWide || state.branding?.calendarStyle === "HORIZONTAL" ? "btn-primary" : ""}" data-canvas-wide="1">${iconLabel(icons.expand, "Wide 70%")}</button>
       </div>
+      ${
+        state.branding?.calendarStyle === "HORIZONTAL"
+          ? `<p class="lead" style="margin-top:6px">Wide board is on — new embeds use <b>70%</b> width. Re-place the widget if an old embed still shows 29.2rem.</p>`
+          : ""
+      }
       <button type="button" class="btn btn-quiet btn-block" id="embedBtn2" ${!state.canDesign ? "disabled" : ""} style="margin-top:8px">
         ${iconLabel(icons.layout, state.canDesign ? "Add booking to page" : "Switch to Design mode first")}
       </button>

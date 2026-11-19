@@ -78,11 +78,19 @@ export function subscribeMode(cb: (mode: string | null) => void) {
   }
 }
 
+export type InsertBookingOptions = {
+  /** From workspace branding — HORIZONTAL (Wide board) forces 70% iframe width. */
+  calendarStyle?: string | null;
+};
+
 /**
  * Direct canvas embed: insert an iframe pointing at the live booking widget.
  * Requires Webflow **Design** mode (not Build / Preview / Comment).
  */
-export async function insertBookingIframe(publicKey: string) {
+export async function insertBookingIframe(
+  publicKey: string,
+  options?: InsertBookingOptions,
+) {
   const api = wf();
   if (!api?.getSelectedElement || !api?.elementPresets?.DOM) {
     throw new Error("Open this from Webflow Designer to embed on canvas");
@@ -110,13 +118,21 @@ export async function insertBookingIframe(publicKey: string) {
   if (!parent?.append) throw new Error("Select a section or container on the canvas first");
 
   const src = `${APP_URL}/book/${encodeURIComponent(publicKey)}?embed=1`;
-  const wide =
+  const calendarStyle = options?.calendarStyle || null;
+  const canvasWide =
     typeof localStorage !== "undefined" && localStorage.getItem("slotwise-canvas-wide") === "1";
+  // Wide board → always 70%. Day/Week strip → compact. Unknown → Designer toggle.
+  const useWide =
+    calendarStyle === "HORIZONTAL"
+      ? true
+      : calendarStyle === "MONTH" || calendarStyle === "WEEK"
+        ? false
+        : canvasWide;
+
   const wrapStyle =
     "width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;display:block;";
   // Start short; widget.js / postMessage grows height. Avoids a tall empty box after uninstall.
-  // Wide board uses 70% customer iframe width; compact styles stay ~mobile card width.
-  const frameStyle = wide
+  const frameStyle = useWide
     ? "display:block;width:70%;max-width:70%;margin-left:auto;margin-right:auto;height:720px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
     : "display:block;width:100%;max-width:29.2rem;margin-left:auto;margin-right:auto;height:640px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
 
@@ -126,6 +142,7 @@ export async function insertBookingIframe(publicKey: string) {
       root.setTag("div");
       root.setAttribute("data-slotwise-widget", publicKey);
       root.setAttribute("data-site", publicKey);
+      if (calendarStyle) root.setAttribute("data-calendar-style", calendarStyle);
       root.setAttribute("style", wrapStyle);
       const frame = root.append(api.elementPresets.DOM);
       frame.setTag("iframe");
@@ -134,12 +151,14 @@ export async function insertBookingIframe(publicKey: string) {
       frame.setAttribute("loading", "lazy");
       frame.setAttribute("scrolling", "no");
       frame.setAttribute("style", frameStyle);
+      if (calendarStyle) frame.setAttribute("data-calendar-style", calendarStyle);
       await parent.append(root);
     } else {
       const wrap = await parent.append(api.elementPresets.DOM);
       await wrap.setTag("div");
       await wrap.setAttribute("data-slotwise-widget", publicKey);
       await wrap.setAttribute("data-site", publicKey);
+      if (calendarStyle) await wrap.setAttribute("data-calendar-style", calendarStyle);
       await wrap.setAttribute("style", wrapStyle);
       const iframe = await wrap.append(api.elementPresets.DOM);
       await iframe.setTag("iframe");
@@ -148,6 +167,7 @@ export async function insertBookingIframe(publicKey: string) {
       await iframe.setAttribute("loading", "lazy");
       await iframe.setAttribute("scrolling", "no");
       await iframe.setAttribute("style", frameStyle);
+      if (calendarStyle) await iframe.setAttribute("data-calendar-style", calendarStyle);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -159,7 +179,12 @@ export async function insertBookingIframe(publicKey: string) {
     throw e instanceof Error ? e : new Error(msg);
   }
 
-  await notify("Success", "Booking widget placed on the canvas");
+  await notify(
+    "Success",
+    useWide
+      ? "Booking widget placed (Wide board · 70% width)"
+      : "Booking widget placed on the canvas",
+  );
 }
 
 /**
