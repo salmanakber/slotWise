@@ -5,28 +5,25 @@ import { appOrigin } from "@/lib/webflow";
 export const INTEGRATION_PROVIDERS = [
   "google_calendar",
   "outlook",
-  "apple_calendar",
   "zapier",
   "zoom",
   "meet",
   "teams",
-  "hubspot",
   "mailchimp",
 ] as const;
 
 export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
 
-export type OAuthProvider = "google" | "microsoft" | "zoom" | "hubspot" | "mailchimp";
+export type OAuthProvider = "google" | "microsoft" | "zoom" | "mailchimp";
 
 /** Providers that use a credentials form instead of browser OAuth. */
-export const CREDENTIAL_PROVIDERS = ["apple_calendar", "hubspot"] as const;
+export const CREDENTIAL_PROVIDERS = [] as const;
 
 /** Map SiteIntegration.provider → OAuth app family. */
 export function oauthFamily(provider: IntegrationProvider): OAuthProvider | null {
   if (provider === "google_calendar" || provider === "meet") return "google";
   if (provider === "outlook" || provider === "teams") return "microsoft";
   if (provider === "zoom") return "zoom";
-  if (provider === "hubspot") return "hubspot";
   if (provider === "mailchimp") return "mailchimp";
   return null;
 }
@@ -35,12 +32,10 @@ export function normalizeIntegrationProvider(raw: string): IntegrationProvider |
   const p = raw.trim().toLowerCase();
   if (p === "google" || p === "google_calendar") return "google_calendar";
   if (p === "microsoft" || p === "outlook") return "outlook";
-  if (p === "apple" || p === "apple_calendar" || p === "icloud") return "apple_calendar";
   if (p === "zapier" || p === "make") return "zapier";
   if (p === "zoom") return "zoom";
   if (p === "meet" || p === "google_meet") return "meet";
   if (p === "teams" || p === "microsoft_teams") return "teams";
-  if (p === "hubspot") return "hubspot";
   if (p === "mailchimp") return "mailchimp";
   return null;
 }
@@ -84,7 +79,6 @@ export function decodeOAuthState(state: string): { siteId: string; provider: Int
 export async function platformKeysConfigured(provider: IntegrationProvider) {
   const secrets = await getPlatformSecrets();
   const family = oauthFamily(provider);
-  if (provider === "apple_calendar") return true; // Apple ID + app-specific password
   if (family === "google") {
     return Boolean(secrets.googleClientId?.trim() && secrets.googleClientSecret?.trim());
   }
@@ -94,16 +88,13 @@ export async function platformKeysConfigured(provider: IntegrationProvider) {
   if (family === "zoom") {
     return Boolean(secrets.zoomClientId?.trim() && secrets.zoomClientSecret?.trim());
   }
-  // HubSpot: site owners can paste a Private App / access token without platform OAuth keys.
-  // Platform Client ID/Secret are optional (CLI OAuth app) for one-click Connect.
-  if (family === "hubspot") return true;
   if (family === "mailchimp") {
     return Boolean(
       (secrets as { mailchimpClientId?: string | null }).mailchimpClientId?.trim() &&
         (secrets as { mailchimpClientSecret?: string | null }).mailchimpClientSecret?.trim(),
     );
   }
-  return true; // zapier / credential providers
+  return true; // zapier
 }
 
 export async function buildAuthorizeUrl(siteId: string, provider: IntegrationProvider) {
@@ -160,19 +151,6 @@ export async function buildAuthorizeUrl(siteId: string, provider: IntegrationPro
           ]
         : ["offline_access", "Calendars.ReadWrite", "User.Read"];
     url.searchParams.set("scope", scopes.join(" "));
-    url.searchParams.set("state", state);
-    return url.toString();
-  }
-
-  if (family === "hubspot") {
-    const clientId = (secrets as { hubspotClientId?: string | null }).hubspotClientId?.trim();
-    const clientSecret = (secrets as { hubspotClientSecret?: string | null }).hubspotClientSecret?.trim();
-    if (!clientId || !clientSecret) throw new Error("HubSpot Client ID/Secret missing");
-    const redirectUri = oauthRedirectUri("hubspot");
-    const url = new URL("https://app.hubspot.com/oauth/authorize");
-    url.searchParams.set("client_id", clientId);
-    url.searchParams.set("redirect_uri", redirectUri);
-    url.searchParams.set("scope", "crm.objects.contacts.write crm.objects.contacts.read oauth");
     url.searchParams.set("state", state);
     return url.toString();
   }
@@ -310,37 +288,6 @@ export async function exchangeOAuthCode(
       refreshToken: typeof data.refresh_token === "string" ? data.refresh_token : null,
       expiresIn: typeof data.expires_in === "number" ? data.expires_in : null,
       email,
-      raw: data,
-    };
-  }
-
-  if (family === "hubspot") {
-    const clientId = (secrets as { hubspotClientId?: string | null }).hubspotClientId?.trim() || "";
-    const clientSecret =
-      (secrets as { hubspotClientSecret?: string | null }).hubspotClientSecret?.trim() || "";
-    const redirectUri = oauthRedirectUri("hubspot");
-    const res = await fetch("https://api.hubapi.com/oauth/v1/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        code,
-      }),
-    });
-    const data = (await res.json()) as Record<string, unknown>;
-    if (!res.ok || !data.access_token) {
-      throw new Error(
-        typeof data.message === "string" ? data.message : "HubSpot token exchange failed",
-      );
-    }
-    return {
-      accessToken: String(data.access_token),
-      refreshToken: typeof data.refresh_token === "string" ? data.refresh_token : null,
-      expiresIn: typeof data.expires_in === "number" ? data.expires_in : null,
-      email: null,
       raw: data,
     };
   }
@@ -564,9 +511,6 @@ export async function refreshOAuthAccessToken(
 
 export function missingKeysHint(provider: IntegrationProvider) {
   if (provider === "zapier") return "Coming soon";
-  if (provider === "apple_calendar") {
-    return "Add your Apple ID and an app-specific password (appleid.apple.com)";
-  }
   const family = oauthFamily(provider);
   if (family === "google") return "Google Calendar isn’t set up for your account yet";
   if (family === "microsoft") {
@@ -575,9 +519,6 @@ export function missingKeysHint(provider: IntegrationProvider) {
       : "Outlook isn’t set up for your account yet";
   }
   if (family === "zoom") return "Zoom isn’t set up for your account yet";
-  if (family === "hubspot") {
-    return "Add a HubSpot Private App access token (or connect via OAuth if platform keys are set)";
-  }
   if (family === "mailchimp") return "Mailchimp isn’t set up for your account yet";
   return "This connection isn’t available yet";
 }

@@ -177,11 +177,9 @@ export default async function ManageBookingPage({
                       ? "Zoom"
                       : booking.meetingProvider === "teams"
                         ? "Microsoft Teams"
-                        : booking.meetingProvider === "apple_calendar"
-                          ? "Apple Calendar"
-                          : booking.meetingProvider === "google_calendar"
-                            ? "Google Calendar"
-                            : "Google Meet"
+                        : booking.meetingProvider === "google_calendar"
+                          ? "Google Calendar"
+                          : "Google Meet"
                   }
                 />
               ) : null}
@@ -227,7 +225,7 @@ export default async function ManageBookingPage({
                   {booking.meetingUrl
                     ? "Open the link below on your phone or laptop."
                     : meetingTools.length
-                      ? "Optional — attach Apple Calendar, Google, Zoom, or Teams to this booking."
+                      ? "Optional — attach Google Calendar, Zoom, Meet, or Teams to this booking."
                       : "The host hasn’t connected partner apps yet. Your booking is still confirmed."}
                 </p>
 

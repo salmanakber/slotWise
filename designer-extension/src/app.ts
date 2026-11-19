@@ -550,13 +550,11 @@ export async function boot(root: HTMLElement) {
                 ? "Zoom"
                 : b.meetingProvider === "teams"
                   ? "Teams"
-                  : b.meetingProvider === "apple_calendar"
-                    ? "Apple"
-                    : b.meetingProvider === "google_calendar"
-                      ? "Calendar"
-                      : b.meetingProvider === "meet"
-                        ? "Meet"
-                        : null;
+                  : b.meetingProvider === "google_calendar"
+                    ? "Calendar"
+                    : b.meetingProvider === "meet"
+                      ? "Meet"
+                      : null;
             return `<div class="home-booking">
             <div class="mini-meta">
               <b title="${escapeHtml(b.customerName)}">${escapeHtml(b.customerName)}</b>

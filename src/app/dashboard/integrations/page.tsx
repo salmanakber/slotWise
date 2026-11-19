@@ -32,58 +32,371 @@ type IntegrationsPayload = {
   providers: ProviderRow[];
 };
 
-const PROVIDER_META: Record<string, { label: string; blurb: string; credentials?: boolean }> = {
-  google_calendar: {
-    label: "Google Calendar",
-    blurb: "Keep bookings on your Google Calendar",
-  },
-  outlook: {
-    label: "Outlook",
-    blurb: "Keep bookings on Outlook / Microsoft 365",
-  },
-  apple_calendar: {
-    label: "Apple Calendar / iCloud",
-    blurb: "Verified CalDAV sync — Apple ID + app-specific password (not your normal password)",
-    credentials: true,
-  },
-  teams: {
-    label: "Microsoft Teams",
-    blurb: "Create Teams meeting links for online bookings",
-  },
-  zoom: {
-    label: "Zoom",
-    blurb: "Add a Zoom link to online bookings",
-  },
-  meet: {
-    label: "Google Meet",
-    blurb: "Add a Meet link to online bookings",
-  },
-  hubspot: {
-    label: "HubSpot",
-    blurb: "Sync booking contacts to your HubSpot — paste a Private App access token",
-    credentials: true,
-  },
-  mailchimp: {
-    label: "Mailchimp",
-    blurb: "Connect with Mailchimp — one-click OAuth, no API key paste",
-  },
-  zapier: {
-    label: "Zapier",
-    blurb: "Send new bookings into your other apps automatically",
-  },
+type ProviderMeta = {
+  label: string;
+  blurb: string;
+  color: string;
+  logo: React.ReactNode;
+  logoLg: React.ReactNode;
 };
 
 const PROVIDER_ORDER = [
   "google_calendar",
-  "apple_calendar",
   "outlook",
   "meet",
   "teams",
   "zoom",
-  "hubspot",
   "mailchimp",
   "zapier",
 ] as const;
+
+function LogoMark({
+  bg,
+  size = 48,
+  children,
+}: {
+  bg: string;
+  size?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className="grid place-items-center rounded-[22%] shadow-[inset_0_0_0_1px_rgba(255,255,255,.14),0_10px_28px_rgba(0,0,0,.12)]"
+      style={{ background: bg, width: size, height: size }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function GoogleCalSvg({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+      <path fill="#4285F4" d="M5 4h14v3.2H5z" />
+      <path fill="#EA4335" d="M16.5 7.2H19V18a2 2 0 0 1-2 2h-.5V7.2z" />
+      <path fill="#34A853" d="M5 7.2h2.5V20H7a2 2 0 0 1-2-2V7.2z" />
+      <path fill="#FBBC04" d="M7.5 16.5H16.5V20H7.5z" />
+      <text x="12" y="14.8" textAnchor="middle" fontSize="7.5" fontWeight="800" fill="#1a73e8">
+        31
+      </text>
+    </svg>
+  );
+}
+
+const PROVIDER_META: Record<string, ProviderMeta> = {
+  google_calendar: {
+    label: "Google Calendar",
+    blurb: "Sync bookings to your Google Calendar",
+    color: "#4285F4",
+    logo: (
+      <LogoMark bg="#fff">
+        <GoogleCalSvg />
+      </LogoMark>
+    ),
+    logoLg: (
+      <LogoMark bg="#fff" size={88}>
+        <GoogleCalSvg size={48} />
+      </LogoMark>
+    ),
+  },
+  outlook: {
+    label: "Outlook",
+    blurb: "Keep bookings on Outlook / Microsoft 365",
+    color: "#0078D4",
+    logo: (
+      <LogoMark bg="#0078D4">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M3 6.5 12 4l9 2.5v11L12 20.5 3 17.5v-11zm9 1.2c-2.2 0-4 1.6-4 3.6s1.8 3.6 4 3.6 4-1.6 4-3.6-1.8-3.6-4-3.6z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+    logoLg: (
+      <LogoMark bg="#0078D4" size={88}>
+        <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M3 6.5 12 4l9 2.5v11L12 20.5 3 17.5v-11zm9 1.2c-2.2 0-4 1.6-4 3.6s1.8 3.6 4 3.6 4-1.6 4-3.6-1.8-3.6-4-3.6z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+  },
+  meet: {
+    label: "Google Meet",
+    blurb: "Add a Meet link to online bookings",
+    color: "#00897B",
+    logo: (
+      <LogoMark bg="#00897B">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M7 8.5h6.5a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 14v-4A1.5 1.5 0 0 1 7 8.5zm9.2 1.2 2.5-1.5c.4-.2.8.1.8.5v6.6c0 .4-.4.7-.8.5l-2.5-1.5v-4.6z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+    logoLg: (
+      <LogoMark bg="#00897B" size={88}>
+        <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M7 8.5h6.5a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 14v-4A1.5 1.5 0 0 1 7 8.5zm9.2 1.2 2.5-1.5c.4-.2.8.1.8.5v6.6c0 .4-.4.7-.8.5l-2.5-1.5v-4.6z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+  },
+  teams: {
+    label: "Microsoft Teams",
+    blurb: "Create Teams meeting links for bookings",
+    color: "#6264A7",
+    logo: (
+      <LogoMark bg="#6264A7">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M8.2 7.2h4.2c.7 0 1.2.5 1.2 1.2v7.2c0 .7-.5 1.2-1.2 1.2H8.2c-.7 0-1.2-.5-1.2-1.2V8.4c0-.7.5-1.2 1.2-1.2zm6.4 2.2h2.4c.6 0 1 .4 1 1v4.8c0 .9-.7 1.6-1.6 1.6h-1.8V9.4zM10.3 5.4a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+    logoLg: (
+      <LogoMark bg="#6264A7" size={88}>
+        <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M8.2 7.2h4.2c.7 0 1.2.5 1.2 1.2v7.2c0 .7-.5 1.2-1.2 1.2H8.2c-.7 0-1.2-.5-1.2-1.2V8.4c0-.7.5-1.2 1.2-1.2zm6.4 2.2h2.4c.6 0 1 .4 1 1v4.8c0 .9-.7 1.6-1.6 1.6h-1.8V9.4zM10.3 5.4a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+  },
+  zoom: {
+    label: "Zoom",
+    blurb: "Add a Zoom link to online bookings",
+    color: "#2D8CFF",
+    logo: (
+      <LogoMark bg="#2D8CFF">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M6.2 8.2h6.1c.9 0 1.6.7 1.6 1.6v4.4c0 .9-.7 1.6-1.6 1.6H6.2c-.9 0-1.6-.7-1.6-1.6V9.8c0-.9.7-1.6 1.6-1.6zm8.3 1.5 3.6-2.1c.4-.2.9.1.9.5v7.8c0 .5-.5.8-.9.5l-3.6-2.1v-4.6z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+    logoLg: (
+      <LogoMark bg="#2D8CFF" size={88}>
+        <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M6.2 8.2h6.1c.9 0 1.6.7 1.6 1.6v4.4c0 .9-.7 1.6-1.6 1.6H6.2c-.9 0-1.6-.7-1.6-1.6V9.8c0-.9.7-1.6 1.6-1.6zm8.3 1.5 3.6-2.1c.4-.2.9.1.9.5v7.8c0 .5-.5.8-.9.5l-3.6-2.1v-4.6z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+  },
+  mailchimp: {
+    label: "Mailchimp",
+    blurb: "Add bookers to your Mailchimp audience",
+    color: "#FFE01B",
+    logo: (
+      <LogoMark bg="#FFE01B">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#241C15"
+            d="M12 4c-2.2 0-4 1.4-4.4 3.3C5.8 7.6 4.5 9 4.5 10.8c0 1.4.8 2.6 2 3.2v2.5c0 .8.7 1.5 1.5 1.5h8c.8 0 1.5-.7 1.5-1.5v-2.5c1.2-.6 2-1.8 2-3.2 0-1.8-1.3-3.2-3.1-3.5C16 5.4 14.2 4 12 4zm-1.2 11.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4zm2.4 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+    logoLg: (
+      <LogoMark bg="#FFE01B" size={88}>
+        <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#241C15"
+            d="M12 4c-2.2 0-4 1.4-4.4 3.3C5.8 7.6 4.5 9 4.5 10.8c0 1.4.8 2.6 2 3.2v2.5c0 .8.7 1.5 1.5 1.5h8c.8 0 1.5-.7 1.5-1.5v-2.5c1.2-.6 2-1.8 2-3.2 0-1.8-1.3-3.2-3.1-3.5C16 5.4 14.2 4 12 4zm-1.2 11.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4zm2.4 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+  },
+  zapier: {
+    label: "Zapier",
+    blurb: "Send bookings into your other apps",
+    color: "#FF4A00",
+    logo: (
+      <LogoMark bg="#FF4A00">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M12 2.5 13.8 9H20l-5.2 3.6L16.6 19 12 15.8 7.4 19l1.8-6.4L4 9h6.2L12 2.5z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+    logoLg: (
+      <LogoMark bg="#FF4A00" size={88}>
+        <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden>
+          <path
+            fill="#fff"
+            d="M12 2.5 13.8 9H20l-5.2 3.6L16.6 19 12 15.8 7.4 19l1.8-6.4L4 9h6.2L12 2.5z"
+          />
+        </svg>
+      </LogoMark>
+    ),
+  },
+};
+
+function ModalShell({
+  open,
+  onClose,
+  children,
+  labelledBy,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  labelledBy: string;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[3px]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={labelledBy}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[420px] overflow-hidden rounded-[28px] border border-[var(--ln)] bg-[var(--pn)] shadow-[0_40px_100px_rgba(0,0,0,.35)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SuccessModal({
+  open,
+  title,
+  body,
+  logo,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  body: string;
+  logo?: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <ModalShell open={open} onClose={onClose} labelledBy="sw-int-success-title">
+      <div className="relative px-7 pb-7 pt-8 text-center">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-80"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 100% at 50% 0%, color-mix(in srgb, #178a58 22%, transparent), transparent)",
+          }}
+        />
+        <div className="relative mx-auto flex justify-center">{logo}</div>
+        <div
+          className="relative mx-auto mt-[-14px] grid h-9 w-9 place-items-center rounded-full border-2 border-[var(--pn)]"
+          style={{ background: "#178a58" }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M20 6 9 17l-5-5"
+              stroke="#fff"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <h2 id="sw-int-success-title" className="relative mt-4 text-[1.4rem] font-extrabold tracking-tight">
+          {title}
+        </h2>
+        <p className="relative mt-2 text-[13.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
+          {body}
+        </p>
+        <button type="button" className="sw-btn sw-btn-primary relative mt-6 w-full justify-center" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function ConnectModal({
+  open,
+  meta,
+  busy,
+  error,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  meta: ProviderMeta | null;
+  busy: boolean;
+  error: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!meta) return null;
+  return (
+    <ModalShell open={open} onClose={busy ? () => undefined : onClose} labelledBy="sw-int-connect-title">
+      <div className="relative overflow-hidden px-7 pb-7 pt-8 text-center">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-36"
+          style={{
+            background: `radial-gradient(ellipse 80% 120% at 50% 0%, color-mix(in srgb, ${meta.color} 28%, transparent), transparent)`,
+          }}
+        />
+        <div className="relative mx-auto flex justify-center">{meta.logoLg}</div>
+        <h2 id="sw-int-connect-title" className="relative mt-5 text-[1.45rem] font-extrabold tracking-tight">
+          Connect {meta.label}
+        </h2>
+        <p className="relative mx-auto mt-2 max-w-[32ch] text-[13.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
+          {meta.blurb}. You’ll be asked to sign in and approve access.
+        </p>
+        {error ? (
+          <p className="relative mt-3 text-[13px] font-semibold" style={{ color: "#c0392b" }} role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="relative mt-6 grid gap-2">
+          <button
+            type="button"
+            className="sw-btn sw-btn-primary w-full justify-center"
+            disabled={busy}
+            onClick={onConfirm}
+          >
+            {busy ? "Connecting…" : `Continue with ${meta.label}`}
+          </button>
+          <button type="button" className="sw-btn w-full justify-center" disabled={busy} onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
 
 export default function IntegrationsPage() {
   return (
@@ -104,91 +417,29 @@ export default function IntegrationsPage() {
 function IntegrationsClient() {
   const search = useSearchParams();
   const [data, setData] = useState<IntegrationsPayload | null>(null);
-  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [credProvider, setCredProvider] = useState<string | null>(null);
-  const [credAccount, setCredAccount] = useState("");
-  const [credSecret, setCredSecret] = useState("");
-  const [credError, setCredError] = useState("");
-  const [msgTone, setMsgTone] = useState<"ok" | "bad">("ok");
   const [ga4Id, setGa4Id] = useState("");
   const [pixelId, setPixelId] = useState("");
-  const [trackingMsg, setTrackingMsg] = useState("");
   const [trackingBusy, setTrackingBusy] = useState(false);
+  const [connectProvider, setConnectProvider] = useState<string | null>(null);
+  const [connectError, setConnectError] = useState("");
+  const [success, setSuccess] = useState<{
+    title: string;
+    body: string;
+    provider?: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/site/integrations");
     const json = await res.json();
     if (res.ok) setData(json);
-    else setMsg(json.error || "Could not load integrations");
+    else setError(json.error || "Could not load integrations");
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    const connected = search.get("connected");
-    const error = search.get("error");
-    if (connected) {
-      setMsgTone("ok");
-      setMsg(`Connected ${connected.replace(/_/g, " ")}`);
-    }
-    if (error) {
-      setMsgTone("bad");
-      const raw = decodeURIComponent(error);
-      if (/verification|tested|tester/i.test(raw)) {
-        setMsg(
-          "Google is still in testing mode. In Google Cloud → OAuth consent screen, add this Google account under Test users, then try Connect again.",
-        );
-      } else {
-        setMsg(`Connect failed: ${raw}`);
-      }
-    }
-  }, [search]);
-
-  async function saveCredentials(provider: string) {
-    setBusy(provider);
-    setMsg("");
-    setCredError("");
-    setMsgTone("ok");
-    try {
-      const res = await fetch("/api/site/integrations/credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider,
-          account: credAccount.trim() || undefined,
-          secret: credSecret.trim(),
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const err =
-          typeof json.error === "string" && json.error
-            ? json.error
-            : "Could not verify those credentials — check email and app-specific password.";
-        setCredError(err);
-        setMsgTone("bad");
-        setMsg(err);
-        throw new Error(err);
-      }
-      setCredProvider(null);
-      setCredAccount("");
-      setCredSecret("");
-      setCredError("");
-      setMsgTone("ok");
-      setMsg(`Connected ${provider.replace(/_/g, " ")}`);
-      await load();
-    } catch (e) {
-      const err = e instanceof Error ? e.message : "Could not save";
-      setCredError(err);
-      setMsgTone("bad");
-      setMsg(err);
-    } finally {
-      setBusy(null);
-    }
-  }
 
   useEffect(() => {
     void fetch("/api/site/branding", { cache: "no-store" })
@@ -201,9 +452,78 @@ function IntegrationsClient() {
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    const connected = search.get("connected");
+    const err = search.get("error");
+    if (connected) {
+      const label = PROVIDER_META[connected]?.label || connected.replace(/_/g, " ");
+      setSuccess({
+        title: `${label} connected`,
+        body: "You’re all set. New bookings can use this connection automatically.",
+        provider: connected,
+      });
+      window.history.replaceState({}, "", "/dashboard/integrations");
+    }
+    if (err) {
+      setError(decodeURIComponent(err));
+      window.history.replaceState({}, "", "/dashboard/integrations");
+    }
+  }, [search]);
+
+  async function runConnect(provider: string) {
+    setBusy(provider);
+    setConnectError("");
+    setError("");
+    try {
+      const res = await fetch("/api/site/integrations/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || json.hint || "Could not connect");
+      if (json.authorizeUrl) {
+        window.location.href = json.authorizeUrl;
+        return;
+      }
+      setConnectProvider(null);
+      await load();
+      const label = PROVIDER_META[provider]?.label || provider;
+      setSuccess({
+        title: `${label} connected`,
+        body: "You’re all set. New bookings can use this connection automatically.",
+        provider,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not connect";
+      setConnectError(msg);
+      setError(msg);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function disconnect(provider: string) {
+    setBusy(provider);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/site/integrations?provider=${encodeURIComponent(provider)}`,
+        { method: "DELETE" },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not disconnect");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not disconnect");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function saveTracking() {
     setTrackingBusy(true);
-    setTrackingMsg("");
+    setError("");
     try {
       const res = await fetch("/api/site/branding", {
         method: "PATCH",
@@ -214,63 +534,15 @@ function IntegrationsClient() {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Could not save tracking IDs");
-      setTrackingMsg("Tracking saved — IDs load on your public booking page.");
+      if (!res.ok) throw new Error(json.error || "Could not save");
+      setSuccess({
+        title: "Tracking saved",
+        body: "Google Analytics and Meta Pixel will load on your public booking page.",
+      });
     } catch (e) {
-      setTrackingMsg(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : "Could not save");
     } finally {
       setTrackingBusy(false);
-    }
-  }
-
-  async function connect(provider: string) {
-    if (PROVIDER_META[provider]?.credentials) {
-      setCredProvider(provider);
-      setCredError("");
-      setMsg("");
-      return;
-    }
-    setBusy(provider);
-    setMsg("");
-    try {
-      const res = await fetch("/api/site/integrations/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || json.hint || "Connect failed");
-      }
-      if (json.authorizeUrl) {
-        window.location.href = json.authorizeUrl;
-        return;
-      }
-      await load();
-      setMsg("Connected");
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Connect failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function disconnect(provider: string) {
-    setBusy(provider);
-    setMsg("");
-    try {
-      const res = await fetch(
-        `/api/site/integrations?provider=${encodeURIComponent(provider)}`,
-        { method: "DELETE" },
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Disconnect failed");
-      await load();
-      setMsg("Disconnected");
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Disconnect failed");
-    } finally {
-      setBusy(null);
     }
   }
 
@@ -278,421 +550,266 @@ function IntegrationsClient() {
     return (
       <section className="sw-card">
         <p className="text-sm" style={{ color: "var(--mut)" }}>
-          {msg || "Loading integrations…"}
+          {error || "Loading integrations…"}
         </p>
       </section>
     );
   }
 
   const byProvider = Object.fromEntries(data.providers.map((p) => [p.provider, p]));
+  const cards = PROVIDER_ORDER.map((key) => {
+    const row = byProvider[key];
+    const meta = PROVIDER_META[key];
+    if (!meta || !row) return null;
+    if (!row.platformConfigured && !row.connected) return null;
+    return { key, row, meta };
+  }).filter(Boolean) as { key: string; row: ProviderRow; meta: ProviderMeta }[];
+
+  const connectMeta = connectProvider ? PROVIDER_META[connectProvider] || null : null;
+  const successLogo = success?.provider ? PROVIDER_META[success.provider]?.logoLg : undefined;
 
   return (
-    <div className="grid gap-3.5">
-      {msg ? (
+    <div className="grid gap-4">
+      <ConnectModal
+        open={Boolean(connectProvider && connectMeta)}
+        meta={connectMeta}
+        busy={Boolean(connectProvider && busy === connectProvider)}
+        error={connectError}
+        onClose={() => {
+          setConnectProvider(null);
+          setConnectError("");
+        }}
+        onConfirm={() => {
+          if (connectProvider) void runConnect(connectProvider);
+        }}
+      />
+
+      <SuccessModal
+        open={Boolean(success)}
+        title={success?.title || ""}
+        body={success?.body || ""}
+        logo={successLogo}
+        onClose={() => setSuccess(null)}
+      />
+
+      {error && !connectProvider ? (
         <div
           className="rounded-xl border px-3.5 py-3 text-[13px] font-semibold"
           style={{
-            borderColor: msgTone === "bad" ? "color-mix(in srgb, #c0392b 35%, var(--ln))" : "var(--ln)",
-            background:
-              msgTone === "bad"
-                ? "color-mix(in srgb, #c0392b 8%, var(--bg))"
-                : "var(--bg)",
-            color: msgTone === "bad" ? "#c0392b" : "var(--at)",
+            borderColor: "color-mix(in srgb, #c0392b 35%, var(--ln))",
+            background: "color-mix(in srgb, #c0392b 8%, var(--bg))",
+            color: "#c0392b",
           }}
-          role={msgTone === "bad" ? "alert" : "status"}
+          role="alert"
         >
-          {msg}
+          {error}
         </div>
       ) : null}
 
       <section className="sw-card">
-        <h2 className="mb-1 text-[15px] font-extrabold">Webflow</h2>
-        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Connect your Webflow site so you can place the booking widget from the Designer.
+        <h2 className="mb-1 text-[15px] font-extrabold">Site & payments</h2>
+        <p className="mb-4 text-[13px]" style={{ color: "var(--mut)" }}>
+          Core connections for your booking site.
         </p>
-        <Row
-          label="Connection"
-          hint={
-            data.webflow.platformConfigured
-              ? "Ready — reconnect if something stops working"
-              : data.webflow.hint || "Ask your Slotwise admin to finish Webflow setup"
-          }
-        >
-          <div className="flex flex-wrap gap-2">
-            {data.webflow.platformConfigured && data.webflow.installUrl ? (
-              <a href={data.webflow.installUrl} className="sw-btn sw-btn-primary">
-                Reconnect Webflow
-              </a>
-            ) : (
-              <em className="sw-tag sw-tag-muted">Not ready yet</em>
-            )}
-            <button
-              type="button"
-              className="sw-btn"
-              onClick={() => {
-                void (async () => {
-                  const res = await fetch("/api/webflow/uninstall", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({}),
-                  });
-                  // Resolve site from session on server — pass empty and fix API
-                  const json = await res.json().catch(() => ({}));
-                  setMsg(
-                    res.ok
-                      ? json.message ||
-                          "Disconnected. Publish your Webflow site so script removal goes live. Delete any leftover booking iframes in Designer."
-                      : json.error || "Could not disconnect",
-                  );
-                  void load();
-                })();
-              }}
-            >
-              Disconnect & hide widget
-            </button>
-          </div>
-        </Row>
-      </section>
-
-      <section className="sw-card">
-        <h2 className="mb-1 text-[15px] font-extrabold">Payments</h2>
-        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Collect deposits or full payment when someone books.
-        </p>
-        <Row
-          label="Stripe"
-          hint={
-            data.stripe.platformConfigured
-              ? `Ready · ${data.stripe.mode} mode`
-              : data.stripe.hint || "Ask your Slotwise admin to finish Stripe setup"
-          }
-        >
-          <Link href={data.stripe.paymentsUrl} className="sw-btn sw-btn-primary">
-            Open payments
-          </Link>
-        </Row>
-      </section>
-
-      <section className="sw-card">
-        <h2 className="mb-1 text-[15px] font-extrabold">Calendars, video & marketing</h2>
-        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Connect calendars, meeting apps, HubSpot, and Mailchimp. HubSpot / Mailchimp / Google need
-          platform OAuth keys. Apple Calendar uses an Apple ID + app-specific password (verified live).
-        </p>
-
-        {PROVIDER_ORDER.map((key) => {
-          const row = byProvider[key];
-          const meta = PROVIDER_META[key];
-          if (!row || !meta) return null;
-          if (!row.platformConfigured && !row.connected && !meta.credentials) return null;
-          const pending = busy === key;
-          const showForm = credProvider === key;
-
-          return (
-            <div key={key} className="border-t border-[var(--ln)] py-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <b>{meta.label}</b>
-                  <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-                    {row.connected && row.externalAccountEmail
-                      ? row.externalAccountEmail
-                      : meta.blurb}
-                  </small>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <em
-                    className={`sw-tag ${
-                      row.status === "error"
-                        ? "sw-tag-bad"
-                        : row.connected
-                          ? "sw-tag-ok"
-                          : "sw-tag-muted"
-                    }`}
-                  >
-                    {row.status === "error"
-                      ? "Needs reconnect"
-                      : row.connected
-                        ? "Connected"
-                        : "Not connected"}
-                  </em>
-                  {row.connected ? (
-                    <>
-                      {!meta.credentials ? (
-                        <button
-                          type="button"
-                          className="sw-btn"
-                          disabled={pending}
-                          onClick={() => void connect(key)}
-                        >
-                          {pending ? "…" : "Reconnect"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="sw-btn"
-                          disabled={pending}
-                          onClick={() => setCredProvider(key)}
-                        >
-                          Update
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="sw-btn"
-                        disabled={pending}
-                        onClick={() => void disconnect(key)}
-                      >
-                        {pending ? "…" : "Disconnect"}
-                      </button>
-                    </>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--ln)] bg-[var(--sf)] p-4">
+            <div className="flex items-start gap-3">
+              <LogoMark bg="#4353FF">
+                <span className="text-[13px] font-black text-white">W</span>
+              </LogoMark>
+              <div className="min-w-0 flex-1">
+                <div className="font-extrabold">Webflow</div>
+                <p className="m-0 mt-1 text-[12.5px]" style={{ color: "var(--mut)" }}>
+                  {data.webflow.platformConfigured
+                    ? "Place the booking widget from Designer"
+                    : data.webflow.hint || "Not available yet"}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {data.webflow.platformConfigured && data.webflow.installUrl ? (
+                    <a href={data.webflow.installUrl} className="sw-btn sw-btn-primary">
+                      Connect
+                    </a>
                   ) : (
-                    <button
-                      type="button"
-                      className="sw-btn sw-btn-primary"
-                      disabled={pending}
-                      onClick={() => void connect(key)}
-                    >
-                      {pending ? "…" : meta.credentials ? "Add credentials" : "Connect"}
-                    </button>
+                    <em className="sw-tag sw-tag-muted">Unavailable</em>
                   )}
                 </div>
               </div>
-              {showForm && key === "apple_calendar" ? (
-                <div className="mt-3 grid gap-2 rounded-[12px] border border-[var(--ln)] bg-[var(--sf)] p-3 sm:grid-cols-2">
-                  <p className="m-0 text-[12.5px] leading-relaxed sm:col-span-2" style={{ color: "var(--mut)" }}>
-                    Apple doesn’t offer Calendar OAuth. Create an{" "}
-                    <a
-                      href="https://appleid.apple.com/account/manage"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-extrabold underline"
-                    >
-                      app-specific password
-                    </a>{" "}
-                    at appleid.apple.com → Sign-In and Security. Wrong logins are rejected after we
-                    check iCloud.
-                  </p>
-                  <input
-                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
-                    placeholder="Apple ID email"
-                    value={credAccount}
-                    onChange={(e) => {
-                      setCredAccount(e.target.value);
-                      setCredError("");
-                    }}
-                    autoComplete="username"
-                    aria-invalid={Boolean(credError)}
-                  />
-                  <input
-                    type="password"
-                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
-                    placeholder="App-specific password"
-                    value={credSecret}
-                    onChange={(e) => {
-                      setCredSecret(e.target.value);
-                      setCredError("");
-                    }}
-                    autoComplete="current-password"
-                    aria-invalid={Boolean(credError)}
-                  />
-                  {credError ? (
-                    <p
-                      className="m-0 rounded-[10px] border px-3 py-2 text-[12.5px] font-semibold sm:col-span-2"
-                      style={{
-                        color: "#c0392b",
-                        borderColor: "color-mix(in srgb, #c0392b 35%, var(--ln))",
-                        background: "color-mix(in srgb, #c0392b 8%, var(--bg))",
-                      }}
-                      role="alert"
-                    >
-                      {credError}
-                    </p>
-                  ) : null}
-                  <div className="flex gap-2 sm:col-span-2">
-                    <button
-                      type="button"
-                      className="sw-btn sw-btn-primary"
-                      disabled={pending || !credSecret.trim() || !credAccount.trim()}
-                      onClick={() => void saveCredentials(key)}
-                    >
-                      {pending ? "Verifying with Apple…" : "Verify & connect"}
-                    </button>
-                    <button
-                      type="button"
-                      className="sw-btn"
-                      onClick={() => {
-                        setCredProvider(null);
-                        setCredError("");
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-              {showForm && key === "hubspot" ? (
-                <div className="mt-3 grid gap-2 rounded-[12px] border border-[var(--ln)] bg-[var(--sf)] p-3">
-                  <p className="m-0 text-[12.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
-                    HubSpot’s new developer platform is CLI-only for OAuth apps. For Slotwise, each site
-                    owner connects <b>their own</b> HubSpot with a Private App token (no CLI):
-                    HubSpot → Settings → Integrations → Private Apps → Create → scopes{" "}
-                    <code className="font-semibold">crm.objects.contacts.read</code> +{" "}
-                    <code className="font-semibold">crm.objects.contacts.write</code> → copy the access
-                    token.
-                  </p>
-                  <input
-                    type="password"
-                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
-                    placeholder="Private App access token (pat-…)"
-                    value={credSecret}
-                    onChange={(e) => {
-                      setCredSecret(e.target.value);
-                      setCredError("");
-                    }}
-                    autoComplete="off"
-                    aria-invalid={Boolean(credError)}
-                  />
-                  <input
-                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
-                    placeholder="Label (optional) — e.g. Studio CRM"
-                    value={credAccount}
-                    onChange={(e) => setCredAccount(e.target.value)}
-                    autoComplete="off"
-                  />
-                  {credError ? (
-                    <p
-                      className="m-0 rounded-[10px] border px-3 py-2 text-[12.5px] font-semibold"
-                      style={{
-                        color: "#c0392b",
-                        borderColor: "color-mix(in srgb, #c0392b 35%, var(--ln))",
-                        background: "color-mix(in srgb, #c0392b 8%, var(--bg))",
-                      }}
-                      role="alert"
-                    >
-                      {credError}
-                    </p>
-                  ) : null}
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="sw-btn sw-btn-primary"
-                      disabled={pending || !credSecret.trim()}
-                      onClick={() => void saveCredentials(key)}
-                    >
-                      {pending ? "Verifying with HubSpot…" : "Verify & connect"}
-                    </button>
-                    <button
-                      type="button"
-                      className="sw-btn"
-                      onClick={() => {
-                        setCredProvider(null);
-                        setCredError("");
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : null}
             </div>
-          );
-        })}
+          </div>
+
+          <div className="rounded-2xl border border-[var(--ln)] bg-[var(--sf)] p-4">
+            <div className="flex items-start gap-3">
+              <LogoMark bg="#635BFF">
+                <span className="text-[13px] font-black text-white">S</span>
+              </LogoMark>
+              <div className="min-w-0 flex-1">
+                <div className="font-extrabold">Stripe</div>
+                <p className="m-0 mt-1 text-[12.5px]" style={{ color: "var(--mut)" }}>
+                  {data.stripe.platformConfigured
+                    ? `Collect deposits · ${data.stripe.mode} mode`
+                    : data.stripe.hint || "Not available yet"}
+                </p>
+                <div className="mt-3">
+                  <Link href={data.stripe.paymentsUrl} className="sw-btn sw-btn-primary">
+                    Open payments
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="sw-card">
-        <h2 className="mb-1 text-[15px] font-extrabold">Analytics &amp; ads</h2>
-        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Paste your IDs here (or under Branding). Google Analytics and Meta don’t offer a Slotwise
-          “Connect” OAuth for pixels — you copy the ID from their dashboards.
+        <h2 className="mb-1 text-[15px] font-extrabold">Partner apps</h2>
+        <p className="mb-4 text-[13px]" style={{ color: "var(--mut)" }}>
+          Connect calendars, video, and marketing tools for your bookings.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <label className="grid gap-1 text-[12px] font-bold">
-            GA4 Measurement ID
+
+        {cards.length === 0 ? (
+          <p className="m-0 text-[13px]" style={{ color: "var(--mut)" }}>
+            No partner apps are available yet. Check back soon.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {cards.map(({ key, row, meta }) => {
+              const pending = busy === key;
+              return (
+                <div
+                  key={key}
+                  className="flex flex-col rounded-2xl border border-[var(--ln)] bg-[var(--sf)] p-4 transition hover:border-[color-mix(in_srgb,var(--ac)_35%,var(--ln))]"
+                >
+                  <div className="flex items-start gap-3">
+                    {meta.logo}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <b className="truncate text-[14px]">{meta.label}</b>
+                        <em
+                          className={`sw-tag shrink-0 ${
+                            row.status === "error"
+                              ? "sw-tag-bad"
+                              : row.connected
+                                ? "sw-tag-ok"
+                                : "sw-tag-muted"
+                          }`}
+                        >
+                          {row.status === "error"
+                            ? "Reconnect"
+                            : row.connected
+                              ? "Connected"
+                              : "Off"}
+                        </em>
+                      </div>
+                      <p className="m-0 mt-1 text-[12.5px] leading-snug" style={{ color: "var(--mut)" }}>
+                        {row.connected && row.externalAccountEmail
+                          ? row.externalAccountEmail
+                          : meta.blurb}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {row.connected ? (
+                      <>
+                        <button
+                          type="button"
+                          className="sw-btn"
+                          disabled={pending}
+                          onClick={() => {
+                            setConnectError("");
+                            setConnectProvider(key);
+                          }}
+                        >
+                          {pending ? "…" : "Reconnect"}
+                        </button>
+                        <button
+                          type="button"
+                          className="sw-btn"
+                          disabled={pending}
+                          onClick={() => void disconnect(key)}
+                        >
+                          {pending ? "…" : "Disconnect"}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="sw-btn sw-btn-primary"
+                        disabled={pending}
+                        onClick={() => {
+                          setConnectError("");
+                          setConnectProvider(key);
+                        }}
+                      >
+                        Connect
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="sw-card">
+        <h2 className="mb-1 text-[15px] font-extrabold">Tracking</h2>
+        <p className="mb-4 text-[13px]" style={{ color: "var(--mut)" }}>
+          Measure visits on your public booking page.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--ln)] bg-[var(--sf)] p-4">
+            <div className="flex items-center gap-3">
+              <LogoMark bg="#F9AB00">
+                <span className="text-[12px] font-black text-[#1a1203]">GA4</span>
+              </LogoMark>
+              <div>
+                <div className="font-extrabold">Google Analytics</div>
+                <p className="m-0 text-[12px]" style={{ color: "var(--mut)" }}>
+                  Measurement ID
+                </p>
+              </div>
+            </div>
             <input
-              className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px] font-semibold"
+              className="mt-3 w-full rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px] font-semibold"
               value={ga4Id}
               onChange={(e) => setGa4Id(e.target.value)}
               placeholder="G-XXXXXXXX"
               autoComplete="off"
               spellCheck={false}
             />
-          </label>
-          <label className="grid gap-1 text-[12px] font-bold">
-            Meta Pixel ID
+          </div>
+
+          <div className="rounded-2xl border border-[var(--ln)] bg-[var(--sf)] p-4">
+            <div className="flex items-center gap-3">
+              <LogoMark bg="#1877F2">
+                <span className="text-[12px] font-black text-white">Meta</span>
+              </LogoMark>
+              <div>
+                <div className="font-extrabold">Meta Pixel</div>
+                <p className="m-0 text-[12px]" style={{ color: "var(--mut)" }}>
+                  Pixel ID
+                </p>
+              </div>
+            </div>
             <input
-              className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px] font-semibold"
+              className="mt-3 w-full rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px] font-semibold"
               value={pixelId}
               onChange={(e) => setPixelId(e.target.value)}
               placeholder="123456789012345"
               autoComplete="off"
               spellCheck={false}
             />
-          </label>
+          </div>
         </div>
-        <ol className="mt-3 list-decimal space-y-1 pl-4 text-[12.5px]" style={{ color: "var(--mut)" }}>
-          <li>
-            GA4:{" "}
-            <a
-              href="https://analytics.google.com/"
-              target="_blank"
-              rel="noreferrer"
-              className="font-extrabold underline"
-            >
-              analytics.google.com
-            </a>{" "}
-            → Admin → Data streams → Measurement ID
-          </li>
-          <li>
-            Meta:{" "}
-            <a
-              href="https://business.facebook.com/events_manager"
-              target="_blank"
-              rel="noreferrer"
-              className="font-extrabold underline"
-            >
-              Events Manager
-            </a>{" "}
-            → your Pixel → Pixel ID
-          </li>
-        </ol>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="sw-btn sw-btn-primary"
-            disabled={trackingBusy}
-            onClick={() => void saveTracking()}
-          >
-            {trackingBusy ? "Saving…" : "Save tracking"}
-          </button>
-          {trackingMsg ? (
-            <span className="text-[12.5px] font-semibold text-[var(--at)]">{trackingMsg}</span>
-          ) : null}
-        </div>
+        <button
+          type="button"
+          className="sw-btn sw-btn-primary mt-4"
+          disabled={trackingBusy}
+          onClick={() => void saveTracking()}
+        >
+          {trackingBusy ? "Saving…" : "Save tracking"}
+        </button>
       </section>
-    </div>
-  );
-}
-
-function Row({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] py-3">
-      <div>
-        <b>{label}</b>
-        {hint ? (
-          <small className="block text-[12.5px]" style={{ color: "var(--mut)" }}>
-            {hint}
-          </small>
-        ) : null}
-      </div>
-      <div>{children}</div>
     </div>
   );
 }

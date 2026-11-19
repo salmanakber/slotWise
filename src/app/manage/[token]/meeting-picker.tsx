@@ -19,7 +19,6 @@ function providerTitle(provider: string | null) {
   if (provider === "zoom") return "Zoom ready";
   if (provider === "teams") return "Teams ready";
   if (provider === "google_calendar") return "Added to Google Calendar";
-  if (provider === "apple_calendar") return "Apple Calendar ready";
   return "Google Meet ready";
 }
 

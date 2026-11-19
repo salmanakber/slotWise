@@ -49,7 +49,7 @@ const patchSchema = z.object({
       return t;
     })
     .refine((v) => v == null || /^\d{5,20}$/.test(v), {
-      message: "Meta Pixel ID must be a number from Events Manager",
+      message: "Meta Pixel ID must be numbers only",
     }),
 });
 

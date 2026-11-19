@@ -21,7 +21,6 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [googleClientSecret, setGoogleClientSecret] = useState("");
   const [microsoftClientSecret, setMicrosoftClientSecret] = useState("");
   const [zoomClientSecret, setZoomClientSecret] = useState("");
-  const [hubspotClientSecret, setHubspotClientSecret] = useState("");
   const [mailchimpClientSecret, setMailchimpClientSecret] = useState("");
   const [zapierSigningSecret, setZapierSigningSecret] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
@@ -70,7 +69,6 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.googleClientId = form.googleClientId;
         payload.microsoftClientId = form.microsoftClientId;
         payload.zoomClientId = form.zoomClientId;
-        payload.hubspotClientId = form.hubspotClientId;
         payload.mailchimpClientId = form.mailchimpClientId;
         payload.aiProvider = form.aiProvider;
         payload.openaiModel = form.openaiModel;
@@ -85,7 +83,6 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
         if (microsoftClientSecret.trim()) payload.microsoftClientSecret = microsoftClientSecret.trim();
         if (zoomClientSecret.trim()) payload.zoomClientSecret = zoomClientSecret.trim();
-        if (hubspotClientSecret.trim()) payload.hubspotClientSecret = hubspotClientSecret.trim();
         if (mailchimpClientSecret.trim()) payload.mailchimpClientSecret = mailchimpClientSecret.trim();
         payload.zapierEnabled = Boolean(form.zapierEnabled);
         if (zapierSigningSecret.trim()) payload.zapierSigningSecret = zapierSigningSecret.trim();
@@ -114,7 +111,6 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       setGoogleClientSecret("");
       setMicrosoftClientSecret("");
       setZoomClientSecret("");
-      setHubspotClientSecret("");
       setMailchimpClientSecret("");
       setZapierSigningSecret("");
       setOpenaiApiKey("");
@@ -411,10 +407,8 @@ export function PlatformSettingsForm({ initial, section }: Props) {
           <section className="sw-card">
             <h2 className="mb-1 text-[15px] font-extrabold">Calendars &amp; tools</h2>
             <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-              Platform OAuth apps for Google Calendar / Meet, Microsoft Outlook / Teams, Zoom,
-              HubSpot, and Zapier. Apple Calendar and Mailchimp use site-owner credentials.
-              Redirect URIs use{" "}
-              <code className="font-semibold">/api/site/integrations/oauth/…/callback</code>.
+              Keys for Google Calendar / Meet, Microsoft Outlook / Teams, Zoom, Mailchimp, and
+              Zapier. Site owners connect these from their workspace Integrations page.
             </p>
             <Field label="Google client ID">
               <input
@@ -467,35 +461,6 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={zoomClientSecret}
                 onChange={(e) => setZoomClientSecret(e.target.value)}
-                placeholder="Paste new secret to rotate"
-                autoComplete="new-password"
-              />
-            </Field>
-            <p className="mb-3 text-[12.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
-              Optional. HubSpot’s new OAuth apps are CLI-only (
-              <code className="font-semibold">hs project create</code>
-              ). Site owners can connect without this by pasting a{" "}
-              <b>Private App access token</b> in their workspace Integrations. Only add Client
-              ID/Secret here if you build a marketplace-style OAuth app via the HubSpot CLI.
-              Redirect URI:{" "}
-              <code className="font-semibold">
-                /api/site/integrations/oauth/hubspot/callback
-              </code>
-              .
-            </p>
-            <Field label="HubSpot client ID">
-              <input
-                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
-                value={form.hubspotClientId ?? ""}
-                onChange={(e) => set("hubspotClientId", e.target.value || null)}
-              />
-            </Field>
-            <Field label="HubSpot client secret" hint={form.hubspotClientSecretHint ?? "Not set"}>
-              <input
-                type="password"
-                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
-                value={hubspotClientSecret}
-                onChange={(e) => setHubspotClientSecret(e.target.value)}
                 placeholder="Paste new secret to rotate"
                 autoComplete="new-password"
               />

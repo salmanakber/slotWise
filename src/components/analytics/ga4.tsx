@@ -10,7 +10,7 @@ declare global {
   }
 }
 
-/** Loads GA4 gtag when a valid Measurement ID is set on branding. */
+/** Loads GA4 gtag when a Measurement ID is saved under Integrations → Tracking. */
 export function Ga4Script({ measurementId }: { measurementId?: string | null }) {
   const id = measurementId?.trim().toUpperCase() || "";
   const valid = /^G-[A-Z0-9]+$/.test(id);

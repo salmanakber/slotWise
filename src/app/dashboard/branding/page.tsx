@@ -28,8 +28,6 @@ export default function BrandingPage() {
   const [showDuration, setShowDuration] = useState(true);
   const [showStaff, setShowStaff] = useState(true);
   const [showBadge, setShowBadge] = useState(true);
-  const [ga4MeasurementId, setGa4MeasurementId] = useState("");
-  const [metaPixelId, setMetaPixelId] = useState("");
   const [widgetKey, setWidgetKey] = useState(0);
 
   const theme = useMemo(() => THEMES.find((t) => t.key === themeKey) ?? THEMES[0], [themeKey]);
@@ -114,10 +112,6 @@ export default function BrandingPage() {
         if (typeof data.showDuration === "boolean") setShowDuration(data.showDuration);
         if (typeof data.showStaff === "boolean") setShowStaff(data.showStaff);
         if (typeof data.showBadge === "boolean") setShowBadge(data.showBadge);
-        if (typeof data.ga4MeasurementId === "string") setGa4MeasurementId(data.ga4MeasurementId);
-        else if (data.ga4MeasurementId === null) setGa4MeasurementId("");
-        if (typeof data.metaPixelId === "string") setMetaPixelId(data.metaPixelId);
-        else if (data.metaPixelId === null) setMetaPixelId("");
         const tokens = resolveSiteTheme(data);
         applySiteThemeToDocument(tokens);
         broadcastSiteTheme(tokens, { preview: true });
@@ -166,8 +160,6 @@ export default function BrandingPage() {
           showBadge,
           showLoader,
           loaderStyle,
-          ga4MeasurementId: ga4MeasurementId.trim() || null,
-          metaPixelId: metaPixelId.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -321,58 +313,6 @@ export default function BrandingPage() {
               ))}
             </select>
           </Row>
-        </section>
-
-        <section className="sw-card">
-          <h2 className="mb-1 text-[15px] font-extrabold">Tracking</h2>
-          <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            Loads on your public booking page and embeds. Google doesn’t offer a one-click “Connect GA4”
-            for Measurement IDs — paste the ID from Analytics Admin.
-          </p>
-          <Row label="GA4 Measurement ID">
-            <input
-              className="w-full max-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px]"
-              value={ga4MeasurementId}
-              onChange={(e) => setGa4MeasurementId(e.target.value)}
-              placeholder="G-XXXXXXXX"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </Row>
-          <p className="mb-3 text-[12px]" style={{ color: "var(--mut)" }}>
-            Find it in{" "}
-            <a
-              href="https://analytics.google.com/"
-              target="_blank"
-              rel="noreferrer"
-              className="font-extrabold underline"
-            >
-              Google Analytics
-            </a>{" "}
-            → Admin → Data streams → your web stream → Measurement ID.
-          </p>
-          <Row label="Meta Pixel ID">
-            <input
-              className="w-full max-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px]"
-              value={metaPixelId}
-              onChange={(e) => setMetaPixelId(e.target.value)}
-              placeholder="123456789012345"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </Row>
-          <p className="m-0 text-[12px]" style={{ color: "var(--mut)" }}>
-            From{" "}
-            <a
-              href="https://business.facebook.com/events_manager"
-              target="_blank"
-              rel="noreferrer"
-              className="font-extrabold underline"
-            >
-              Meta Events Manager
-            </a>{" "}
-            → Data sources → your Pixel → Pixel ID (numbers only).
-          </p>
         </section>
 
         <div className="flex flex-wrap items-center gap-3">

@@ -165,13 +165,14 @@ export async function siteBootstrapPayload(
       ),
       appRow("zoom", "Zoom", Boolean(platform.zoomClientId && platform.zoomClientSecretSet)),
       appRow("meet", "Google Meet", Boolean(platform.googleClientId && platform.googleClientSecretSet)),
-      appRow("apple_calendar", "Apple Calendar", true),
       appRow(
-        "hubspot",
-        "HubSpot",
-        Boolean(platform.hubspotClientId && platform.hubspotClientSecretSet),
+        "mailchimp",
+        "Mailchimp",
+        Boolean(
+          (platform as { mailchimpClientId?: string | null }).mailchimpClientId &&
+            (platform as { mailchimpClientSecretSet?: boolean }).mailchimpClientSecretSet,
+        ),
       ),
-      appRow("mailchimp", "Mailchimp", true),
       appRow("zapier", "Zapier", Boolean(platform.zapierEnabled)),
     ].filter((a) => a.ready || a.connected),
     activeEvents: site.services.map((s) => ({

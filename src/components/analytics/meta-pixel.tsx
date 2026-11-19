@@ -10,7 +10,7 @@ declare global {
   }
 }
 
-/** Loads Meta (Facebook) Pixel when a numeric Pixel ID is set on branding. */
+/** Loads Meta Pixel when a Pixel ID is saved under Integrations → Tracking. */
 export function MetaPixelScript({ pixelId }: { pixelId?: string | null }) {
   const id = pixelId?.trim().replace(/\s+/g, "") || "";
   const valid = /^\d{5,20}$/.test(id);

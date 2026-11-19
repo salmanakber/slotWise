@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-/** Downloadable ICS for Apple Calendar / any calendar app. */
+/** Downloadable ICS for any calendar app. */
 export async function GET(
   _request: Request,
   context: { params: Promise<{ token: string }> },

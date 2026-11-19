@@ -29,15 +29,12 @@ function keysReadyFor(
   if (provider === "zoom") {
     return Boolean(settings.zoomClientId && settings.zoomClientSecretSet);
   }
-  // Always available — site owners use a Private App token; OAuth is optional
-  if (provider === "hubspot") return true;
   if (provider === "mailchimp") {
     return Boolean(
       (settings as { mailchimpClientId?: string | null }).mailchimpClientId &&
         (settings as { mailchimpClientSecretSet?: boolean }).mailchimpClientSecretSet,
     );
   }
-  if (provider === "apple_calendar") return true;
   return true;
 }
 
