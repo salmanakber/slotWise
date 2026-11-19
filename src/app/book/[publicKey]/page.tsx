@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Ga4Script } from "@/components/analytics/ga4";
 import { BookingWidget } from "@/components/widget/booking-widget";
 import { prisma } from "@/lib/prisma";
 import { validateWebflowConnection } from "@/lib/webflow-uninstall";
@@ -19,9 +20,16 @@ export default async function BookPage({
   const row = await prisma.site
     .findUnique({
       where: { publicKey },
-      select: { id: true, status: true, webflowSiteId: true },
+      select: {
+        id: true,
+        status: true,
+        webflowSiteId: true,
+        branding: { select: { ga4MeasurementId: true } },
+      },
     })
     .catch(() => null);
+
+  const ga4Id = row?.branding?.ga4MeasurementId ?? null;
 
   if (row?.webflowSiteId && row.status === "ACTIVE") {
     await validateWebflowConnection(row.id).catch(() => undefined);
@@ -55,6 +63,7 @@ export default async function BookPage({
           html, body { margin: 0; padding: 0; overflow-x: hidden; background: transparent; }
           .sw-embed-shell { width: 100%; max-width: 100%; min-width: 0; }
         `}</style>
+        <Ga4Script measurementId={ga4Id} />
         <BookingWidget publicKey={publicKey} embed />
       </main>
     );
@@ -72,6 +81,7 @@ export default async function BookPage({
 
   return (
     <main className="relative min-h-screen overflow-x-hidden px-4 py-10 sm:py-14">
+      <Ga4Script measurementId={ga4Id} />
       <div
         className="pointer-events-none absolute inset-0 -z-10"
         style={{

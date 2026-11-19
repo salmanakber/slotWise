@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  provider: z.enum(["zoom", "meet", "google_calendar"]),
+  provider: z.enum(["zoom", "meet", "google_calendar", "teams"]),
 });
 
 export async function GET(

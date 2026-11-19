@@ -7,7 +7,7 @@ import {
 } from "@/lib/integrations-oauth";
 import { prisma } from "@/lib/prisma";
 
-export type MeetingToolId = "zoom" | "meet" | "google_calendar";
+export type MeetingToolId = "zoom" | "meet" | "google_calendar" | "teams";
 
 export type MeetingTool = {
   id: MeetingToolId;
@@ -139,14 +139,16 @@ export async function listMeetingTools(siteId: string): Promise<MeetingTool[]> {
   const zoom = await loadTokens(siteId, "zoom");
   if (zoom) tools.push({ id: "zoom", label: "Zoom" });
 
+  const teams = await loadTokens(siteId, "teams");
+  const outlook = await loadTokens(siteId, "outlook");
+  if (teams || outlook) tools.push({ id: "teams", label: "Microsoft Teams" });
+
   const meet = await loadTokens(siteId, "meet");
   const gcal = await loadTokens(siteId, "google_calendar");
 
-  // Show Google Calendar whenever Calendar or Meet OAuth is connected
   if (gcal || meet) {
     tools.push({ id: "google_calendar", label: "Google Calendar" });
   }
-  // Meet video link (same Google OAuth scopes)
   if (meet || gcal) {
     tools.push({ id: "meet", label: "Google Meet" });
   }
@@ -379,6 +381,49 @@ async function createGoogleCalendarEvent(input: {
   return { meetingUrl: data.htmlLink, provider: "google_calendar" };
 }
 
+async function createTeamsMeeting(input: {
+  siteId: string;
+  customerName: string;
+  serviceName: string;
+  startsAt: Date;
+  endsAt: Date;
+}): Promise<{ meetingUrl: string; provider: "teams" }> {
+  const token = await ensureAccessToken(input.siteId, ["teams", "outlook"]);
+  if (!token) {
+    throw new Error(
+      "Microsoft Teams is not connected. Connect Teams under Integrations, then try again.",
+    );
+  }
+
+  const res = await fetch("https://graph.microsoft.com/v1.0/me/onlineMeetings", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token.access}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      startDateTime: input.startsAt.toISOString(),
+      endDateTime: input.endsAt.toISOString(),
+      subject: `${input.serviceName} · ${input.customerName}`.slice(0, 250),
+    }),
+  });
+
+  if (!res.ok) {
+    const raw = await res.text();
+    console.error("[meeting:teams]", raw);
+    throw new Error(
+      res.status === 401
+        ? "Teams session expired. Reconnect Microsoft Teams in Integrations."
+        : "Could not create Teams meeting — reconnect Teams with OnlineMeetings permission.",
+    );
+  }
+
+  const data = (await res.json()) as { joinWebUrl?: string; joinUrl?: string };
+  const meetingUrl = data.joinWebUrl || data.joinUrl;
+  if (!meetingUrl) throw new Error("Teams did not return a join link");
+  return { meetingUrl, provider: "teams" };
+}
+
 export async function createMeetingLink(input: {
   siteId: string;
   provider: MeetingToolId;
@@ -394,10 +439,11 @@ export async function createMeetingLink(input: {
   if (input.provider === "zoom") {
     return createZoomMeeting(input);
   }
-
+  if (input.provider === "teams") {
+    return createTeamsMeeting(input);
+  }
   if (input.provider === "google_calendar") {
     return createGoogleCalendarEvent({ ...input, withMeet: false });
   }
-
   return createGoogleCalendarEvent({ ...input, withMeet: true });
 }

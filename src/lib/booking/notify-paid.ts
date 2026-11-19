@@ -2,6 +2,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { Role } from "@prisma/client";
 import { sendBookingConfirmation, sendOwnerBookingAlert } from "@/lib/email";
 import { syncBookingIntegrations } from "@/lib/integrations-sync";
+import { syncBookingMarketing } from "@/lib/marketing-sync";
 import { createOwnerNotification } from "@/lib/owner-notifications";
 import { canUse } from "@/lib/plan-entitlements";
 import { prisma } from "@/lib/prisma";
@@ -60,6 +61,16 @@ export async function notifyBookingPaid(bookingId: string) {
     manageUrl,
     locationType: booking.service.locationType,
   }).catch((err) => console.error("[paid:calendar-sync]", err));
+
+  await syncBookingMarketing({
+    siteId: site.id,
+    customerName: booking.customerName,
+    customerEmail: booking.customerEmail,
+    customerPhone: booking.customerPhone,
+    serviceName: booking.service.name,
+    reference: booking.reference,
+    startsAt: booking.startsAt,
+  }).catch((err) => console.error("[paid:marketing-sync]", err));
 
   if (site.notificationSettings?.emailConfirm !== false) {
     await sendBookingConfirmation({

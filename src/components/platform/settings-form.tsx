@@ -21,6 +21,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [googleClientSecret, setGoogleClientSecret] = useState("");
   const [microsoftClientSecret, setMicrosoftClientSecret] = useState("");
   const [zoomClientSecret, setZoomClientSecret] = useState("");
+  const [hubspotClientSecret, setHubspotClientSecret] = useState("");
   const [zapierSigningSecret, setZapierSigningSecret] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [groqApiKey, setGroqApiKey] = useState("");
@@ -68,6 +69,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.googleClientId = form.googleClientId;
         payload.microsoftClientId = form.microsoftClientId;
         payload.zoomClientId = form.zoomClientId;
+        payload.hubspotClientId = form.hubspotClientId;
         payload.aiProvider = form.aiProvider;
         payload.openaiModel = form.openaiModel;
         payload.groqModel = form.groqModel;
@@ -81,6 +83,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
         if (microsoftClientSecret.trim()) payload.microsoftClientSecret = microsoftClientSecret.trim();
         if (zoomClientSecret.trim()) payload.zoomClientSecret = zoomClientSecret.trim();
+        if (hubspotClientSecret.trim()) payload.hubspotClientSecret = hubspotClientSecret.trim();
         payload.zapierEnabled = Boolean(form.zapierEnabled);
         if (zapierSigningSecret.trim()) payload.zapierSigningSecret = zapierSigningSecret.trim();
         if (openaiApiKey.trim()) payload.openaiApiKey = openaiApiKey.trim();
@@ -108,9 +111,12 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       setGoogleClientSecret("");
       setMicrosoftClientSecret("");
       setZoomClientSecret("");
+      setHubspotClientSecret("");
       setZapierSigningSecret("");
       setOpenaiApiKey("");
       setGroqApiKey("");
+      setMetaWhatsappAccessToken("");
+      setOpenwaApiKey("");
       setMsg("Saved. Secrets are encrypted at rest.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Save failed");
@@ -401,8 +407,9 @@ export function PlatformSettingsForm({ initial, section }: Props) {
           <section className="sw-card">
             <h2 className="mb-1 text-[15px] font-extrabold">Calendars &amp; tools</h2>
             <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-              Platform OAuth apps for Google Calendar / Meet, Microsoft Outlook, Zoom, and Zapier
-              webhook signing. Redirect URIs use{" "}
+              Platform OAuth apps for Google Calendar / Meet, Microsoft Outlook / Teams, Zoom,
+              HubSpot, and Zapier. Apple Calendar and Mailchimp use site-owner credentials.
+              Redirect URIs use{" "}
               <code className="font-semibold">/api/site/integrations/oauth/…/callback</code>.
             </p>
             <Field label="Google client ID">
@@ -456,6 +463,23 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={zoomClientSecret}
                 onChange={(e) => setZoomClientSecret(e.target.value)}
+                placeholder="Paste new secret to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="HubSpot client ID">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.hubspotClientId ?? ""}
+                onChange={(e) => set("hubspotClientId", e.target.value || null)}
+              />
+            </Field>
+            <Field label="HubSpot client secret" hint={form.hubspotClientSecretHint ?? "Not set"}>
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={hubspotClientSecret}
+                onChange={(e) => setHubspotClientSecret(e.target.value)}
                 placeholder="Paste new secret to rotate"
                 autoComplete="new-password"
               />

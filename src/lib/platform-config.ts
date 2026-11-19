@@ -53,6 +53,9 @@ export type PlatformPublicSettings = {
   zapierSigningSecretSet: boolean;
   zapierSigningSecretHint: string | null;
   zapierEnabled: boolean;
+  hubspotClientId: string | null;
+  hubspotClientSecretSet: boolean;
+  hubspotClientSecretHint: string | null;
   aiProvider: string;
   openaiApiKeySet: boolean;
   openaiApiKeyHint: string | null;
@@ -178,6 +181,13 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       zapierEnabled: Boolean(
         (row as { zapierEnabled?: boolean }).zapierEnabled,
       ),
+      hubspotClientId: (row as { hubspotClientId?: string | null }).hubspotClientId || null,
+      hubspotClientSecretSet: Boolean(
+        safeDecrypt((row as { hubspotClientSecretEncrypted?: string | null }).hubspotClientSecretEncrypted),
+      ),
+      hubspotClientSecretHint: maskSecret(
+        safeDecrypt((row as { hubspotClientSecretEncrypted?: string | null }).hubspotClientSecretEncrypted),
+      ),
       aiProvider: row.aiProvider || "openai",
       openaiApiKeySet: Boolean(
         safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY,
@@ -241,6 +251,9 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       zapierSigningSecretSet: Boolean(process.env.ZAPIER_SIGNING_SECRET),
       zapierSigningSecretHint: maskSecret(process.env.ZAPIER_SIGNING_SECRET),
       zapierEnabled: false,
+      hubspotClientId: process.env.HUBSPOT_CLIENT_ID || null,
+      hubspotClientSecretSet: Boolean(process.env.HUBSPOT_CLIENT_SECRET),
+      hubspotClientSecretHint: maskSecret(process.env.HUBSPOT_CLIENT_SECRET),
       aiProvider: "openai",
       openaiApiKeySet: Boolean(process.env.OPENAI_API_KEY),
       openaiApiKeyHint: maskSecret(process.env.OPENAI_API_KEY),
@@ -309,6 +322,16 @@ export async function getPlatformSecrets() {
         safeDecrypt(row.zoomClientSecretEncrypted) || process.env.ZOOM_CLIENT_SECRET || null,
       zapierSigningSecret:
         safeDecrypt(row.zapierSigningSecretEncrypted) || process.env.ZAPIER_SIGNING_SECRET || null,
+      hubspotClientId:
+        (row as { hubspotClientId?: string | null }).hubspotClientId ||
+        process.env.HUBSPOT_CLIENT_ID ||
+        null,
+      hubspotClientSecret:
+        safeDecrypt(
+          (row as { hubspotClientSecretEncrypted?: string | null }).hubspotClientSecretEncrypted,
+        ) ||
+        process.env.HUBSPOT_CLIENT_SECRET ||
+        null,
       aiProvider: (row.aiProvider || "openai") as "openai" | "groq" | "template",
       openaiApiKey: safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY || null,
       openaiModel: row.openaiModel || process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -347,6 +370,8 @@ export async function getPlatformSecrets() {
       zoomClientId: process.env.ZOOM_CLIENT_ID || null,
       zoomClientSecret: process.env.ZOOM_CLIENT_SECRET || null,
       zapierSigningSecret: process.env.ZAPIER_SIGNING_SECRET || null,
+      hubspotClientId: process.env.HUBSPOT_CLIENT_ID || null,
+      hubspotClientSecret: process.env.HUBSPOT_CLIENT_SECRET || null,
       aiProvider: "openai" as const,
       openaiApiKey: process.env.OPENAI_API_KEY || null,
       openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -395,6 +420,8 @@ export type PlatformSettingsUpdate = {
   zoomClientSecret?: string;
   zapierSigningSecret?: string;
   zapierEnabled?: boolean;
+  hubspotClientId?: string | null;
+  hubspotClientSecret?: string;
   aiProvider?: "openai" | "groq" | "template";
   openaiApiKey?: string;
   openaiModel?: string | null;
@@ -474,6 +501,10 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
     data.zapierSigningSecretEncrypted = encryptSecret(input.zapierSigningSecret.trim());
   }
   if (input.zapierEnabled !== undefined) data.zapierEnabled = input.zapierEnabled;
+  if (input.hubspotClientId !== undefined) data.hubspotClientId = input.hubspotClientId || null;
+  if (input.hubspotClientSecret?.trim()) {
+    data.hubspotClientSecretEncrypted = encryptSecret(input.hubspotClientSecret.trim());
+  }
   if (input.aiProvider) data.aiProvider = input.aiProvider;
   if (input.openaiApiKey?.trim()) data.openaiApiKeyEncrypted = encryptSecret(input.openaiApiKey.trim());
   if (input.openaiModel !== undefined) data.openaiModel = input.openaiModel || null;

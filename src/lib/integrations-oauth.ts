@@ -5,20 +5,29 @@ import { appOrigin } from "@/lib/webflow";
 export const INTEGRATION_PROVIDERS = [
   "google_calendar",
   "outlook",
+  "apple_calendar",
   "zapier",
   "zoom",
   "meet",
+  "teams",
+  "hubspot",
+  "mailchimp",
 ] as const;
 
 export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
 
-export type OAuthProvider = "google" | "microsoft" | "zoom";
+export type OAuthProvider = "google" | "microsoft" | "zoom" | "hubspot" | "mailchimp";
+
+/** Providers that use a credentials form instead of browser OAuth. */
+export const CREDENTIAL_PROVIDERS = ["apple_calendar", "mailchimp"] as const;
 
 /** Map SiteIntegration.provider → OAuth app family. */
 export function oauthFamily(provider: IntegrationProvider): OAuthProvider | null {
   if (provider === "google_calendar" || provider === "meet") return "google";
-  if (provider === "outlook") return "microsoft";
+  if (provider === "outlook" || provider === "teams") return "microsoft";
   if (provider === "zoom") return "zoom";
+  if (provider === "hubspot") return "hubspot";
+  if (provider === "mailchimp") return "mailchimp";
   return null;
 }
 
@@ -26,16 +35,20 @@ export function normalizeIntegrationProvider(raw: string): IntegrationProvider |
   const p = raw.trim().toLowerCase();
   if (p === "google" || p === "google_calendar") return "google_calendar";
   if (p === "microsoft" || p === "outlook") return "outlook";
+  if (p === "apple" || p === "apple_calendar" || p === "icloud") return "apple_calendar";
   if (p === "zapier" || p === "make") return "zapier";
   if (p === "zoom") return "zoom";
   if (p === "meet" || p === "google_meet") return "meet";
+  if (p === "teams" || p === "microsoft_teams") return "teams";
+  if (p === "hubspot") return "hubspot";
+  if (p === "mailchimp") return "mailchimp";
   return null;
 }
 
-/** Path segment for callback routes (google | microsoft | zoom | meet). */
+/** Path segment for callback routes. */
 export function callbackProviderParam(provider: IntegrationProvider): string {
   if (provider === "google_calendar") return "google";
-  if (provider === "outlook") return "microsoft";
+  if (provider === "outlook" || provider === "teams") return "microsoft";
   if (provider === "meet") return "meet";
   return provider;
 }
@@ -71,6 +84,7 @@ export function decodeOAuthState(state: string): { siteId: string; provider: Int
 export async function platformKeysConfigured(provider: IntegrationProvider) {
   const secrets = await getPlatformSecrets();
   const family = oauthFamily(provider);
+  if (provider === "apple_calendar" || provider === "mailchimp") return true; // site credentials
   if (family === "google") {
     return Boolean(secrets.googleClientId?.trim() && secrets.googleClientSecret?.trim());
   }
@@ -80,7 +94,13 @@ export async function platformKeysConfigured(provider: IntegrationProvider) {
   if (family === "zoom") {
     return Boolean(secrets.zoomClientId?.trim() && secrets.zoomClientSecret?.trim());
   }
-  return true; // zapier needs no OAuth app keys to create a webhook URL
+  if (family === "hubspot") {
+    return Boolean(
+      (secrets as { hubspotClientId?: string | null }).hubspotClientId?.trim() &&
+        (secrets as { hubspotClientSecret?: string | null }).hubspotClientSecret?.trim(),
+    );
+  }
+  return true; // zapier / credential providers
 }
 
 export async function buildAuthorizeUrl(siteId: string, provider: IntegrationProvider) {
@@ -127,7 +147,29 @@ export async function buildAuthorizeUrl(siteId: string, provider: IntegrationPro
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("response_mode", "query");
-    url.searchParams.set("scope", "offline_access Calendars.ReadWrite User.Read");
+    const scopes =
+      provider === "teams"
+        ? [
+            "offline_access",
+            "User.Read",
+            "OnlineMeetings.ReadWrite",
+            "Calendars.ReadWrite",
+          ]
+        : ["offline_access", "Calendars.ReadWrite", "User.Read"];
+    url.searchParams.set("scope", scopes.join(" "));
+    url.searchParams.set("state", state);
+    return url.toString();
+  }
+
+  if (family === "hubspot") {
+    const clientId = (secrets as { hubspotClientId?: string | null }).hubspotClientId?.trim();
+    const clientSecret = (secrets as { hubspotClientSecret?: string | null }).hubspotClientSecret?.trim();
+    if (!clientId || !clientSecret) throw new Error("HubSpot Client ID/Secret missing");
+    const redirectUri = oauthRedirectUri("hubspot");
+    const url = new URL("https://app.hubspot.com/oauth/authorize");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("scope", "crm.objects.contacts.write crm.objects.contacts.read oauth");
     url.searchParams.set("state", state);
     return url.toString();
   }
@@ -222,7 +264,8 @@ export async function exchangeOAuthCode(
         code,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
-        scope: "offline_access Calendars.ReadWrite User.Read",
+        scope:
+          "offline_access User.Read Calendars.ReadWrite OnlineMeetings.ReadWrite",
       }),
     });
     const data = (await res.json()) as Record<string, unknown>;
@@ -251,6 +294,37 @@ export async function exchangeOAuthCode(
       refreshToken: typeof data.refresh_token === "string" ? data.refresh_token : null,
       expiresIn: typeof data.expires_in === "number" ? data.expires_in : null,
       email,
+      raw: data,
+    };
+  }
+
+  if (family === "hubspot") {
+    const clientId = (secrets as { hubspotClientId?: string | null }).hubspotClientId?.trim() || "";
+    const clientSecret =
+      (secrets as { hubspotClientSecret?: string | null }).hubspotClientSecret?.trim() || "";
+    const redirectUri = oauthRedirectUri("hubspot");
+    const res = await fetch("https://api.hubapi.com/oauth/v1/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code,
+      }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (!res.ok || !data.access_token) {
+      throw new Error(
+        typeof data.message === "string" ? data.message : "HubSpot token exchange failed",
+      );
+    }
+    return {
+      accessToken: String(data.access_token),
+      refreshToken: typeof data.refresh_token === "string" ? data.refresh_token : null,
+      expiresIn: typeof data.expires_in === "number" ? data.expires_in : null,
+      email: null,
       raw: data,
     };
   }
@@ -356,7 +430,8 @@ export async function refreshOAuthAccessToken(
         client_secret: clientSecret,
         refresh_token: refreshToken,
         grant_type: "refresh_token",
-        scope: "offline_access Calendars.ReadWrite User.Read",
+        scope:
+          "offline_access User.Read Calendars.ReadWrite OnlineMeetings.ReadWrite",
       }),
     });
     const data = (await res.json()) as Record<string, unknown>;
@@ -364,7 +439,7 @@ export async function refreshOAuthAccessToken(
       throw new Error(
         typeof data.error_description === "string"
           ? data.error_description
-          : "Outlook token refresh failed — reconnect in Integrations",
+          : "Microsoft token refresh failed — reconnect in Integrations",
       );
     }
     return {
@@ -406,9 +481,16 @@ export async function refreshOAuthAccessToken(
 
 export function missingKeysHint(provider: IntegrationProvider) {
   if (provider === "zapier") return "Coming soon";
+  if (provider === "apple_calendar") return "Add your Apple ID and an app-specific password";
+  if (provider === "mailchimp") return "Add your Mailchimp API key and audience ID";
   const family = oauthFamily(provider);
   if (family === "google") return "Google Calendar isn’t set up for your account yet";
-  if (family === "microsoft") return "Outlook isn’t set up for your account yet";
+  if (family === "microsoft") {
+    return provider === "teams"
+      ? "Microsoft Teams isn’t set up for your account yet"
+      : "Outlook isn’t set up for your account yet";
+  }
   if (family === "zoom") return "Zoom isn’t set up for your account yet";
+  if (family === "hubspot") return "HubSpot isn’t set up for your account yet";
   return "This connection isn’t available yet";
 }

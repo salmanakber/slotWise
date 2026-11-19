@@ -32,7 +32,7 @@ type IntegrationsPayload = {
   providers: ProviderRow[];
 };
 
-const PROVIDER_META: Record<string, { label: string; blurb: string }> = {
+const PROVIDER_META: Record<string, { label: string; blurb: string; credentials?: boolean }> = {
   google_calendar: {
     label: "Google Calendar",
     blurb: "Keep bookings on your Google Calendar",
@@ -41,9 +41,14 @@ const PROVIDER_META: Record<string, { label: string; blurb: string }> = {
     label: "Outlook",
     blurb: "Keep bookings on Outlook / Microsoft 365",
   },
-  zapier: {
-    label: "Zapier",
-    blurb: "Send new bookings into your other apps automatically",
+  apple_calendar: {
+    label: "Apple Calendar / iCloud",
+    blurb: "Sync bookings with an Apple ID + app-specific password",
+    credentials: true,
+  },
+  teams: {
+    label: "Microsoft Teams",
+    blurb: "Create Teams meeting links for online bookings",
   },
   zoom: {
     label: "Zoom",
@@ -53,7 +58,32 @@ const PROVIDER_META: Record<string, { label: string; blurb: string }> = {
     label: "Google Meet",
     blurb: "Add a Meet link to online bookings",
   },
+  hubspot: {
+    label: "HubSpot",
+    blurb: "Create contacts in HubSpot when someone books",
+  },
+  mailchimp: {
+    label: "Mailchimp",
+    blurb: "Add bookers to a Mailchimp audience",
+    credentials: true,
+  },
+  zapier: {
+    label: "Zapier",
+    blurb: "Send new bookings into your other apps automatically",
+  },
 };
+
+const PROVIDER_ORDER = [
+  "google_calendar",
+  "apple_calendar",
+  "outlook",
+  "meet",
+  "teams",
+  "zoom",
+  "hubspot",
+  "mailchimp",
+  "zapier",
+] as const;
 
 export default function IntegrationsPage() {
   return (
@@ -76,6 +106,10 @@ function IntegrationsClient() {
   const [data, setData] = useState<IntegrationsPayload | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [credProvider, setCredProvider] = useState<string | null>(null);
+  const [credAccount, setCredAccount] = useState("");
+  const [credSecret, setCredSecret] = useState("");
+  const [credAudience, setCredAudience] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/site/integrations");
@@ -104,7 +138,41 @@ function IntegrationsClient() {
     }
   }, [search]);
 
+  async function saveCredentials(provider: string) {
+    setBusy(provider);
+    setMsg("");
+    try {
+      const res = await fetch("/api/site/integrations/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          account: credAccount.trim() || undefined,
+          secret: credSecret.trim(),
+          audienceId: credAudience.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not save");
+      setCredProvider(null);
+      setCredAccount("");
+      setCredSecret("");
+      setCredAudience("");
+      setMsg(`Connected ${provider.replace(/_/g, " ")}`);
+      await load();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function connect(provider: string) {
+    if (PROVIDER_META[provider]?.credentials) {
+      setCredProvider(provider);
+      setMsg("");
+      return;
+    }
     setBusy(provider);
     setMsg("");
     try {
@@ -238,18 +306,19 @@ function IntegrationsClient() {
       </section>
 
       <section className="sw-card">
-        <h2 className="mb-1 text-[15px] font-extrabold">Calendars and tools</h2>
+        <h2 className="mb-1 text-[15px] font-extrabold">Calendars, video & marketing</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Connect the tools you already use. One click when they’re available for your account.
+          Connect calendars, meeting apps, HubSpot, and Mailchimp. Some need platform OAuth keys;
+          Apple Calendar and Mailchimp use your own credentials.
         </p>
 
-        {(["google_calendar", "outlook", "zapier", "zoom", "meet"] as const).map((key) => {
+        {PROVIDER_ORDER.map((key) => {
           const row = byProvider[key];
           const meta = PROVIDER_META[key];
           if (!row || !meta) return null;
-          // Hide until admin enables the integration (still show if already connected)
-          if (!row.platformConfigured && !row.connected) return null;
+          if (!row.platformConfigured && !row.connected && !meta.credentials) return null;
           const pending = busy === key;
+          const showForm = credProvider === key;
 
           return (
             <div key={key} className="border-t border-[var(--ln)] py-3">
@@ -280,15 +349,25 @@ function IntegrationsClient() {
                   </em>
                   {row.connected ? (
                     <>
-                      <button
-                        type="button"
-                        className="sw-btn"
-                        disabled={pending}
-                        onClick={() => void connect(key)}
-                        title="Refresh Google / Zoom authorization"
-                      >
-                        {pending ? "…" : "Reconnect"}
-                      </button>
+                      {!meta.credentials ? (
+                        <button
+                          type="button"
+                          className="sw-btn"
+                          disabled={pending}
+                          onClick={() => void connect(key)}
+                        >
+                          {pending ? "…" : "Reconnect"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="sw-btn"
+                          disabled={pending}
+                          onClick={() => setCredProvider(key)}
+                        >
+                          Update
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="sw-btn"
@@ -305,14 +384,75 @@ function IntegrationsClient() {
                       disabled={pending}
                       onClick={() => void connect(key)}
                     >
-                      {pending ? "…" : row.status === "error" ? "Reconnect" : "Connect"}
+                      {pending ? "…" : meta.credentials ? "Add credentials" : "Connect"}
                     </button>
                   )}
                 </div>
               </div>
+              {showForm ? (
+                <div className="mt-3 grid gap-2 rounded-[12px] border border-[var(--ln)] bg-[var(--sf)] p-3 sm:grid-cols-2">
+                  {key === "apple_calendar" || key === "mailchimp" ? (
+                    <input
+                      className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
+                      placeholder={key === "apple_calendar" ? "Apple ID email" : "Account email (optional)"}
+                      value={credAccount}
+                      onChange={(e) => setCredAccount(e.target.value)}
+                    />
+                  ) : null}
+                  <input
+                    type="password"
+                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
+                    placeholder={
+                      key === "apple_calendar"
+                        ? "App-specific password"
+                        : key === "mailchimp"
+                          ? "Mailchimp API key"
+                          : "Secret"
+                    }
+                    value={credSecret}
+                    onChange={(e) => setCredSecret(e.target.value)}
+                  />
+                  {key === "mailchimp" ? (
+                    <input
+                      className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px] sm:col-span-2"
+                      placeholder="Audience / list ID"
+                      value={credAudience}
+                      onChange={(e) => setCredAudience(e.target.value)}
+                    />
+                  ) : null}
+                  <div className="flex gap-2 sm:col-span-2">
+                    <button
+                      type="button"
+                      className="sw-btn sw-btn-primary"
+                      disabled={pending || !credSecret.trim()}
+                      onClick={() => void saveCredentials(key)}
+                    >
+                      {pending ? "Saving…" : "Save & connect"}
+                    </button>
+                    <button
+                      type="button"
+                      className="sw-btn"
+                      onClick={() => setCredProvider(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })}
+      </section>
+
+      <section className="sw-card">
+        <h2 className="mb-1 text-[15px] font-extrabold">Google Analytics 4</h2>
+        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+          Add your GA4 Measurement ID (G-XXXXXXXX) under{" "}
+          <Link href="/dashboard/branding" className="font-extrabold underline">
+            Branding
+          </Link>{" "}
+          — it loads on public booking pages.
+        </p>
       </section>
     </div>
   );

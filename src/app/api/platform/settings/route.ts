@@ -59,6 +59,8 @@ const bodySchema = z.object({
   microsoftClientSecret: z.string().optional(),
   zoomClientId: z.string().nullable().optional(),
   zoomClientSecret: z.string().optional(),
+  hubspotClientId: z.string().nullable().optional(),
+  hubspotClientSecret: z.string().optional(),
   zapierSigningSecret: z.string().optional(),
   zapierEnabled: z.boolean().optional(),
   aiProvider: z

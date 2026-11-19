@@ -43,13 +43,13 @@ export async function GET(request: Request, context: Ctx) {
     const pathFamily =
       pathProvider === "google_calendar" || pathProvider === "meet"
         ? "google"
-        : pathProvider === "outlook"
+        : pathProvider === "outlook" || pathProvider === "teams"
           ? "microsoft"
           : pathProvider;
     const stateFamily =
       decoded.provider === "google_calendar" || decoded.provider === "meet"
         ? "google"
-        : decoded.provider === "outlook"
+        : decoded.provider === "outlook" || decoded.provider === "teams"
           ? "microsoft"
           : decoded.provider;
     if (pathFamily !== stateFamily) {

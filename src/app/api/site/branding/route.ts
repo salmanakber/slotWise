@@ -23,6 +23,20 @@ const patchSchema = z.object({
   showBadge: z.boolean().optional(),
   showLoader: z.boolean().optional(),
   loaderStyle: z.enum(["PULSE", "SPIN", "DRAW", "CALENDAR"]).optional(),
+  ga4MeasurementId: z
+    .string()
+    .max(32)
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v == null) return v;
+      const t = v.trim().toUpperCase();
+      if (!t) return null;
+      return t;
+    })
+    .refine((v) => v == null || /^G-[A-Z0-9]+$/.test(v), {
+      message: "GA4 ID must look like G-XXXXXXXX",
+    }),
 });
 
 function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
@@ -47,6 +61,7 @@ function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
     showBadge: branding?.showBadge ?? true,
     showLoader: branding?.showLoader ?? true,
     loaderStyle: branding?.loaderStyle ?? "PULSE",
+    ga4MeasurementId: branding?.ga4MeasurementId ?? null,
     theme,
   };
 }
@@ -113,6 +128,9 @@ export async function PATCH(request: Request) {
       ...(body.showBadge !== undefined ? { showBadge: body.showBadge } : {}),
       ...(body.showLoader !== undefined ? { showLoader: body.showLoader } : {}),
       ...(body.loaderStyle !== undefined ? { loaderStyle: body.loaderStyle } : {}),
+      ...(body.ga4MeasurementId !== undefined
+        ? { ga4MeasurementId: body.ga4MeasurementId }
+        : {}),
       ...(theme ? { buttonStyle: theme.button } : {}),
     };
 
@@ -135,6 +153,7 @@ export async function PATCH(request: Request) {
         showBadge: body.showBadge ?? true,
         showLoader: body.showLoader ?? true,
         loaderStyle: body.loaderStyle ?? "PULSE",
+        ga4MeasurementId: body.ga4MeasurementId ?? null,
       },
     });
 

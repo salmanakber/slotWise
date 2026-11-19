@@ -229,6 +229,8 @@ model Branding {
   showLoader   Boolean      @default(true)
   loaderStyle  LoaderStyle  @default(PULSE)
   customCss    String?
+  /** Google Analytics 4 Measurement ID (G-XXXXXXXX). Injected on public booking pages. */
+  ga4MeasurementId String?
   updatedAt    DateTime     @updatedAt
 }
 
@@ -514,6 +516,12 @@ model PlatformConfig {
   /** When false, site owners see Zapier as Coming soon. */
   zapierEnabled                    Boolean @default(false)
 
+  // Marketing / CRM OAuth apps (optional)
+  hubspotClientId                  String?
+  hubspotClientSecretEncrypted     String?
+  mailchimpClientId                String?
+  mailchimpClientSecretEncrypted   String?
+
   // Ops
   maintenanceMode                  Boolean @default(false)
   supportEmail                     String?
@@ -524,7 +532,7 @@ model SiteIntegration {
   id                     String   @id @default(cuid())
   siteId                 String
   site                   Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  provider               String // google_calendar | outlook | zapier | zoom | meet
+  provider               String // google_calendar | outlook | zapier | zoom | meet | teams | apple_calendar | hubspot | mailchimp
   status                 String   @default("disconnected") // disconnected | connected | error
   accessTokenEncrypted   String?
   refreshTokenEncrypted  String?

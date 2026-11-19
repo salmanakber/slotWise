@@ -57,7 +57,7 @@ const TIER: Record<PlanTier, TierLimits> = {
     bookingsLimit: 25,
     staffLimit: 1,
     themesLimit: 2,
-    features: ["events", "canvas_embed", "publish", "themes"],
+    features: ["events", "canvas_embed", "publish", "themes", "staff"],
     upgradeTo: PlanTier.PRO,
     label: "Free",
     priceLabel: "$0",

@@ -5,6 +5,7 @@ import { getDaySlots, rankSlots } from "@/lib/booking/availability";
 import { sendBookingConfirmation, sendOwnerBookingAlert } from "@/lib/email";
 import { syncBookingIntegrations } from "@/lib/integrations-sync";
 import { canUse, entitlementsForTier } from "@/lib/plan-entitlements";
+import { syncBookingMarketing } from "@/lib/marketing-sync";
 import { notifyZapierBooking } from "@/lib/zapier";
 import { getPlatformSecrets } from "@/lib/platform-config";
 import { prisma } from "@/lib/prisma";
@@ -565,6 +566,16 @@ export async function createBooking(input: {
         awaitingPayment: false,
       },
     }).catch((err) => console.error("zapier notify failed", err));
+
+    await syncBookingMarketing({
+      siteId: site.id,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      customerPhone: booking.customerPhone,
+      serviceName: booking.service.name,
+      reference: booking.reference,
+      startsAt: booking.startsAt,
+    }).catch((err) => console.error("marketing sync failed", err));
   })();
 
   return {

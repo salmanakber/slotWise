@@ -28,6 +28,7 @@ export default function BrandingPage() {
   const [showDuration, setShowDuration] = useState(true);
   const [showStaff, setShowStaff] = useState(true);
   const [showBadge, setShowBadge] = useState(true);
+  const [ga4MeasurementId, setGa4MeasurementId] = useState("");
   const [widgetKey, setWidgetKey] = useState(0);
 
   const theme = useMemo(() => THEMES.find((t) => t.key === themeKey) ?? THEMES[0], [themeKey]);
@@ -112,6 +113,8 @@ export default function BrandingPage() {
         if (typeof data.showDuration === "boolean") setShowDuration(data.showDuration);
         if (typeof data.showStaff === "boolean") setShowStaff(data.showStaff);
         if (typeof data.showBadge === "boolean") setShowBadge(data.showBadge);
+        if (typeof data.ga4MeasurementId === "string") setGa4MeasurementId(data.ga4MeasurementId);
+        else if (data.ga4MeasurementId === null) setGa4MeasurementId("");
         const tokens = resolveSiteTheme(data);
         applySiteThemeToDocument(tokens);
         broadcastSiteTheme(tokens, { preview: true });
@@ -160,9 +163,13 @@ export default function BrandingPage() {
           showBadge,
           showLoader,
           loaderStyle,
+          ga4MeasurementId: ga4MeasurementId.trim() || null,
         }),
       });
-      if (!res.ok) throw new Error("Save failed — is Postgres running?");
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || "Save failed — is Postgres running?");
+      }
       const data = await res.json();
       const tokens = resolveSiteTheme(data);
       applySiteThemeToDocument(tokens);
@@ -309,6 +316,24 @@ export default function BrandingPage() {
                 </option>
               ))}
             </select>
+          </Row>
+        </section>
+
+        <section className="sw-card">
+          <h2 className="mb-1 text-[15px] font-extrabold">Google Analytics 4</h2>
+          <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+            Measurement ID loads on your public booking page (and embeds) so you can track visits and
+            conversions.
+          </p>
+          <Row label="Measurement ID">
+            <input
+              className="w-full max-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px]"
+              value={ga4MeasurementId}
+              onChange={(e) => setGa4MeasurementId(e.target.value)}
+              placeholder="G-XXXXXXXX"
+              autoComplete="off"
+              spellCheck={false}
+            />
           </Row>
         </section>
 

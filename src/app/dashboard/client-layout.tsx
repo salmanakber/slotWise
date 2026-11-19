@@ -13,6 +13,7 @@ import {
   Palette,
   Plug,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { AccessBanner } from "@/components/admin/access-banner";
 import { useInboxUnread } from "@/components/admin/nav-unread-badge";
@@ -25,6 +26,7 @@ const NAV_BASE = [
   { href: "/dashboard", label: "Overview", icon: <LayoutDashboard size={16} strokeWidth={2} /> },
   { href: "/dashboard/bookings", label: "Bookings", icon: <CalendarDays size={16} strokeWidth={2} /> },
   { href: "/dashboard/services", label: "Events", icon: <ListChecks size={16} strokeWidth={2} /> },
+  { href: "/dashboard/staff", label: "Team", icon: <Users size={16} strokeWidth={2} /> },
   { href: "/dashboard/ai-chat", label: "Chat", icon: <MessageCircle size={16} strokeWidth={2} /> },
   { href: "/dashboard/availability", label: "Availability", icon: <Clock3 size={16} strokeWidth={2} /> },
   { href: "/dashboard/notifications", label: "Notifications", icon: <Bell size={16} strokeWidth={2} /> },
@@ -38,6 +40,7 @@ const TITLES: Record<string, [string, string]> = {
   "/dashboard": ["Overview", "Bookings, revenue and what’s coming up"],
   "/dashboard/bookings": ["Bookings", "Customer details, deposits, Meet & Zoom links"],
   "/dashboard/services": ["Events", "Edit events, pricing, and performance reports"],
+  "/dashboard/staff": ["Team", "People shown under Who on your booking calendar"],
   "/dashboard/ai-chat": ["Chat", "Visitor calendar Q&A analytics (BETA)"],
   "/dashboard/availability": ["Availability", "Weekly hours and blocked date/time ranges"],
   "/dashboard/notifications": ["Notifications", "Inbox, bookings alerts, and delivery settings"],

@@ -23,12 +23,19 @@ function keysReadyFor(
   if (provider === "google_calendar" || provider === "meet") {
     return Boolean(settings.googleClientId && settings.googleClientSecretSet);
   }
-  if (provider === "outlook") {
+  if (provider === "outlook" || provider === "teams") {
     return Boolean(settings.microsoftClientId && settings.microsoftClientSecretSet);
   }
   if (provider === "zoom") {
     return Boolean(settings.zoomClientId && settings.zoomClientSecretSet);
   }
+  if (provider === "hubspot") {
+    return Boolean(
+      (settings as { hubspotClientId?: string | null }).hubspotClientId &&
+        (settings as { hubspotClientSecretSet?: boolean }).hubspotClientSecretSet,
+    );
+  }
+  if (provider === "apple_calendar" || provider === "mailchimp") return true;
   return true;
 }
 

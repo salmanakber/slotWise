@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
 import { CalendarChat } from "@/components/widget/calendar-chat";
+import { PartnerAppsPanel, PartnerReadyLink } from "@/components/widget/partner-apps";
 import { formatCustomerPrice } from "@/lib/utils";
 
 type Service = {
@@ -572,143 +573,65 @@ export function BookingWidget({
             ) : null}
 
             {confirmation.meetingUrl ? (
-              <a
+              <PartnerReadyLink
                 href={confirmation.meetingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mx-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[13px] font-extrabold transition hover:brightness-105"
-                style={{
-                  background: accent,
-                  color: onAccent,
-                  borderRadius: Math.max(radius - 4, 10),
-                }}
-              >
-                <MeetingBrandIcon id={confirmation.meetingProvider || "meet"} />
-                {confirmation.meetingProvider === "google_calendar"
-                  ? "Open in Google Calendar"
-                  : confirmation.meetingProvider === "zoom"
-                    ? "Join Zoom"
-                    : "Join Google Meet"}
-              </a>
+                provider={confirmation.meetingProvider}
+                accent={accent}
+                onAccent={onAccent}
+                radius={radius}
+              />
             ) : !meetingSkipped && confirmation.meetingTools.length > 0 ? (
-              <div
-                className="rounded-2xl border px-3.5 py-3.5 text-left"
-                style={{
-                  borderColor: line,
-                  background: `color-mix(in srgb, ${accent} 8%, ${panel})`,
+              <PartnerAppsPanel
+                tools={confirmation.meetingTools}
+                busy={meetingBusy}
+                error={meetingError}
+                accent={accent}
+                onAccent={onAccent}
+                ink={ink}
+                mut={mut}
+                line={line}
+                panel={panel}
+                radius={radius}
+                onPick={(toolId) => {
+                  void (async () => {
+                    setMeetingBusy(toolId);
+                    setMeetingError(null);
+                    try {
+                      const res = await fetch(
+                        `/api/v1/manage/${confirmation.manageToken}/meeting`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ provider: toolId }),
+                        },
+                      );
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Could not create meeting");
+                      setConfirmation((c) =>
+                        c
+                          ? {
+                              ...c,
+                              meetingUrl: data.meetingUrl,
+                              meetingProvider: data.meetingProvider,
+                              meetingTools: [],
+                            }
+                          : c,
+                      );
+                    } catch (err) {
+                      setMeetingError(
+                        err instanceof Error ? err.message : "Could not create meeting",
+                      );
+                    } finally {
+                      setMeetingBusy(null);
+                    }
+                  })();
                 }}
-              >
-                <div className="text-[13px] font-extrabold">Add calendar or video</div>
-                <p className="m-0 mt-1 text-[11.5px] leading-snug" style={{ color: mut }}>
-                  Optional — pick a partner app, or skip if you don’t need one.
-                </p>
-                <div
-                  className="mt-3 grid gap-2"
-                  style={{
-                    gridTemplateColumns:
-                      confirmation.meetingTools.length > 1
-                        ? "repeat(2, minmax(0, 1fr))"
-                        : "1fr",
-                  }}
-                >
-                  {confirmation.meetingTools.map((tool) => (
-                    <button
-                      key={tool.id}
-                      type="button"
-                      disabled={Boolean(meetingBusy)}
-                      onClick={() => {
-                        void (async () => {
-                          setMeetingBusy(tool.id);
-                          setMeetingError(null);
-                          try {
-                            const res = await fetch(
-                              `/api/v1/manage/${confirmation.manageToken}/meeting`,
-                              {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ provider: tool.id }),
-                              },
-                            );
-                            const data = await res.json();
-                            if (!res.ok) throw new Error(data.error || "Could not create meeting");
-                            setConfirmation((c) =>
-                              c
-                                ? {
-                                    ...c,
-                                    meetingUrl: data.meetingUrl,
-                                    meetingProvider: data.meetingProvider,
-                                    meetingTools: [],
-                                  }
-                                : c,
-                            );
-                          } catch (err) {
-                            setMeetingError(
-                              err instanceof Error ? err.message : "Could not create meeting",
-                            );
-                          } finally {
-                            setMeetingBusy(null);
-                          }
-                        })();
-                      }}
-                      className="flex flex-col items-center gap-2 border px-3 py-3.5 text-center transition disabled:opacity-50"
-                      style={{
-                        borderRadius: Math.max(radius - 6, 12),
-                        borderColor: line,
-                        background: panel,
-                      }}
-                    >
-                      <span
-                        className="grid h-11 w-11 place-items-center rounded-xl"
-                        style={{
-                          background:
-                            tool.id === "zoom"
-                              ? "color-mix(in srgb, #2D8CFF 14%, transparent)"
-                              : tool.id === "google_calendar"
-                                ? "color-mix(in srgb, #4285F4 14%, transparent)"
-                                : "color-mix(in srgb, #00897B 14%, transparent)",
-                        }}
-                      >
-                        <MeetingBrandIcon id={tool.id} size={22} />
-                      </span>
-                      <span className="text-[12.5px] font-extrabold leading-tight">
-                        {meetingBusy === tool.id ? "Creating…" : tool.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                {meetingError ? (
-                  <p className="mb-0 mt-2 text-[11.5px] font-semibold" style={{ color: "#c0392b" }}>
-                    {meetingError}
-                  </p>
-                ) : null}
-                <div className="mt-3 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    className="px-3 py-2 text-[12px] font-bold"
-                    style={{ color: mut, borderRadius: Math.max(radius - 8, 10) }}
-                    disabled={Boolean(meetingBusy)}
-                    onClick={() => setMeetingSkipped(true)}
-                  >
-                    Skip
-                  </button>
-                  <button
-                    type="button"
-                    className="px-3.5 py-2 text-[12px] font-extrabold"
-                    style={{
-                      borderRadius: Math.max(radius - 8, 10),
-                      background: accent,
-                      color: onAccent,
-                    }}
-                    disabled={Boolean(meetingBusy)}
-                    onClick={() => setMeetingSkipped(true)}
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
+                onSkip={() => setMeetingSkipped(true)}
+                onDone={() => setMeetingSkipped(true)}
+              />
             ) : meetingSkipped ? (
               <p className="m-0 text-[12px] font-semibold" style={{ color: mut }}>
-                No video call added — you’re all set.
+                No calendar or video added — you’re all set.
               </p>
             ) : null}
 
@@ -1239,44 +1162,6 @@ function FieldIcon({ kind }: { kind: "user" | "email" | "phone" }) {
     <svg {...common}>
       <path d="M20 21a8 8 0 0 0-16 0" />
       <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function MeetingBrandIcon({ id, size = 18 }: { id: string; size?: number }) {
-  if (id === "zoom") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
-        <rect width="24" height="24" rx="6" fill="#2D8CFF" />
-        <path
-          fill="#fff"
-          d="M6.2 8.2h6.1c.9 0 1.6.7 1.6 1.6v4.4c0 .9-.7 1.6-1.6 1.6H6.2c-.9 0-1.6-.7-1.6-1.6V9.8c0-.9.7-1.6 1.6-1.6zm8.3 1.5 3.6-2.1c.4-.2.9.1.9.5v7.8c0 .5-.5.8-.9.5l-3.6-2.1v-4.6z"
-        />
-      </svg>
-    );
-  }
-  if (id === "google_calendar") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
-        <rect width="24" height="24" rx="6" fill="#fff" stroke="#DADCE0" />
-        <path fill="#4285F4" d="M6 4h12v3H6z" />
-        <path fill="#EA4335" d="M17 7h3v12a2 2 0 0 1-2 2h-1V7z" />
-        <path fill="#34A853" d="M4 7h3v14H6a2 2 0 0 1-2-2V7z" />
-        <path fill="#FBBC04" d="M7 17h10v4H7z" />
-        <rect x="7" y="9" width="10" height="7" fill="#F1F3F4" />
-        <text x="12" y="15.5" textAnchor="middle" fontSize="7" fontWeight="800" fill="#1a73e8">
-          31
-        </text>
-      </svg>
-    );
-  }
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
-      <rect width="24" height="24" rx="6" fill="#00897B" />
-      <path
-        fill="#fff"
-        d="M7 8.5h6.5a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 14v-4A1.5 1.5 0 0 1 7 8.5zm9.2 1.2 2.5-1.5c.4-.2.8.1.8.5v6.6c0 .4-.4.7-.8.5l-2.5-1.5v-4.6z"
-      />
     </svg>
   );
 }
