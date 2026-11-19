@@ -1246,6 +1246,12 @@ export async function boot(root: HTMLElement) {
           <option value="FLOATING" ${state.branding?.layout === "FLOATING" ? "selected" : ""}>Floating button</option>
         </select>
       </label>
+      <label class="field"><span>Calendar style</span>
+        <select id="brandCalendarStyle">
+          <option value="MONTH" ${state.branding?.calendarStyle !== "WEEK" ? "selected" : ""}>Month grid</option>
+          <option value="WEEK" ${state.branding?.calendarStyle === "WEEK" ? "selected" : ""}>Week strip</option>
+        </select>
+      </label>
       <button type="button" class="btn btn-primary btn-block" id="saveBranding">
         ${iconLabel(icons.check, "Save branding")}
       </button>
@@ -1820,6 +1826,7 @@ export async function boot(root: HTMLElement) {
       const inkEl = root.querySelector("#brandInk") as HTMLInputElement | null;
       const radiusInput = root.querySelector("#brandRadius") as HTMLInputElement | null;
       const layoutEl = root.querySelector("#brandLayout") as HTMLSelectElement | null;
+      const calendarEl = root.querySelector("#brandCalendarStyle") as HTMLSelectElement | null;
       try {
         setStatus("Saving branding…");
         const res = await api.patchBranding({
@@ -1830,6 +1837,7 @@ export async function boot(root: HTMLElement) {
           inkColor: inkEl?.value,
           radius: radiusInput ? Number(radiusInput.value) : undefined,
           layout: (layoutEl?.value as "INLINE" | "POPUP" | "FLOATING") || undefined,
+          calendarStyle: (calendarEl?.value as "MONTH" | "WEEK") || undefined,
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
+import { BookingCalendar } from "@/components/widget/booking-calendar";
 import { CalendarChat } from "@/components/widget/calendar-chat";
 import { PartnerAppsPanel, PartnerReadyLink } from "@/components/widget/partner-apps";
 import { formatCustomerPrice } from "@/lib/utils";
@@ -29,6 +30,7 @@ type SitePayload = {
     radius: number;
     font: string;
     layout: string;
+    calendarStyle?: "MONTH" | "WEEK" | string;
     businessName: string | null;
     showStaff: boolean;
     showPrice: boolean;
@@ -53,12 +55,6 @@ type Slot = {
 
 function todayIso() {
   const d = new Date();
-  return d.toISOString().slice(0, 10);
-}
-
-function addDaysIso(iso: string, days: number) {
-  const d = new Date(`${iso}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -87,6 +83,7 @@ export type BrandingPreview = {
   radius?: number;
   font?: string;
   layout?: string;
+  calendarStyle?: "MONTH" | "WEEK" | string;
   businessName?: string | null;
   showStaff?: boolean;
   showPrice?: boolean;
@@ -384,7 +381,10 @@ export function BookingWidget({
     );
   }
 
-  const days = Array.from({ length: 14 }, (_, i) => addDaysIso(todayIso(), i));
+  const calendarStyle =
+    brandingPreview?.calendarStyle === "WEEK" || branding?.calendarStyle === "WEEK"
+      ? "WEEK"
+      : "MONTH";
   const steps = [
     { key: "pick", label: "Time" },
     { key: "details", label: "Details" },
@@ -404,8 +404,8 @@ export function BookingWidget({
         border: `1px solid ${line}`,
         borderRadius: embed ? Math.min(radius, 18) : radius,
         width: "100%",
-        maxWidth: "min(100%, 33rem)",
-        maxHeight: embed ? "min(92vh, 640px)" : "min(92vh, 720px)",
+        maxWidth: calendarStyle === "MONTH" ? "min(100%, 46rem)" : "min(100%, 36rem)",
+        maxHeight: embed ? "min(92vh, 720px)" : "min(92vh, 820px)",
         marginTop: embed ? 20 : 0,
         marginInline: "auto",
         display: "flex",
@@ -439,12 +439,18 @@ export function BookingWidget({
         .sw-w-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
         .sw-w-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 22%, transparent); border-radius: 99px; }
         .sw-widget *, .sw-widget *::before, .sw-widget *::after { box-sizing: border-box; }
-        .sw-w-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+        .sw-w-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
+        .sw-w-when { display: grid; gap: 1rem; min-width: 0; }
+        @container (min-width: 34rem) {
+          .sw-w-when { grid-template-columns: 1.15fr 0.95fr; gap: 1.15rem; align-items: start; }
+          .sw-w-when.is-week { grid-template-columns: 1fr; }
+          .sw-w-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         @container (min-width: 22rem) {
-          .sw-w-times { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+          .sw-w-times.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
         @container (min-width: 28rem) {
-          .sw-w-times { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+          .sw-w-times.is-compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
         @media (prefers-reduced-motion: reduce) {
           .sw-w-rise, .sw-w-check { animation: none !important; }
@@ -727,112 +733,93 @@ export function BookingWidget({
               </section>
             ) : null}
 
-            <section className="min-w-0">
-              <div className="mb-1.5 flex min-w-0 items-end justify-between gap-2">
-                <h3 className="text-[13px] font-extrabold tracking-tight">Day</h3>
-                <span className="max-w-[40%] truncate text-[10px]" style={{ color: mut }}>
-                  {site.timezone}
-                </span>
-              </div>
-              <div className="sw-w-scroll w-full min-w-0 max-w-full overflow-x-auto pb-1">
-                <div className="flex w-max gap-1 pr-1">
-                  {days.map((d) => {
-                    const dt = new Date(`${d}T12:00:00Z`);
-                    const weekday = dt.toLocaleDateString("en-US", { weekday: "short" });
-                    const dayNum = dt.toLocaleDateString("en-US", { day: "numeric" });
-                    const on = d === date;
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => setDate(d)}
-                        className="flex h-[52px] w-[48px] shrink-0 flex-col items-center justify-center gap-0 border text-center transition"
-                        style={{
-                          borderRadius: Math.max(radius - 6, 10),
-                          borderColor: on ? accent : line,
-                          background: on ? accent : "transparent",
-                          color: on ? onAccent : ink,
-                        }}
-                      >
-                        <svg
-                          width="9"
-                          height="9"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden
-                          style={{ opacity: on ? 0.9 : 0.55 }}
-                        >
-                          <rect x="3" y="4" width="18" height="18" rx="2" />
-                          <path d="M16 2v4M8 2v4M3 10h18" />
-                        </svg>
-                        <span className="text-[8.5px] font-bold uppercase leading-none tracking-wide opacity-80">
-                          {weekday}
-                        </span>
-                        <span className="text-[12.5px] font-extrabold leading-none">{dayNum}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </section>
+            <div className={`sw-w-when ${calendarStyle === "WEEK" ? "is-week" : ""}`}>
+              <section
+                className="min-w-0 rounded-[18px] border p-3"
+                style={{
+                  borderColor: line,
+                  background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 7%, ${panel}), ${panel})`,
+                }}
+              >
+                <BookingCalendar
+                  mode={calendarStyle}
+                  date={date}
+                  timezone={site.timezone}
+                  accent={accent}
+                  onAccent={onAccent}
+                  ink={ink}
+                  mut={mut}
+                  line={line}
+                  panel={panel}
+                  radius={radius}
+                  onChange={(iso) => {
+                    setDate(iso);
+                    setSlotStart("");
+                  }}
+                />
+              </section>
 
-            <section className="min-w-0">
-              <h3 className="mb-1.5 text-[13px] font-extrabold tracking-tight">Time</h3>
-              <div className="sw-w-scroll sw-w-times max-h-[148px] w-full min-w-0 overflow-y-auto pb-0.5">
-                {slots.length === 0 && !loadingSlots ? (
-                  <div
-                    className="rounded-lg border border-dashed px-3 py-4 text-center text-[12px]"
-                    style={{
-                      borderColor: line,
-                      color: mut,
-                      gridColumn: "1 / -1",
-                    }}
-                  >
-                    No openings this day. Try another date.
-                  </div>
-                ) : (
-                  slots.map((s) => {
-                    const on = slotStart === s.start;
-                    return (
-                      <button
-                        key={s.start}
-                        type="button"
-                        disabled={!s.available}
-                        onClick={() => setSlotStart(s.start)}
-                        className="flex min-h-[36px] min-w-0 flex-col items-center justify-center gap-0.5 border px-1 py-1.5 text-[11.5px] font-bold transition disabled:cursor-not-allowed disabled:line-through disabled:opacity-35"
-                        style={{
-                          borderRadius: Math.max(radius - 8, 8),
-                          borderColor: on ? accent : line,
-                          background: on ? accent : "transparent",
-                          color: on ? onAccent : ink,
-                        }}
-                      >
-                        <svg
-                          width="11"
-                          height="11"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden
-                          style={{ opacity: on ? 0.95 : 0.7 }}
+              <section className="min-w-0">
+                <div className="mb-2">
+                  <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Select time</h3>
+                  <p className="m-0 mt-0.5 text-[11.5px]" style={{ color: mut }}>
+                    {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                    {slots.filter((s) => s.available).length
+                      ? ` · ${slots.filter((s) => s.available).length} open`
+                      : ""}
+                  </p>
+                </div>
+                <div
+                  className={`sw-w-scroll sw-w-times max-h-[240px] w-full min-w-0 overflow-y-auto pb-0.5 ${
+                    calendarStyle === "WEEK" ? "is-compact" : ""
+                  }`}
+                >
+                  {slots.length === 0 && !loadingSlots ? (
+                    <div
+                      className="rounded-xl border border-dashed px-3 py-5 text-center text-[12.5px]"
+                      style={{
+                        borderColor: line,
+                        color: mut,
+                        gridColumn: "1 / -1",
+                      }}
+                    >
+                      No openings this day. Try another date.
+                    </div>
+                  ) : (
+                    slots.map((s) => {
+                      const on = slotStart === s.start;
+                      return (
+                        <button
+                          key={s.start}
+                          type="button"
+                          disabled={!s.available}
+                          onClick={() => setSlotStart(s.start)}
+                          className="flex min-h-[48px] min-w-0 items-center justify-center border px-2 text-[14px] font-bold transition disabled:cursor-not-allowed disabled:opacity-35"
+                          style={{
+                            borderRadius: Math.max(radius - 4, 14),
+                            borderColor: on ? accent : line,
+                            background: on
+                              ? `color-mix(in srgb, ${accent} 16%, ${panel})`
+                              : panel,
+                            color: ink,
+                            fontWeight: on ? 800 : 650,
+                            boxShadow: on
+                              ? `0 8px 18px color-mix(in srgb, ${accent} 16%, transparent)`
+                              : "none",
+                          }}
                         >
-                          <rect x="3" y="4" width="18" height="18" rx="2" />
-                          <path d="M16 2v4M8 2v4M3 10h18" />
-                        </svg>
-                        <span>{s.label}</span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </section>
+                          {s.label}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </div>
           </div>
         ) : null}
 

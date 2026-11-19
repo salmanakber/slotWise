@@ -23,6 +23,7 @@ const patchSchema = z.object({
   radius: z.number().int().min(0).max(28).optional(),
   font: z.string().min(1).optional(),
   layout: z.enum(["INLINE", "POPUP", "FLOATING"]).optional(),
+  calendarStyle: z.enum(["MONTH", "WEEK"]).optional(),
 });
 
 type BrandingRow = {
@@ -32,6 +33,7 @@ type BrandingRow = {
   radius?: number | null;
   font?: string | null;
   layout?: string | null;
+  calendarStyle?: string | null;
   businessName?: string | null;
 };
 
@@ -49,6 +51,7 @@ function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteFor
     radius: branding?.radius ?? theme.radius,
     font: branding?.font ?? theme.font,
     layout: branding?.layout ?? "INLINE",
+    calendarStyle: branding?.calendarStyle === "WEEK" ? "WEEK" : "MONTH",
     businessName: branding?.businessName ?? site.name,
     theme,
   };
@@ -85,6 +88,7 @@ export async function PATCH(request: Request) {
       radius: body.radius ?? theme?.radius,
       font: body.font ?? theme?.font,
       layout: body.layout,
+      calendarStyle: body.calendarStyle,
       buttonStyle: theme?.button,
     };
 
@@ -95,6 +99,7 @@ export async function PATCH(request: Request) {
       ...(data.radius !== undefined ? { radius: data.radius } : {}),
       ...(data.font !== undefined ? { font: data.font } : {}),
       ...(data.layout !== undefined ? { layout: data.layout } : {}),
+      ...(data.calendarStyle !== undefined ? { calendarStyle: data.calendarStyle } : {}),
       ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
     };
 
@@ -108,6 +113,8 @@ export async function PATCH(request: Request) {
         radius: data.radius ?? theme?.radius ?? 14,
         font: data.font ?? theme?.font ?? "Manrope",
         buttonStyle: data.buttonStyle ?? theme?.button ?? "solid",
+        layout: data.layout ?? "INLINE",
+        calendarStyle: data.calendarStyle ?? "MONTH",
         businessName: site.name,
         ...(data.inkColor !== undefined
           ? { inkColor: data.inkColor }

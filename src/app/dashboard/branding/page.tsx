@@ -19,6 +19,7 @@ export default function BrandingPage() {
   const [radius, setRadius] = useState(14);
   const [font, setFont] = useState("Manrope");
   const [layout, setLayout] = useState<"INLINE" | "POPUP" | "FLOATING">("INLINE");
+  const [calendarStyle, setCalendarStyle] = useState<"MONTH" | "WEEK">("MONTH");
   const [name, setName] = useState("Your business");
   const [showLoader, setShowLoader] = useState(true);
   const [loaderStyle, setLoaderStyle] = useState("PULSE");
@@ -40,6 +41,7 @@ export default function BrandingPage() {
       radius,
       font,
       layout,
+      calendarStyle,
       businessName: name,
       showStaff,
       showPrice,
@@ -61,6 +63,7 @@ export default function BrandingPage() {
       radius,
       font,
       layout,
+      calendarStyle,
       name,
       showStaff,
       showPrice,
@@ -104,6 +107,9 @@ export default function BrandingPage() {
         if (data.font) setFont(data.font);
         if (data.layout === "INLINE" || data.layout === "POPUP" || data.layout === "FLOATING") {
           setLayout(data.layout);
+        }
+        if (data.calendarStyle === "WEEK" || data.calendarStyle === "MONTH") {
+          setCalendarStyle(data.calendarStyle);
         }
         if (data.businessName) setName(data.businessName);
         if (typeof data.showLoader === "boolean") setShowLoader(data.showLoader);
@@ -153,6 +159,7 @@ export default function BrandingPage() {
           radius,
           font,
           layout,
+          calendarStyle,
           businessName: name,
           showStaff,
           showPrice,
@@ -281,6 +288,16 @@ export default function BrandingPage() {
               <option value="INLINE">Inline</option>
               <option value="POPUP">Popup</option>
               <option value="FLOATING">Floating button</option>
+            </select>
+          </Row>
+          <Row label="Calendar style">
+            <select
+              className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+              value={calendarStyle}
+              onChange={(e) => setCalendarStyle(e.target.value as typeof calendarStyle)}
+            >
+              <option value="MONTH">Month grid</option>
+              <option value="WEEK">Week strip</option>
             </select>
           </Row>
           <Row label="Business name">

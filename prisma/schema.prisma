@@ -221,6 +221,8 @@ model Branding {
   buttonStyle  String       @default("solid")
   density      String       @default("comfortable")
   layout       WidgetLayout @default(INLINE)
+  /** Booking calendar UI: MONTH (grid) or WEEK (7-day strip). */
+  calendarStyle String      @default("MONTH")
   businessName String?
   showStaff    Boolean      @default(true)
   showPrice    Boolean      @default(true)
