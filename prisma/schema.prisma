@@ -231,6 +231,8 @@ model Branding {
   customCss    String?
   /** Google Analytics 4 Measurement ID (G-XXXXXXXX). Injected on public booking pages. */
   ga4MeasurementId String?
+  /** Meta (Facebook) Pixel ID — numeric. Injected on public booking pages. */
+  metaPixelId      String?
   updatedAt    DateTime     @updatedAt
 }
 

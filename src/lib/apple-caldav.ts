@@ -17,48 +17,75 @@ function normalizeBase(url?: string) {
   return (url || "https://caldav.icloud.com").replace(/\/$/, "");
 }
 
-/** Probe iCloud CalDAV — rejects fake email/password pairs. */
+function looksLikeDavXml(body: string) {
+  const t = body.toLowerCase();
+  return (
+    t.includes("multistatus") ||
+    t.includes("current-user-principal") ||
+    t.includes("dav:") ||
+    t.includes("<d:href") ||
+    t.includes(":href")
+  );
+}
+
+/** Probe iCloud CalDAV — rejects fake / wrong email+password pairs. */
 export async function validateAppleCalDav(
   input: AppleCalDavConfig,
 ): Promise<{ ok: true; principalUrl: string } | { ok: false; error: string }> {
   const appleId = input.appleId.trim().toLowerCase();
   const appPassword = input.appPassword.replace(/\s+/g, "");
-  if (!appleId.includes("@")) {
-    return { ok: false, error: "Enter a valid Apple ID email" };
+  if (!appleId.includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(appleId)) {
+    return { ok: false, error: "Enter a valid Apple ID email (example@icloud.com)." };
   }
-  // App-specific passwords are typically 16 letters (often shown as xxxx-xxxx-xxxx-xxxx)
+  // App-specific passwords are typically 16 letters (xxxx-xxxx-xxxx-xxxx)
   if (appPassword.length < 12) {
     return {
       ok: false,
-      error: "Use an Apple app-specific password (appleid.apple.com → Sign-In and Security)",
+      error:
+        "That doesn’t look like an Apple app-specific password. Create one at appleid.apple.com → Sign-In and Security (not your normal Apple password).",
     };
   }
 
   const base = normalizeBase(input.calDavUrl);
   const auth = basicAuth(appleId, appPassword);
+  const propfindBody = `<?xml version="1.0" encoding="UTF-8"?>
+<d:propfind xmlns:d="DAV:">
+  <d:prop><d:current-user-principal/></d:prop>
+</d:propfind>`;
 
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 14_000);
     const res = await fetch(`${base}/`, {
       method: "PROPFIND",
       headers: {
         Authorization: auth,
         Depth: "0",
         "Content-Type": "application/xml; charset=utf-8",
+        Accept: "application/xml, text/xml, */*",
       },
-      body: `<?xml version="1.0" encoding="UTF-8"?>
-<d:propfind xmlns:d="DAV:">
-  <d:prop><d:current-user-principal/></d:prop>
-</d:propfind>`,
-      signal: AbortSignal.timeout(12_000),
-    });
+      body: propfindBody,
+      signal: controller.signal,
+      redirect: "manual",
+    }).finally(() => clearTimeout(timer));
 
     if (res.status === 401 || res.status === 403) {
       return {
         ok: false,
         error:
-          "Apple rejected those credentials. Use your Apple ID email and an app-specific password (not your normal password).",
+          "Apple rejected those login details. Use your real Apple ID email and an app-specific password (not your normal password).",
       };
     }
+
+    // Redirects / HTML login pages mean auth failed even if status isn't 401
+    if (res.status >= 300 && res.status < 400) {
+      return {
+        ok: false,
+        error:
+          "Apple didn’t accept those credentials. Check the Apple ID and app-specific password, then try again.",
+      };
+    }
+
     if (!res.ok && res.status !== 207) {
       return {
         ok: false,
@@ -67,25 +94,44 @@ export async function validateAppleCalDav(
     }
 
     const xml = await res.text();
-    const principalMatch = xml.match(/<[^>]*current-user-principal[^>]*>[\s\S]*?<[^>]*href[^>]*>([^<]+)/i);
-    const principalUrl = principalMatch?.[1]?.trim()
-      ? principalMatch[1].trim().startsWith("http")
-        ? principalMatch[1].trim()
-        : `${base}${principalMatch[1].trim()}`
+    if (!looksLikeDavXml(xml)) {
+      return {
+        ok: false,
+        error:
+          "Apple didn’t confirm those credentials. Wrong email/password, or use an app-specific password from appleid.apple.com.",
+      };
+    }
+
+    const principalMatch = xml.match(
+      /<[^>]*current-user-principal[^>]*>[\s\S]*?<[^>]*href[^>]*>([^<]+)/i,
+    );
+    const href = principalMatch?.[1]?.trim();
+    const principalUrl = href
+      ? href.startsWith("http")
+        ? href
+        : `${base}${href.startsWith("/") ? "" : "/"}${href}`
       : `${base}/`;
 
     return { ok: true, principalUrl };
   } catch (e) {
     console.error("[apple-caldav:validate]", e);
+    const aborted =
+      e instanceof Error && (e.name === "AbortError" || /aborted|timeout/i.test(e.message));
     return {
       ok: false,
-      error: "Could not verify Apple Calendar — check your connection and try again.",
+      error: aborted
+        ? "iCloud took too long to respond. Check your connection and try again."
+        : "Could not verify Apple Calendar right now. Check your connection and try again.",
     };
   }
 }
 
 function icsEscape(value: string) {
-  return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
 }
 
 export function buildBookingIcs(input: {

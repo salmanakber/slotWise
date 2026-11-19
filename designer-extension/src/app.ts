@@ -186,16 +186,13 @@ export async function boot(root: HTMLElement) {
   }
 
   function panelSwitcher() {
-    const mobileOn = state.panelMode === "mobile";
-    const fullOn = state.panelMode === "full";
-    return `<div class="panel-switch" role="group" aria-label="Panel layout">
-      <button type="button" class="panel-switch-btn${mobileOn ? " is-on" : ""}" id="panelMobile" title="Mobile view" aria-pressed="${mobileOn}">
-        <span class="ico">${icons.phone}</span>
-      </button>
-      <button type="button" class="panel-switch-btn${fullOn ? " is-on" : ""}" id="panelFull" title="Desktop view" aria-pressed="${fullOn}">
-        <span class="ico">${icons.monitor}</span>
-      </button>
-    </div>`;
+    const isMobile = state.panelMode === "mobile";
+    // Show the opposite mode — one icon, less space
+    return `<button type="button" class="side-foot-icon panel-toggle" id="panelToggle" title="${
+      isMobile ? "Switch to desktop view" : "Switch to mobile view"
+    }" aria-label="${isMobile ? "Desktop view" : "Mobile view"}">
+      <span class="ico">${isMobile ? icons.monitor : icons.phone}</span>
+    </button>`;
   }
 
   function shell(body: string) {
@@ -211,13 +208,11 @@ export async function boot(root: HTMLElement) {
           <span class="ico">${icons.rocket}</span>
           <span>Publish</span>
         </button>
-        <div class="side-foot-row side-foot-row-switch">
+        <div class="side-foot-row side-foot-row-tools">
           <a class="side-foot-icon" href="${upgradeUrl()}" target="_blank" rel="noreferrer" title="Upgrade plan">
             <span class="ico">${icons.spark}</span>
           </a>
           ${panelSwitcher()}
-        </div>
-        <div class="side-foot-row side-foot-row-tools">
           <a class="side-foot-icon" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">
             <span class="ico">${icons.grid}</span>
           </a>
@@ -306,12 +301,8 @@ export async function boot(root: HTMLElement) {
       void render();
     });
     root.querySelector("#publishBtn")?.addEventListener("click", () => void onPublish());
-    root.querySelector("#panelMobile")?.addEventListener("click", () => {
-      setPanelMode("mobile");
-      void render();
-    });
-    root.querySelector("#panelFull")?.addEventListener("click", () => {
-      setPanelMode("full");
+    root.querySelector("#panelToggle")?.addEventListener("click", () => {
+      setPanelMode(state.panelMode === "mobile" ? "full" : "mobile");
       void render();
     });
     root.querySelector("#fabNew")?.addEventListener("click", () => {

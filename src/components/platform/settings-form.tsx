@@ -471,6 +471,22 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 autoComplete="new-password"
               />
             </Field>
+            <p className="mb-3 text-[12.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
+              HubSpot keys are from the{" "}
+              <a
+                href="https://developers.hubspot.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="font-extrabold underline"
+              >
+                HubSpot Developer portal
+              </a>{" "}
+              (not a CLI). Create an app → Auth tab → Client ID &amp; Client secret. Add redirect URI:{" "}
+              <code className="font-semibold">
+                /api/site/integrations/oauth/hubspot/callback
+              </code>
+              .
+            </p>
             <Field label="HubSpot client ID">
               <input
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"

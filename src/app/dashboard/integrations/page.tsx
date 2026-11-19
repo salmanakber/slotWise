@@ -60,7 +60,7 @@ const PROVIDER_META: Record<string, { label: string; blurb: string; credentials?
   },
   hubspot: {
     label: "HubSpot",
-    blurb: "Create contacts in HubSpot when someone books",
+    blurb: "Create contacts in HubSpot when someone books (needs platform Client ID/Secret)",
   },
   mailchimp: {
     label: "Mailchimp",
@@ -108,6 +108,12 @@ function IntegrationsClient() {
   const [credProvider, setCredProvider] = useState<string | null>(null);
   const [credAccount, setCredAccount] = useState("");
   const [credSecret, setCredSecret] = useState("");
+  const [credError, setCredError] = useState("");
+  const [msgTone, setMsgTone] = useState<"ok" | "bad">("ok");
+  const [ga4Id, setGa4Id] = useState("");
+  const [pixelId, setPixelId] = useState("");
+  const [trackingMsg, setTrackingMsg] = useState("");
+  const [trackingBusy, setTrackingBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/site/integrations");
@@ -123,8 +129,12 @@ function IntegrationsClient() {
   useEffect(() => {
     const connected = search.get("connected");
     const error = search.get("error");
-    if (connected) setMsg(`Connected ${connected.replace(/_/g, " ")}`);
+    if (connected) {
+      setMsgTone("ok");
+      setMsg(`Connected ${connected.replace(/_/g, " ")}`);
+    }
     if (error) {
+      setMsgTone("bad");
       const raw = decodeURIComponent(error);
       if (/verification|tested|tester/i.test(raw)) {
         setMsg(
@@ -139,6 +149,8 @@ function IntegrationsClient() {
   async function saveCredentials(provider: string) {
     setBusy(provider);
     setMsg("");
+    setCredError("");
+    setMsgTone("ok");
     try {
       const res = await fetch("/api/site/integrations/credentials", {
         method: "POST",
@@ -149,23 +161,71 @@ function IntegrationsClient() {
           secret: credSecret.trim(),
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Could not save");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err =
+          typeof json.error === "string" && json.error
+            ? json.error
+            : "Could not verify those credentials — check email and app-specific password.";
+        setCredError(err);
+        setMsgTone("bad");
+        setMsg(err);
+        throw new Error(err);
+      }
       setCredProvider(null);
       setCredAccount("");
       setCredSecret("");
+      setCredError("");
+      setMsgTone("ok");
       setMsg(`Connected ${provider.replace(/_/g, " ")}`);
       await load();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Could not save");
+      const err = e instanceof Error ? e.message : "Could not save";
+      setCredError(err);
+      setMsgTone("bad");
+      setMsg(err);
     } finally {
       setBusy(null);
+    }
+  }
+
+  useEffect(() => {
+    void fetch("/api/site/branding", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        if (typeof d.ga4MeasurementId === "string") setGa4Id(d.ga4MeasurementId);
+        if (typeof d.metaPixelId === "string") setPixelId(d.metaPixelId);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function saveTracking() {
+    setTrackingBusy(true);
+    setTrackingMsg("");
+    try {
+      const res = await fetch("/api/site/branding", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ga4MeasurementId: ga4Id.trim() || null,
+          metaPixelId: pixelId.trim() || null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not save tracking IDs");
+      setTrackingMsg("Tracking saved — IDs load on your public booking page.");
+    } catch (e) {
+      setTrackingMsg(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setTrackingBusy(false);
     }
   }
 
   async function connect(provider: string) {
     if (PROVIDER_META[provider]?.credentials) {
       setCredProvider(provider);
+      setCredError("");
       setMsg("");
       return;
     }
@@ -228,7 +288,18 @@ function IntegrationsClient() {
   return (
     <div className="grid gap-3.5">
       {msg ? (
-        <div className="rounded-xl border border-[var(--ln)] bg-[var(--bg)] px-3.5 py-3 text-[13px] font-semibold text-[var(--at)]">
+        <div
+          className="rounded-xl border px-3.5 py-3 text-[13px] font-semibold"
+          style={{
+            borderColor: msgTone === "bad" ? "color-mix(in srgb, #c0392b 35%, var(--ln))" : "var(--ln)",
+            background:
+              msgTone === "bad"
+                ? "color-mix(in srgb, #c0392b 8%, var(--bg))"
+                : "var(--bg)",
+            color: msgTone === "bad" ? "#c0392b" : "var(--at)",
+          }}
+          role={msgTone === "bad" ? "alert" : "status"}
+        >
           {msg}
         </div>
       ) : null}
@@ -304,8 +375,8 @@ function IntegrationsClient() {
       <section className="sw-card">
         <h2 className="mb-1 text-[15px] font-extrabold">Calendars, video & marketing</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Connect calendars, meeting apps, HubSpot, and Mailchimp. Some need platform OAuth keys;
-          Apple Calendar and Mailchimp use your own credentials.
+          Connect calendars, meeting apps, HubSpot, and Mailchimp. HubSpot / Mailchimp / Google need
+          platform OAuth keys. Apple Calendar uses an Apple ID + app-specific password (verified live).
         </p>
 
         {PROVIDER_ORDER.map((key) => {
@@ -397,24 +468,45 @@ function IntegrationsClient() {
                     >
                       app-specific password
                     </a>{" "}
-                    at appleid.apple.com → Sign-In and Security. Random emails are rejected — we verify
-                    against iCloud CalDAV before saving.
+                    at appleid.apple.com → Sign-In and Security. Wrong logins are rejected after we
+                    check iCloud.
                   </p>
                   <input
                     className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
                     placeholder="Apple ID email"
                     value={credAccount}
-                    onChange={(e) => setCredAccount(e.target.value)}
+                    onChange={(e) => {
+                      setCredAccount(e.target.value);
+                      setCredError("");
+                    }}
                     autoComplete="username"
+                    aria-invalid={Boolean(credError)}
                   />
                   <input
                     type="password"
                     className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
                     placeholder="App-specific password"
                     value={credSecret}
-                    onChange={(e) => setCredSecret(e.target.value)}
+                    onChange={(e) => {
+                      setCredSecret(e.target.value);
+                      setCredError("");
+                    }}
                     autoComplete="current-password"
+                    aria-invalid={Boolean(credError)}
                   />
+                  {credError ? (
+                    <p
+                      className="m-0 rounded-[10px] border px-3 py-2 text-[12.5px] font-semibold sm:col-span-2"
+                      style={{
+                        color: "#c0392b",
+                        borderColor: "color-mix(in srgb, #c0392b 35%, var(--ln))",
+                        background: "color-mix(in srgb, #c0392b 8%, var(--bg))",
+                      }}
+                      role="alert"
+                    >
+                      {credError}
+                    </p>
+                  ) : null}
                   <div className="flex gap-2 sm:col-span-2">
                     <button
                       type="button"
@@ -422,17 +514,38 @@ function IntegrationsClient() {
                       disabled={pending || !credSecret.trim() || !credAccount.trim()}
                       onClick={() => void saveCredentials(key)}
                     >
-                      {pending ? "Verifying…" : "Verify & connect"}
+                      {pending ? "Verifying with Apple…" : "Verify & connect"}
                     </button>
                     <button
                       type="button"
                       className="sw-btn"
-                      onClick={() => setCredProvider(null)}
+                      onClick={() => {
+                        setCredProvider(null);
+                        setCredError("");
+                      }}
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
+              ) : null}
+              {key === "hubspot" && !row.platformConfigured ? (
+                <p className="mb-0 mt-2 text-[12.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
+                  Ask your platform admin to create a HubSpot app at{" "}
+                  <a
+                    href="https://developers.hubspot.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-extrabold underline"
+                  >
+                    developers.hubspot.com
+                  </a>{" "}
+                  → Create app → Auth → copy Client ID &amp; Client secret into{" "}
+                  <Link href="/platform/settings" className="font-extrabold underline">
+                    Platform → Settings
+                  </Link>
+                  . No CLI install required.
+                </p>
               ) : null}
             </div>
           );
@@ -440,14 +553,74 @@ function IntegrationsClient() {
       </section>
 
       <section className="sw-card">
-        <h2 className="mb-1 text-[15px] font-extrabold">Google Analytics 4</h2>
+        <h2 className="mb-1 text-[15px] font-extrabold">Analytics &amp; ads</h2>
         <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-          Add your GA4 Measurement ID (G-XXXXXXXX) under{" "}
-          <Link href="/dashboard/branding" className="font-extrabold underline">
-            Branding
-          </Link>{" "}
-          — it loads on public booking pages.
+          Paste your IDs here (or under Branding). Google Analytics and Meta don’t offer a Slotwise
+          “Connect” OAuth for pixels — you copy the ID from their dashboards.
         </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="grid gap-1 text-[12px] font-bold">
+            GA4 Measurement ID
+            <input
+              className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px] font-semibold"
+              value={ga4Id}
+              onChange={(e) => setGa4Id(e.target.value)}
+              placeholder="G-XXXXXXXX"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+          <label className="grid gap-1 text-[12px] font-bold">
+            Meta Pixel ID
+            <input
+              className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 font-mono text-[13px] font-semibold"
+              value={pixelId}
+              onChange={(e) => setPixelId(e.target.value)}
+              placeholder="123456789012345"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+        </div>
+        <ol className="mt-3 list-decimal space-y-1 pl-4 text-[12.5px]" style={{ color: "var(--mut)" }}>
+          <li>
+            GA4:{" "}
+            <a
+              href="https://analytics.google.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="font-extrabold underline"
+            >
+              analytics.google.com
+            </a>{" "}
+            → Admin → Data streams → Measurement ID
+          </li>
+          <li>
+            Meta:{" "}
+            <a
+              href="https://business.facebook.com/events_manager"
+              target="_blank"
+              rel="noreferrer"
+              className="font-extrabold underline"
+            >
+              Events Manager
+            </a>{" "}
+            → your Pixel → Pixel ID
+          </li>
+        </ol>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="sw-btn sw-btn-primary"
+            disabled={trackingBusy}
+            onClick={() => void saveTracking()}
+          >
+            {trackingBusy ? "Saving…" : "Save tracking"}
+          </button>
+          {trackingMsg ? (
+            <span className="text-[12.5px] font-semibold text-[var(--at)]">{trackingMsg}</span>
+          ) : null}
+        </div>
       </section>
     </div>
   );

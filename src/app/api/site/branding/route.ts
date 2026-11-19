@@ -37,6 +37,20 @@ const patchSchema = z.object({
     .refine((v) => v == null || /^G-[A-Z0-9]+$/.test(v), {
       message: "GA4 ID must look like G-XXXXXXXX",
     }),
+  metaPixelId: z
+    .string()
+    .max(32)
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v == null) return v;
+      const t = v.trim().replace(/\s+/g, "");
+      if (!t) return null;
+      return t;
+    })
+    .refine((v) => v == null || /^\d{5,20}$/.test(v), {
+      message: "Meta Pixel ID must be a number from Events Manager",
+    }),
 });
 
 function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
@@ -62,6 +76,7 @@ function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
     showLoader: branding?.showLoader ?? true,
     loaderStyle: branding?.loaderStyle ?? "PULSE",
     ga4MeasurementId: branding?.ga4MeasurementId ?? null,
+    metaPixelId: branding?.metaPixelId ?? null,
     theme,
   };
 }
@@ -131,6 +146,7 @@ export async function PATCH(request: Request) {
       ...(body.ga4MeasurementId !== undefined
         ? { ga4MeasurementId: body.ga4MeasurementId }
         : {}),
+      ...(body.metaPixelId !== undefined ? { metaPixelId: body.metaPixelId } : {}),
       ...(theme ? { buttonStyle: theme.button } : {}),
     };
 
@@ -154,6 +170,7 @@ export async function PATCH(request: Request) {
         showLoader: body.showLoader ?? true,
         loaderStyle: body.loaderStyle ?? "PULSE",
         ga4MeasurementId: body.ga4MeasurementId ?? null,
+        metaPixelId: body.metaPixelId ?? null,
       },
     });
 

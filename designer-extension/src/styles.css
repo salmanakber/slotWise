@@ -280,50 +280,13 @@ html[data-panel="full"] .app,
   gap: 6px;
   align-items: center;
 }
-.side-foot-row-switch {
-  grid-template-columns: 32px minmax(0, 1fr);
-}
 .side-foot-row-tools {
-  grid-template-columns: 32px 32px;
+  grid-template-columns: repeat(4, 32px);
   justify-content: start;
 }
-.panel-switch {
-  display: inline-grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  min-height: 32px;
-  padding: 2px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--soft);
-}
-.panel-switch-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 26px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--mut);
-  cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-.panel-switch-btn:hover {
-  color: var(--ink);
-}
-.panel-switch-btn.is-on {
-  background: var(--panel);
+.panel-toggle.is-on,
+.side-foot-icon.panel-toggle:hover {
   color: var(--ac);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
-}
-.panel-switch-btn .ico,
-.panel-switch-btn .ico svg {
-  width: 14px;
-  height: 14px;
-}
-.nav-actions .panel-switch {
-  flex-shrink: 0;
 }
 .side-foot-icon {
   display: inline-flex;
