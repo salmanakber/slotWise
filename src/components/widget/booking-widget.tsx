@@ -180,20 +180,51 @@ export function BookingWidget({
     const el = rootRef.current;
     if (!el) return;
 
+    const style =
+      site?.branding?.calendarStyle === "WEEK"
+        ? "WEEK"
+        : site?.branding?.calendarStyle === "HORIZONTAL"
+          ? "HORIZONTAL"
+          : brandingPreview?.calendarStyle === "WEEK"
+            ? "WEEK"
+            : brandingPreview?.calendarStyle === "HORIZONTAL"
+              ? "HORIZONTAL"
+              : "MONTH";
+
     const post = () => {
       const height = Math.ceil(el.getBoundingClientRect().height);
       window.parent.postMessage(
-        { source: "slotwise", type: "resize", publicKey, height },
+        {
+          source: "slotwise",
+          type: "resize",
+          publicKey,
+          height,
+          calendarStyle: style,
+          frameWidth: style === "HORIZONTAL" ? "70%" : null,
+        },
         "*",
       );
     };
 
-    window.parent.postMessage({ source: "slotwise", type: "ready", publicKey }, "*");
+    window.parent.postMessage(
+      { source: "slotwise", type: "ready", publicKey, calendarStyle: style },
+      "*",
+    );
     post();
     const ro = new ResizeObserver(post);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [embed, publicKey, step, site, slots, loadingSlots, submitting, serviceId]);
+  }, [
+    embed,
+    publicKey,
+    step,
+    site,
+    slots,
+    loadingSlots,
+    submitting,
+    serviceId,
+    brandingPreview?.calendarStyle,
+  ]);
 
   useEffect(() => {
     if (!embed || typeof window === "undefined" || !error) return;
@@ -451,8 +482,8 @@ export function BookingWidget({
         .sw-widget *, .sw-widget *::before, .sw-widget *::after { box-sizing: border-box; }
         .sw-w-times {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-          gap: 0.55rem;
+          grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+          gap: 0.4rem;
         }
         .sw-w-when { display: grid; gap: 1rem; min-width: 0; }
         .sw-w-board { display: grid; gap: 1.25rem; min-width: 0; align-items: start; }
@@ -995,16 +1026,16 @@ export function BookingWidget({
                         type="button"
                         disabled={!s.available}
                         onClick={() => setSlotStart(s.start)}
-                        className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 border px-2 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:opacity-35"
+                        className="flex min-h-[40px] min-w-0 flex-col items-center justify-center gap-0.5 border px-1.5 py-1.5 text-[12px] font-bold transition disabled:cursor-not-allowed disabled:opacity-35"
                         style={{
-                          borderRadius: Math.max(radius - 4, 12),
+                          borderRadius: Math.max(radius - 6, 10),
                           borderColor: on ? accent : line,
                           background: on ? accent : panel,
                           color: on ? onAccent : ink,
                           fontWeight: on ? 800 : 650,
                         }}
                       >
-                        <TimeGlyph color={on ? onAccent : mut} />
+                        <TimeGlyph color={on ? onAccent : mut} size={12} />
                         {s.label}
                       </button>
                     );
@@ -1279,9 +1310,9 @@ export function BookingWidget({
   );
 }
 
-function TimeGlyph({ color }: { color: string }) {
+function TimeGlyph({ color, size = 14 }: { color: string; size?: number }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
       <rect x="3" y="5" width="18" height="16" rx="2.5" stroke={color} strokeWidth="1.8" />
       <path d="M3 10h18" stroke={color} strokeWidth="1.8" />
       <path d="M8 3v4M16 3v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" />

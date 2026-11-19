@@ -115,8 +115,9 @@ export async function insertBookingIframe(publicKey: string) {
   const wrapStyle =
     "width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;display:block;";
   // Start short; widget.js / postMessage grows height. Avoids a tall empty box after uninstall.
+  // Wide board uses 70% customer iframe width; compact styles stay ~mobile card width.
   const frameStyle = wide
-    ? "display:block;width:100%;max-width:100%;margin:0;height:720px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
+    ? "display:block;width:70%;max-width:70%;margin-left:auto;margin-right:auto;height:720px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
     : "display:block;width:100%;max-width:29.2rem;margin-left:auto;margin-right:auto;height:640px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
 
   try {

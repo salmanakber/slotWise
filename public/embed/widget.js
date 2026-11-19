@@ -13,7 +13,8 @@
       "box-sizing:border-box;isolation:isolate;overflow:hidden}" +
       ".slotwise-frame{display:block;width:100%;max-width:29.2rem;margin:0 auto;border:0;border-radius:16px;" +
       "background:transparent;min-height:0;height:0;overflow:hidden;" +
-      "box-shadow:0 14px 40px rgba(15,27,45,.1);transition:min-height .25s ease,height .25s ease}" +
+      "box-shadow:0 14px 40px rgba(15,27,45,.1);transition:min-height .25s ease,height .25s ease,max-width .25s ease,width .25s ease}" +
+      ".slotwise-frame.is-wide{width:70%;max-width:70%}" +
       ".slotwise-skel{position:absolute;inset:0;border-radius:16px;overflow:hidden;" +
       "background:linear-gradient(135deg,#f7f8fb,#eef2f7);pointer-events:none}" +
       ".slotwise-skel::after{content:'';position:absolute;inset:0;" +
@@ -24,6 +25,24 @@
       ".slotwise-host.is-gone,.slotwise-gone{display:none!important;height:0!important;min-height:0!important;" +
       "margin:0!important;padding:0!important;overflow:hidden!important;border:0!important}";
     document.head.appendChild(css);
+  }
+
+  function applyFrameWidth(iframe, calendarStyle) {
+    if (!iframe) return;
+    var wide = calendarStyle === "HORIZONTAL";
+    if (wide) {
+      iframe.classList.add("is-wide");
+      iframe.style.width = "70%";
+      iframe.style.maxWidth = "70%";
+      iframe.style.marginLeft = "auto";
+      iframe.style.marginRight = "auto";
+    } else {
+      iframe.classList.remove("is-wide");
+      iframe.style.width = "100%";
+      iframe.style.maxWidth = "29.2rem";
+      iframe.style.marginLeft = "auto";
+      iframe.style.marginRight = "auto";
+    }
   }
 
   function hide(el) {
@@ -72,11 +91,13 @@
       fetch(base + "/api/v1/sites/" + encodeURIComponent(key), { credentials: "omit" })
         .then(function (r) {
           if (!r.ok) throw new Error("unavailable");
+          return r.json();
         })
-        .then(function () {
+        .then(function (data) {
           el.classList.add("is-ready");
           existing.style.minHeight = "640px";
           existing.style.height = "640px";
+          applyFrameWidth(existing, data && data.branding && data.branding.calendarStyle);
         })
         .catch(function () {
           hideFrame(existing);
@@ -96,6 +117,15 @@
           var next = Math.max(320, Math.ceil(data.height) + 8);
           existing.style.minHeight = next + "px";
           existing.style.height = next + "px";
+          if (data.calendarStyle || data.frameWidth) {
+            applyFrameWidth(
+              existing,
+              data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
+            );
+          }
+        }
+        if (data.type === "ready" && data.calendarStyle) {
+          applyFrameWidth(existing, data.calendarStyle);
         }
       });
       return;
@@ -106,7 +136,7 @@
         if (!r.ok) throw new Error("unavailable");
         return r.json();
       })
-      .then(function () {
+      .then(function (data) {
         el.style.width = "100%";
         el.style.maxWidth = "100%";
         el.style.minWidth = "0";
@@ -125,23 +155,31 @@
         iframe.setAttribute("allow", "payment *");
         iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
         iframe.setAttribute("scrolling", "no");
+        applyFrameWidth(iframe, data && data.branding && data.branding.calendarStyle);
 
         var minH = parseInt(el.getAttribute("data-min-height") || "640", 10);
 
         function onMessage(ev) {
-          var data = ev && ev.data;
-          if (!data || data.source !== "slotwise" || data.publicKey !== site) return;
-          if (data.type === "resize" && typeof data.height === "number") {
-            if (data.height <= 1) {
+          var msg = ev && ev.data;
+          if (!msg || msg.source !== "slotwise" || msg.publicKey !== site) return;
+          if (msg.type === "resize" && typeof msg.height === "number") {
+            if (msg.height <= 1) {
               hide(el);
               return;
             }
-            var next = Math.max(minH, Math.ceil(data.height) + 8);
+            var next = Math.max(minH, Math.ceil(msg.height) + 8);
             iframe.style.minHeight = next + "px";
             iframe.style.height = next + "px";
+            if (msg.calendarStyle || msg.frameWidth) {
+              applyFrameWidth(
+                iframe,
+                msg.calendarStyle || (msg.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
+              );
+            }
           }
-          if (data.type === "ready") {
+          if (msg.type === "ready") {
             el.classList.add("is-ready");
+            if (msg.calendarStyle) applyFrameWidth(iframe, msg.calendarStyle);
           }
         }
 
@@ -174,6 +212,10 @@
         fetch(base + "/api/v1/sites/" + encodeURIComponent(publicKey), { credentials: "omit" })
           .then(function (r) {
             if (!r.ok) throw new Error("unavailable");
+            return r.json();
+          })
+          .then(function (data) {
+            applyFrameWidth(frame, data && data.branding && data.branding.calendarStyle);
           })
           .catch(function () {
             hideFrame(frame);
@@ -187,7 +229,16 @@
               var next = Math.max(320, Math.ceil(data.height) + 8);
               frame.style.minHeight = next + "px";
               frame.style.height = next + "px";
+              if (data.calendarStyle || data.frameWidth) {
+                applyFrameWidth(
+                  frame,
+                  data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
+                );
+              }
             }
+          }
+          if (data.type === "ready" && data.calendarStyle) {
+            applyFrameWidth(frame, data.calendarStyle);
           }
         });
       })(iframe, key);
