@@ -217,11 +217,11 @@ model Branding {
   accent       String       @default("#f5a000")
   inkColor     String?
   radius       Int          @default(14)
-  font         String       @default("Manrope")
+  font         String       @default("Match my site")
   buttonStyle  String       @default("solid")
   density      String       @default("comfortable")
   layout       WidgetLayout @default(INLINE)
-  /** Booking calendar UI: MONTH (grid) or WEEK (7-day strip). */
+  /** Booking calendar UI: MONTH, WEEK, or HORIZONTAL (wide 3-column board). */
   calendarStyle String      @default("MONTH")
   businessName String?
   showStaff    Boolean      @default(true)

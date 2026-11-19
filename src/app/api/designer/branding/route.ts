@@ -23,7 +23,7 @@ const patchSchema = z.object({
   radius: z.number().int().min(0).max(28).optional(),
   font: z.string().min(1).optional(),
   layout: z.enum(["INLINE", "POPUP", "FLOATING"]).optional(),
-  calendarStyle: z.enum(["MONTH", "WEEK"]).optional(),
+  calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
 });
 
 type BrandingRow = {
@@ -51,7 +51,12 @@ function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteFor
     radius: branding?.radius ?? theme.radius,
     font: branding?.font ?? theme.font,
     layout: branding?.layout ?? "INLINE",
-    calendarStyle: branding?.calendarStyle === "WEEK" ? "WEEK" : "MONTH",
+    calendarStyle:
+      branding?.calendarStyle === "WEEK"
+        ? "WEEK"
+        : branding?.calendarStyle === "HORIZONTAL"
+          ? "HORIZONTAL"
+          : "MONTH",
     businessName: branding?.businessName ?? site.name,
     theme,
   };
@@ -111,7 +116,7 @@ export async function PATCH(request: Request) {
         themeKey: data.themeKey ?? theme?.key ?? "amber-light",
         accent: data.accent ?? theme?.accent ?? "#f5a000",
         radius: data.radius ?? theme?.radius ?? 14,
-        font: data.font ?? theme?.font ?? "Manrope",
+        font: data.font ?? theme?.font ?? "Match my site",
         buttonStyle: data.buttonStyle ?? theme?.button ?? "solid",
         layout: data.layout ?? "INLINE",
         calendarStyle: data.calendarStyle ?? "MONTH",

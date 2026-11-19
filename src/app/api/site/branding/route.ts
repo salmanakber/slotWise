@@ -16,7 +16,7 @@ const patchSchema = z.object({
   radius: z.number().int().min(0).max(28).optional(),
   font: z.string().min(1).optional(),
   layout: z.enum(["INLINE", "POPUP", "FLOATING"]).optional(),
-  calendarStyle: z.enum(["MONTH", "WEEK"]).optional(),
+  calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
   businessName: z.string().max(120).optional(),
   showStaff: z.boolean().optional(),
   showPrice: z.boolean().optional(),
@@ -69,7 +69,12 @@ function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
     currency: site.currency,
     ...tokens,
     layout: branding?.layout ?? "INLINE",
-    calendarStyle: (branding as { calendarStyle?: string | null })?.calendarStyle || "MONTH",
+    calendarStyle:
+      (branding as { calendarStyle?: string | null })?.calendarStyle === "WEEK"
+        ? "WEEK"
+        : (branding as { calendarStyle?: string | null })?.calendarStyle === "HORIZONTAL"
+          ? "HORIZONTAL"
+          : "MONTH",
     businessName: branding?.businessName || site.name,
     showStaff: branding?.showStaff ?? true,
     showPrice: branding?.showPrice ?? true,
@@ -162,7 +167,7 @@ export async function PATCH(request: Request) {
         accent: body.accent ?? theme?.accent ?? "#f5a000",
         inkColor: body.inkColor ?? theme?.ink ?? "#0f1b2d",
         radius: body.radius ?? theme?.radius ?? 14,
-        font: body.font ?? theme?.font ?? "Manrope",
+        font: body.font ?? theme?.font ?? "Match my site",
         buttonStyle: theme?.button ?? "solid",
         layout: body.layout ?? "INLINE",
         calendarStyle: body.calendarStyle ?? "MONTH",

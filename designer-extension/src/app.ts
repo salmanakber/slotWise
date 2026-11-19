@@ -354,7 +354,7 @@ export async function boot(root: HTMLElement) {
         accent: state.bootstrap.site.accent || "#f5a000",
         inkColor: "#0f1b2d",
         radius: 14,
-        font: "Manrope",
+        font: "Match my site",
       };
       applyBrandColors(state.branding.accent, state.branding.inkColor);
       void loadCalendarChat().catch(() => undefined);
@@ -1203,7 +1203,7 @@ export async function boot(root: HTMLElement) {
               line: "#e1e6ee",
               accent,
               radius,
-              font: "Manrope",
+              font: "Match my site",
               button: "solid" as const,
             },
           ];
@@ -1248,8 +1248,9 @@ export async function boot(root: HTMLElement) {
       </label>
       <label class="field"><span>Calendar style</span>
         <select id="brandCalendarStyle">
-          <option value="MONTH" ${state.branding?.calendarStyle !== "WEEK" ? "selected" : ""}>Month grid</option>
+          <option value="MONTH" ${!state.branding?.calendarStyle || state.branding?.calendarStyle === "MONTH" ? "selected" : ""}>Month grid</option>
           <option value="WEEK" ${state.branding?.calendarStyle === "WEEK" ? "selected" : ""}>Week strip</option>
+          <option value="HORIZONTAL" ${state.branding?.calendarStyle === "HORIZONTAL" ? "selected" : ""}>Wide board</option>
         </select>
       </label>
       <button type="button" class="btn btn-primary btn-block" id="saveBranding">
@@ -1837,7 +1838,7 @@ export async function boot(root: HTMLElement) {
           inkColor: inkEl?.value,
           radius: radiusInput ? Number(radiusInput.value) : undefined,
           layout: (layoutEl?.value as "INLINE" | "POPUP" | "FLOATING") || undefined,
-          calendarStyle: (calendarEl?.value as "MONTH" | "WEEK") || undefined,
+          calendarStyle: (calendarEl?.value as "MONTH" | "WEEK" | "HORIZONTAL") || undefined,
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 type Props = {
   mode: "MONTH" | "WEEK";
+  /** classic = original circular month cells; wide = fuller board cells for HORIZONTAL layout */
+  look?: "classic" | "wide";
   date: string;
   timezone: string;
   accent: string;
@@ -88,6 +90,7 @@ function NavBtn({
 
 export function BookingCalendar({
   mode,
+  look = "classic",
   date,
   timezone,
   accent,
@@ -132,10 +135,10 @@ export function BookingCalendar({
 
     return (
       <div className="min-w-0">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-2.5 flex items-center justify-between gap-2">
           <div>
-            <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Pick a day</h3>
-            <p className="m-0 mt-0.5 text-[12px]" style={{ color: mut }}>
+            <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Choose a day</h3>
+            <p className="m-0 mt-0.5 text-[11.5px]" style={{ color: mut }}>
               {label}
             </p>
           </div>
@@ -198,6 +201,9 @@ export function BookingCalendar({
             );
           })}
         </div>
+        <p className="mb-0 mt-2.5 text-center text-[11px]" style={{ color: mut }}>
+          Times in {timezone}
+        </p>
       </div>
     );
   }
@@ -213,14 +219,17 @@ export function BookingCalendar({
   const canPrevMonth =
     year > today.getFullYear() ||
     (year === today.getFullYear() && month > today.getMonth());
+  const wide = look === "wide";
 
   return (
     <div className="min-w-0">
-      <div className="mb-3 flex items-start justify-between gap-2">
+      <div className={`flex items-start justify-between gap-2 ${wide ? "mb-3" : "mb-2.5"}`}>
         <div>
-          <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Pick a day</h3>
-          <p className="m-0 mt-0.5 text-[12px]" style={{ color: mut }}>
-            {label}
+          <h3 className={`m-0 font-extrabold tracking-tight ${wide ? "text-[15px]" : "text-[14px]"}`}>
+            {wide ? "Pick a day" : "Choose date"}
+          </h3>
+          <p className={`m-0 mt-0.5 ${wide ? "text-[12px]" : "text-[11.5px]"}`} style={{ color: mut }}>
+            {wide ? label : "Pick a convenient day"}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
@@ -234,6 +243,11 @@ export function BookingCalendar({
           >
             ‹
           </NavBtn>
+          {!wide ? (
+            <span className="min-w-[7.5rem] text-center text-[13px] font-extrabold tracking-tight">
+              {label}
+            </span>
+          ) : null}
           <NavBtn
             label="Next month"
             line={line}
@@ -246,14 +260,18 @@ export function BookingCalendar({
         </div>
       </div>
 
-      <div className="mb-1 grid grid-cols-7 gap-1">
+      <div className={`mb-1.5 grid grid-cols-7 ${wide ? "mb-1 gap-1" : "gap-1"}`}>
         {weekdays.map((w) => (
           <div
             key={w}
-            className="py-1 text-center text-[11px] font-bold"
+            className={
+              wide
+                ? "py-1 text-center text-[11px] font-bold"
+                : "py-1 text-center text-[10px] font-extrabold uppercase tracking-[0.05em]"
+            }
             style={{ color: mut }}
           >
-            {w.charAt(0)}
+            {wide ? w.charAt(0) : w}
           </div>
         ))}
       </div>
@@ -265,20 +283,46 @@ export function BookingCalendar({
           const past = d < today;
           const on = sameDay(d, selected);
           const disabled = past || !inMonth;
+          if (wide) {
+            return (
+              <button
+                key={`${iso}-${inMonth ? "in" : "out"}`}
+                type="button"
+                disabled={disabled}
+                onClick={() => onChange(iso)}
+                className="aspect-square w-full place-items-center text-[14px] transition disabled:cursor-default"
+                style={{
+                  display: "grid",
+                  borderRadius: Math.max(radius - 8, 10),
+                  border: "0",
+                  background: on ? accent : "transparent",
+                  color: on ? onAccent : inMonth ? ink : mut,
+                  opacity: inMonth ? (past ? 0.35 : 1) : 0.28,
+                  fontWeight: on ? 800 : 600,
+                }}
+              >
+                {d.getDate()}
+              </button>
+            );
+          }
           return (
             <button
               key={`${iso}-${inMonth ? "in" : "out"}`}
               type="button"
               disabled={disabled}
               onClick={() => onChange(iso)}
-              className="aspect-square w-full place-items-center text-[14px] transition disabled:cursor-default"
+              className="mx-auto grid h-10 w-10 place-items-center text-[13.5px] transition disabled:cursor-default"
               style={{
-                display: "grid",
-                borderRadius: Math.max(radius - 8, 10),
+                borderRadius: 999,
                 border: "0",
-                background: on ? accent : "transparent",
+                background: on
+                  ? `linear-gradient(145deg, color-mix(in srgb, ${accent} 88%, #fff), ${accent})`
+                  : "transparent",
                 color: on ? onAccent : inMonth ? ink : mut,
-                opacity: inMonth ? (past ? 0.35 : 1) : 0.28,
+                opacity: inMonth ? (past ? 0.35 : 1) : 0.35,
+                boxShadow: on
+                  ? `0 8px 18px color-mix(in srgb, ${accent} 30%, transparent)`
+                  : "none",
                 fontWeight: on ? 800 : 600,
               }}
             >
@@ -287,6 +331,12 @@ export function BookingCalendar({
           );
         })}
       </div>
+
+      {!wide ? (
+        <p className="mb-0 mt-3 text-center text-[11px]" style={{ color: mut }}>
+          All times shown in {timezone}
+        </p>
+      ) : null}
     </div>
   );
 }

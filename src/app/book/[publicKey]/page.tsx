@@ -93,7 +93,7 @@ export default async function BookPage({
             "radial-gradient(70% 50% at 50% 0%, rgba(245,160,0,.12), transparent 60%), linear-gradient(180deg, #f7f8fb 0%, #eef1f6 100%)",
         }}
       />
-      <div className="mx-auto w-full max-w-[1180px]">
+      <div className="mx-auto w-full max-w-[min(100%,1180px)]">
         <BookingWidget publicKey={publicKey} />
         <p className="mt-8 text-center text-[11px]" style={{ color: "var(--mut)" }}>
           Powered by{" "}
