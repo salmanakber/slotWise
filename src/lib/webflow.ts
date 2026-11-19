@@ -236,11 +236,28 @@ export async function fetchWebflowSites(accessToken: string) {
   }
 }
 
+/** Hosted runtime version — bump when public/embed/widget.js bytes change. */
+export const SLOTWISE_WIDGET_SCRIPT_VERSION = "0.3.0";
+export const SLOTWISE_WIDGET_SCRIPT_NAME = "Slotwise Widget";
+
+type RegisteredScript = {
+  id?: string;
+  displayName?: string;
+  hostedLocation?: string;
+  version?: string;
+  integrityHash?: string;
+};
+
+type AppliedScript = {
+  id: string;
+  location?: "header" | "footer";
+  version?: string;
+};
+
 /**
- * Prefer Designer canvas embeds (no Custom Code). If Custom Code is required,
- * register a hosted script with integrity — never an inline loader that injects
- * <script> tags (Marketplace elevated-risk / past rejection pattern).
- * @see https://developers.webflow.com/apps/docs/marketplace-guidelines
+ * Register hosted widget.js (SRI) and apply it site-wide via Custom Code API.
+ * Uninstall purges this via deleteSiteCustomCode / deleteAllPageCustomCode.
+ * @see https://developers.webflow.com/data/docs/working-with-custom-code
  */
 export async function registerHostedWidgetScript(accessToken: string, siteId: string) {
   const appUrl = appOrigin();
@@ -263,16 +280,91 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
       hostedLocation,
       integrityHash,
       canCopy: false,
-      version: "0.3.0",
-      displayName: "Slotwise Widget",
+      version: SLOTWISE_WIDGET_SCRIPT_VERSION,
+      displayName: SLOTWISE_WIDGET_SCRIPT_NAME,
     }),
+  });
+
+  if (res.ok) {
+    return (await res.json()) as RegisteredScript;
+  }
+
+  // Already registered for this version — look it up
+  const listed = await listRegisteredScripts(accessToken, siteId);
+  const existing = listed.find(
+    (s) =>
+      s.hostedLocation === hostedLocation ||
+      s.displayName === SLOTWISE_WIDGET_SCRIPT_NAME ||
+      (s.id && s.id.toLowerCase().includes("slotwise")),
+  );
+  if (existing?.id) return existing;
+
+  const text = await res.text();
+  throw new Error(`Register script failed: ${text}`);
+}
+
+export async function listRegisteredScripts(accessToken: string, siteId: string) {
+  try {
+    const data = await wfGet<{ registeredScripts?: RegisteredScript[]; scripts?: RegisteredScript[] }>(
+      `/sites/${siteId}/registered_scripts`,
+      accessToken,
+    );
+    return data.registeredScripts || data.scripts || [];
+  } catch {
+    return [] as RegisteredScript[];
+  }
+}
+
+export async function getSiteCustomCode(accessToken: string, siteId: string) {
+  try {
+    const data = await wfGet<{ scripts?: AppliedScript[] }>(`/sites/${siteId}/custom_code`, accessToken);
+    return data.scripts || [];
+  } catch {
+    return [] as AppliedScript[];
+  }
+}
+
+/**
+ * Ensure Slotwise widget.js is registered + applied on the Webflow site (footer).
+ * Call on install and when placing the booking embed. Owner must Publish for it to go live.
+ */
+export async function ensureWidgetCustomCode(accessToken: string, webflowSiteId: string) {
+  const registered = await registerHostedWidgetScript(accessToken, webflowSiteId);
+  const scriptId = registered.id;
+  if (!scriptId) throw new Error("Registered script missing id");
+
+  const existing = await getSiteCustomCode(accessToken, webflowSiteId);
+  const others = existing.filter((s) => s.id !== scriptId);
+  const scripts: AppliedScript[] = [
+    ...others,
+    {
+      id: scriptId,
+      location: "footer",
+      version: registered.version || SLOTWISE_WIDGET_SCRIPT_VERSION,
+    },
+  ];
+
+  const res = await fetch(`${WEBFLOW_API}/sites/${webflowSiteId}/custom_code`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({ scripts }),
   });
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Register script failed: ${text}`);
+    throw new Error(`Apply custom code failed: ${text}`);
   }
-  return res.json();
+
+  return {
+    scriptId,
+    version: registered.version || SLOTWISE_WIDGET_SCRIPT_VERSION,
+    hostedLocation: `${appOrigin()}/embed/widget.js`,
+    integrityHash: registered.integrityHash || null,
+  };
 }
 
 /** Script tag + mount node for Marketplace runtime tests (SRI required). */

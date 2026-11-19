@@ -4,6 +4,7 @@ import { hash } from "bcryptjs";
 import { encryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 import {
+  ensureWidgetCustomCode,
   fetchWebflowAuthorizedUser,
   fetchWebflowSites,
   type WebflowAccessToken,
@@ -159,6 +160,20 @@ async function upsertSiteFromWebflow(args: {
       meta: { webflowSiteId: wfSite?.id ?? null },
     },
   });
+
+  // Dynamically register + apply hosted widget.js (SRI) so published pages load the runtime.
+  // Uninstall removes it via purgeAppCustomCode. Site owner must Publish for it to go live.
+  if (wfSite?.id) {
+    try {
+      await ensureWidgetCustomCode(token.access_token, wfSite.id);
+      await prisma.site.update({
+        where: { id: site.id },
+        data: { customCodeApplied: true },
+      });
+    } catch (e) {
+      console.error("[webflow-provision] ensureWidgetCustomCode", wfSite.id, e);
+    }
+  }
 
   return site;
 }

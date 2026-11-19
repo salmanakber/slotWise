@@ -434,11 +434,20 @@ export async function boot(root: HTMLElement) {
     try {
       const calendarStyle =
         state.branding?.calendarStyle || state.bootstrap.site?.calendarStyle || undefined;
+      // Dynamically apply hosted widget.js (SRI) on the Webflow site — no manual Custom Code paste.
+      try {
+        await api.ensureRuntime({
+          webflowSiteId: state.webflowSiteId,
+          publicKey: state.bootstrap.site.publicKey,
+        });
+      } catch (runtimeErr) {
+        console.warn("[slotwise] ensureRuntime", runtimeErr);
+      }
       await insertBookingIframe(state.bootstrap.site.publicKey, { calendarStyle });
       setStatus(
         calendarStyle === "HORIZONTAL"
-          ? "Widget placed at 70% width (Wide board)"
-          : "Widget placed on canvas",
+          ? "Widget placed (Wide board). Publish site so widget.js loads live."
+          : "Widget placed. Publish site so widget.js loads live.",
       );
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Embed failed", false);

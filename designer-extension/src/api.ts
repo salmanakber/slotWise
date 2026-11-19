@@ -161,6 +161,22 @@ export function uninstallWebflow(body: {
   );
 }
 
+/** Register + apply hosted widget.js via Webflow Custom Code (no manual paste). */
+export function ensureRuntime(body: {
+  webflowSiteId?: string | null;
+  publicKey?: string | null;
+}) {
+  return req<{
+    ok: boolean;
+    applied?: { scriptId: string; version: string; hostedLocation: string };
+    note?: string;
+    error?: string;
+  }>("/api/designer/runtime", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function listServices(params: { webflowSiteId?: string | null; publicKey?: string | null }) {
   const qs = new URLSearchParams();
   if (params.webflowSiteId) qs.set("webflowSiteId", params.webflowSiteId);
