@@ -1248,7 +1248,7 @@ export async function boot(root: HTMLElement) {
       </label>
       <label class="field"><span>Calendar style</span>
         <select id="brandCalendarStyle">
-          <option value="MONTH" ${!state.branding?.calendarStyle || state.branding?.calendarStyle === "MONTH" ? "selected" : ""}>Month grid</option>
+          <option value="MONTH" ${!state.branding?.calendarStyle || state.branding?.calendarStyle === "MONTH" ? "selected" : ""}>Day strip</option>
           <option value="WEEK" ${state.branding?.calendarStyle === "WEEK" ? "selected" : ""}>Week strip</option>
           <option value="HORIZONTAL" ${state.branding?.calendarStyle === "HORIZONTAL" ? "selected" : ""}>Wide board</option>
         </select>

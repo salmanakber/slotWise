@@ -404,10 +404,10 @@ export function BookingWidget({
         borderRadius: embed ? Math.min(radius, 18) : radius,
         width: "100%",
         maxWidth: isHorizontal
-          ? "min(100%, 1040px)"
+          ? "min(100%, 1280px)"
           : calendarStyle === "MONTH"
-            ? "min(100%, 46rem)"
-            : "min(100%, 36rem)",
+            ? "min(100%, 28rem)"
+            : "min(100%, 28rem)",
         maxHeight: isHorizontal
           ? embed
             ? "min(92vh, 880px)"
@@ -449,29 +449,37 @@ export function BookingWidget({
         .sw-w-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
         .sw-w-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 22%, transparent); border-radius: 99px; }
         .sw-widget *, .sw-widget *::before, .sw-widget *::after { box-sizing: border-box; }
-        .sw-w-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
+        .sw-w-times {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+          gap: 0.55rem;
+        }
         .sw-w-when { display: grid; gap: 1rem; min-width: 0; }
         .sw-w-board { display: grid; gap: 1.25rem; min-width: 0; align-items: start; }
         .sw-w-board .sw-w-times { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 0.5rem; }
-        @container (min-width: 34rem) {
-          .sw-w-when { grid-template-columns: 1.15fr 0.95fr; gap: 1.15rem; align-items: start; }
-          .sw-w-when.is-week { grid-template-columns: 1fr; }
-          .sw-w-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
         @container (min-width: 22rem) {
           .sw-w-times.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
         @container (min-width: 28rem) {
           .sw-w-times.is-compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
-        @container (min-width: 52rem) {
+        @container (min-width: 48rem) {
           .sw-w-board {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.9fr);
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.95fr);
             gap: 1.35rem;
           }
           .sw-w-board > * { min-width: 0; }
           .sw-w-svc-list { max-height: min(52vh, 420px) !important; }
           .sw-w-board .sw-w-times { max-height: min(52vh, 420px) !important; }
+        }
+        @media (min-width: 960px) {
+          .sw-widget[data-calendar="HORIZONTAL"] .sw-w-board {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.95fr);
+            gap: 1.35rem;
+          }
+          .sw-widget[data-calendar="HORIZONTAL"] .sw-w-board > * { min-width: 0; }
+          .sw-widget[data-calendar="HORIZONTAL"] .sw-w-svc-list { max-height: min(52vh, 420px) !important; }
+          .sw-widget[data-calendar="HORIZONTAL"] .sw-w-board .sw-w-times { max-height: min(52vh, 420px) !important; }
         }
         @media (prefers-reduced-motion: reduce) {
           .sw-w-rise, .sw-w-check { animation: none !important; }
@@ -928,94 +936,82 @@ export function BookingWidget({
               </section>
             ) : null}
 
-            <div className={`sw-w-when ${calendarStyle === "WEEK" ? "is-week" : ""}`}>
-              <section
-                className="min-w-0 rounded-[18px] border p-3"
-                style={{
-                  borderColor: line,
-                  background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 7%, ${panel}), ${panel})`,
+            <section className="min-w-0">
+              <BookingCalendar
+                mode={calendarMode}
+                look="classic"
+                date={date}
+                timezone={site.timezone}
+                accent={accent}
+                onAccent={onAccent}
+                ink={ink}
+                mut={mut}
+                line={line}
+                panel={panel}
+                radius={radius}
+                onChange={(iso) => {
+                  setDate(iso);
+                  setSlotStart("");
                 }}
-              >
-                <BookingCalendar
-                  mode={calendarMode}
-                  look="classic"
-                  date={date}
-                  timezone={site.timezone}
-                  accent={accent}
-                  onAccent={onAccent}
-                  ink={ink}
-                  mut={mut}
-                  line={line}
-                  panel={panel}
-                  radius={radius}
-                  onChange={(iso) => {
-                    setDate(iso);
-                    setSlotStart("");
-                  }}
-                />
-              </section>
+              />
+            </section>
 
-              <section className="min-w-0">
-                <div className="mb-2">
-                  <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Select time</h3>
-                  <p className="m-0 mt-0.5 text-[11.5px]" style={{ color: mut }}>
-                    {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                    {slots.filter((s) => s.available).length
-                      ? ` · ${slots.filter((s) => s.available).length} open`
-                      : ""}
-                  </p>
-                </div>
-                <div
-                  className={`sw-w-scroll sw-w-times max-h-[240px] w-full min-w-0 overflow-y-auto pb-0.5 ${
-                    calendarStyle === "WEEK" ? "is-compact" : ""
-                  }`}
-                >
-                  {slots.length === 0 && !loadingSlots ? (
-                    <div
-                      className="rounded-xl border border-dashed px-3 py-5 text-center text-[12.5px]"
-                      style={{
-                        borderColor: line,
-                        color: mut,
-                        gridColumn: "1 / -1",
-                      }}
-                    >
-                      No openings this day. Try another date.
-                    </div>
-                  ) : (
-                    slots.map((s) => {
-                      const on = slotStart === s.start;
-                      return (
-                        <button
-                          key={s.start}
-                          type="button"
-                          disabled={!s.available}
-                          onClick={() => setSlotStart(s.start)}
-                          className="flex min-h-[48px] min-w-0 items-center justify-center border px-2 text-[14px] font-bold transition disabled:cursor-not-allowed disabled:opacity-35"
-                          style={{
-                            borderRadius: Math.max(radius - 4, 14),
-                            borderColor: on ? accent : line,
-                            background: on
-                              ? `color-mix(in srgb, ${accent} 16%, ${panel})`
-                              : panel,
-                            color: ink,
-                            fontWeight: on ? 800 : 650,
-                            boxShadow: on
-                              ? `0 8px 18px color-mix(in srgb, ${accent} 16%, transparent)`
-                              : "none",
-                          }}
-                        >
-                          {s.label}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
-            </div>
+            <section className="min-w-0">
+              <div className="mb-2">
+                <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Select time</h3>
+                <p className="m-0 mt-0.5 text-[11.5px]" style={{ color: mut }}>
+                  {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                  {slots.filter((s) => s.available).length
+                    ? ` · ${slots.filter((s) => s.available).length} open`
+                    : ""}
+                </p>
+              </div>
+              <div
+                className={`sw-w-scroll sw-w-times max-h-[260px] w-full min-w-0 overflow-y-auto pb-0.5 ${
+                  calendarStyle === "WEEK" ? "is-compact" : ""
+                }`}
+              >
+                {slots.length === 0 && !loadingSlots ? (
+                  <div
+                    className="rounded-xl border border-dashed px-3 py-5 text-center text-[12.5px]"
+                    style={{
+                      borderColor: line,
+                      color: mut,
+                      gridColumn: "1 / -1",
+                    }}
+                  >
+                    No openings this day. Try another date.
+                  </div>
+                ) : (
+                  slots.map((s) => {
+                    const on = slotStart === s.start;
+                    return (
+                      <button
+                        key={s.start}
+                        type="button"
+                        disabled={!s.available}
+                        onClick={() => setSlotStart(s.start)}
+                        className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 border px-2 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:opacity-35"
+                        style={{
+                          borderRadius: Math.max(radius - 4, 12),
+                          borderColor: on ? accent : line,
+                          background: on ? accent : panel,
+                          color: on ? onAccent : ink,
+                          fontWeight: on ? 800 : 650,
+                        }}
+                      >
+                        <TimeGlyph color={on ? onAccent : mut} />
+                        {s.label}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </section>
           </div>
         ) : null}
 
@@ -1280,6 +1276,16 @@ export function BookingWidget({
         Book now
       </button>
     </div>
+  );
+}
+
+function TimeGlyph({ color }: { color: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="5" width="18" height="16" rx="2.5" stroke={color} strokeWidth="1.8" />
+      <path d="M3 10h18" stroke={color} strokeWidth="1.8" />
+      <path d="M8 3v4M16 3v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }
 

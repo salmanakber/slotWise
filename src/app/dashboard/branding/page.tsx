@@ -300,7 +300,7 @@ export default function BrandingPage() {
               value={calendarStyle}
               onChange={(e) => setCalendarStyle(e.target.value as typeof calendarStyle)}
             >
-              <option value="MONTH">Month grid</option>
+              <option value="MONTH">Day strip</option>
               <option value="WEEK">Week strip</option>
               <option value="HORIZONTAL">Wide board</option>
             </select>
@@ -368,7 +368,9 @@ export default function BrandingPage() {
             ) : null}
           </div>
           <div
-            className="overflow-hidden rounded-2xl border"
+            className={`rounded-2xl border ${
+              calendarStyle === "HORIZONTAL" ? "overflow-x-auto overflow-y-hidden" : "overflow-hidden"
+            }`}
             style={{
               borderColor: theme.line,
               background: theme.bg,
@@ -376,12 +378,20 @@ export default function BrandingPage() {
             }}
           >
             {publicKey ? (
-              <BookingWidget
-                key={`${publicKey}-${widgetKey}`}
-                publicKey={publicKey}
-                embed
-                brandingPreview={brandingPreview}
-              />
+              <div
+                style={
+                  calendarStyle === "HORIZONTAL"
+                    ? { minWidth: 980, width: "100%" }
+                    : { width: "100%" }
+                }
+              >
+                <BookingWidget
+                  key={`${publicKey}-${widgetKey}`}
+                  publicKey={publicKey}
+                  embed
+                  brandingPreview={brandingPreview}
+                />
+              </div>
             ) : (
               <div
                 className="flex min-h-[280px] items-center justify-center text-[13px]"

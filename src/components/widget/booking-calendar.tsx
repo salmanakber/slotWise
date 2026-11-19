@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Props = {
   mode: "MONTH" | "WEEK";
-  /** classic = original circular month cells; wide = fuller board cells for HORIZONTAL layout */
+  /** classic = day/week cards; wide = month grid for HORIZONTAL board */
   look?: "classic" | "wide";
   date: string;
   timezone: string;
@@ -49,6 +49,16 @@ function sameDay(a: Date, b: Date) {
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
+  );
+}
+
+function CalendarGlyph({ color }: { color: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="5" width="18" height="16" rx="2.5" stroke={color} strokeWidth="1.8" />
+      <path d="M3 10h18" stroke={color} strokeWidth="1.8" />
+      <path d="M8 3v4M16 3v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -103,27 +113,126 @@ export function BookingCalendar({
   onChange,
 }: Props) {
   const selected = parseIso(date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
 
   const [cursor, setCursor] = useState(() =>
-    mode === "WEEK" ? startOfWeek(selected) : new Date(selected.getFullYear(), selected.getMonth(), 1),
+    mode === "WEEK" || look === "classic"
+      ? startOfWeek(selected)
+      : new Date(selected.getFullYear(), selected.getMonth(), 1),
   );
 
   useEffect(() => {
+    if (look === "wide" && mode === "MONTH") {
+      setCursor((c) => {
+        if (selected.getMonth() === c.getMonth() && selected.getFullYear() === c.getFullYear()) {
+          return c;
+        }
+        return new Date(selected.getFullYear(), selected.getMonth(), 1);
+      });
+      return;
+    }
     if (mode === "WEEK") {
       const w = startOfWeek(selected);
       setCursor((c) => (sameDay(w, c) ? c : w));
       return;
     }
-    setCursor((c) => {
-      if (selected.getMonth() === c.getMonth() && selected.getFullYear() === c.getFullYear()) {
-        return c;
-      }
-      return new Date(selected.getFullYear(), selected.getMonth(), 1);
-    });
-  }, [date, mode, selected]);
+    // classic MONTH day-strip: keep strip rooted near selected
+    const start = selected < today ? today : selected;
+    const anchor = addDays(start, -3);
+    const rooted = anchor < today ? today : anchor;
+    setCursor((c) => (sameDay(rooted, c) ? c : rooted));
+  }, [date, mode, look, selected, today]);
 
+  // Wide month grid (HORIZONTAL board only)
+  if (look === "wide" && mode === "MONTH") {
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    const first = new Date(year, month, 1);
+    const startPad = (first.getDay() + 6) % 7;
+    const gridStart = addDays(first, -startPad);
+    const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const label = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    const canPrevMonth =
+      year > today.getFullYear() ||
+      (year === today.getFullYear() && month > today.getMonth());
+
+    return (
+      <div className="min-w-0">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div>
+            <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Pick a day</h3>
+            <p className="m-0 mt-0.5 text-[12px]" style={{ color: mut }}>
+              {label}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <NavBtn
+              label="Previous month"
+              disabled={!canPrevMonth}
+              line={line}
+              ink={ink}
+              radius={radius}
+              onClick={() => setCursor(new Date(year, month - 1, 1))}
+            >
+              ‹
+            </NavBtn>
+            <NavBtn
+              label="Next month"
+              line={line}
+              ink={ink}
+              radius={radius}
+              onClick={() => setCursor(new Date(year, month + 1, 1))}
+            >
+              ›
+            </NavBtn>
+          </div>
+        </div>
+        <div className="mb-1 grid grid-cols-7 gap-1">
+          {weekdays.map((w) => (
+            <div key={w} className="py-1 text-center text-[11px] font-bold" style={{ color: mut }}>
+              {w.charAt(0)}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((d) => {
+            const iso = toIsoLocal(d);
+            const inMonth = d.getMonth() === month;
+            const past = d < today;
+            const on = sameDay(d, selected);
+            const disabled = past || !inMonth;
+            return (
+              <button
+                key={`${iso}-${inMonth ? "in" : "out"}`}
+                type="button"
+                disabled={disabled}
+                onClick={() => onChange(iso)}
+                className="aspect-square w-full place-items-center text-[14px] transition disabled:cursor-default"
+                style={{
+                  display: "grid",
+                  borderRadius: Math.max(radius - 8, 10),
+                  border: "0",
+                  background: on ? accent : "transparent",
+                  color: on ? onAccent : inMonth ? ink : mut,
+                  opacity: inMonth ? (past ? 0.35 : 1) : 0.28,
+                  fontWeight: on ? 800 : 600,
+                }}
+              >
+                {d.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // WEEK: 7-day strip
   if (mode === "WEEK") {
     const days = Array.from({ length: 7 }, (_, i) => addDays(cursor, i));
     const end = days[6];
@@ -170,34 +279,20 @@ export function BookingCalendar({
             const past = d < today;
             const on = sameDay(d, selected);
             return (
-              <button
+              <DayCard
                 key={iso}
-                type="button"
+                day={d}
+                on={on}
                 disabled={past}
+                accent={accent}
+                onAccent={onAccent}
+                ink={ink}
+                mut={mut}
+                line={line}
+                panel={panel}
+                radius={radius}
                 onClick={() => onChange(iso)}
-                className="flex min-h-[64px] flex-col items-center justify-center gap-0.5 border transition disabled:cursor-not-allowed disabled:opacity-35"
-                style={{
-                  borderRadius: Math.max(radius - 4, 12),
-                  borderColor: on ? accent : line,
-                  background: on
-                    ? accent
-                    : `color-mix(in srgb, ${panel} 88%, ${accent} 4%)`,
-                  color: on ? onAccent : ink,
-                  boxShadow: on
-                    ? `0 10px 22px color-mix(in srgb, ${accent} 28%, transparent)`
-                    : "none",
-                }}
-              >
-                <small
-                  className="text-[10px] font-bold uppercase tracking-[0.04em]"
-                  style={{ opacity: on ? 0.85 : 0.7, color: on ? onAccent : mut }}
-                >
-                  {d.toLocaleDateString(undefined, { weekday: "short" })}
-                </small>
-                <b className="text-[18px] font-extrabold leading-none tracking-tight">
-                  {d.getDate()}
-                </b>
-              </button>
+              />
             );
           })}
         </div>
@@ -208,135 +303,125 @@ export function BookingCalendar({
     );
   }
 
-  const year = cursor.getFullYear();
-  const month = cursor.getMonth();
-  const first = new Date(year, month, 1);
-  const startPad = (first.getDay() + 6) % 7;
-  const gridStart = addDays(first, -startPad);
-  const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-  const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const label = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  const canPrevMonth =
-    year > today.getFullYear() ||
-    (year === today.getFullYear() && month > today.getMonth());
-  const wide = look === "wide";
+  // MONTH classic: horizontal scrolling day cards (original default)
+  const days = Array.from({ length: 21 }, (_, i) => addDays(cursor < today ? today : cursor, i));
+  const canPrevStrip = addDays(cursor, -7) >= addDays(today, -14);
+  const monthLabel = selected.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
   return (
     <div className="min-w-0">
-      <div className={`flex items-start justify-between gap-2 ${wide ? "mb-3" : "mb-2.5"}`}>
-        <div>
-          <h3 className={`m-0 font-extrabold tracking-tight ${wide ? "text-[15px]" : "text-[14px]"}`}>
-            {wide ? "Pick a day" : "Choose date"}
-          </h3>
-          <p className={`m-0 mt-0.5 ${wide ? "text-[12px]" : "text-[11.5px]"}`} style={{ color: mut }}>
-            {wide ? label : "Pick a convenient day"}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Choose a day</h3>
+        <div className="flex items-center gap-1">
           <NavBtn
-            label="Previous month"
-            disabled={!canPrevMonth}
+            label="Earlier days"
+            disabled={!canPrevStrip}
             line={line}
             ink={ink}
             radius={radius}
-            onClick={() => setCursor(new Date(year, month - 1, 1))}
+            onClick={() => {
+              const next = addDays(cursor, -7);
+              setCursor(next < today ? today : next);
+            }}
           >
             ‹
           </NavBtn>
-          {!wide ? (
-            <span className="min-w-[7.5rem] text-center text-[13px] font-extrabold tracking-tight">
-              {label}
-            </span>
-          ) : null}
           <NavBtn
-            label="Next month"
+            label="Later days"
             line={line}
             ink={ink}
             radius={radius}
-            onClick={() => setCursor(new Date(year, month + 1, 1))}
+            onClick={() => setCursor(addDays(cursor, 7))}
           >
             ›
           </NavBtn>
         </div>
       </div>
-
-      <div className={`mb-1.5 grid grid-cols-7 ${wide ? "mb-1 gap-1" : "gap-1"}`}>
-        {weekdays.map((w) => (
-          <div
-            key={w}
-            className={
-              wide
-                ? "py-1 text-center text-[11px] font-bold"
-                : "py-1 text-center text-[10px] font-extrabold uppercase tracking-[0.05em]"
-            }
-            style={{ color: mut }}
-          >
-            {wide ? w.charAt(0) : w}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((d) => {
+      <div
+        className="sw-w-scroll flex gap-2 overflow-x-auto pb-1"
+        style={{ scrollbarWidth: "thin" }}
+      >
+        {days.map((d) => {
           const iso = toIsoLocal(d);
-          const inMonth = d.getMonth() === month;
           const past = d < today;
           const on = sameDay(d, selected);
-          const disabled = past || !inMonth;
-          if (wide) {
-            return (
-              <button
-                key={`${iso}-${inMonth ? "in" : "out"}`}
-                type="button"
-                disabled={disabled}
-                onClick={() => onChange(iso)}
-                className="aspect-square w-full place-items-center text-[14px] transition disabled:cursor-default"
-                style={{
-                  display: "grid",
-                  borderRadius: Math.max(radius - 8, 10),
-                  border: "0",
-                  background: on ? accent : "transparent",
-                  color: on ? onAccent : inMonth ? ink : mut,
-                  opacity: inMonth ? (past ? 0.35 : 1) : 0.28,
-                  fontWeight: on ? 800 : 600,
-                }}
-              >
-                {d.getDate()}
-              </button>
-            );
-          }
           return (
-            <button
-              key={`${iso}-${inMonth ? "in" : "out"}`}
-              type="button"
-              disabled={disabled}
+            <DayCard
+              key={iso}
+              day={d}
+              on={on}
+              disabled={past}
+              accent={accent}
+              onAccent={onAccent}
+              ink={ink}
+              mut={mut}
+              line={line}
+              panel={panel}
+              radius={radius}
+              fixedWidth
               onClick={() => onChange(iso)}
-              className="mx-auto grid h-10 w-10 place-items-center text-[13.5px] transition disabled:cursor-default"
-              style={{
-                borderRadius: 999,
-                border: "0",
-                background: on
-                  ? `linear-gradient(145deg, color-mix(in srgb, ${accent} 88%, #fff), ${accent})`
-                  : "transparent",
-                color: on ? onAccent : inMonth ? ink : mut,
-                opacity: inMonth ? (past ? 0.35 : 1) : 0.35,
-                boxShadow: on
-                  ? `0 8px 18px color-mix(in srgb, ${accent} 30%, transparent)`
-                  : "none",
-                fontWeight: on ? 800 : 600,
-              }}
-            >
-              {d.getDate()}
-            </button>
+            />
           );
         })}
       </div>
-
-      {!wide ? (
-        <p className="mb-0 mt-3 text-center text-[11px]" style={{ color: mut }}>
-          All times shown in {timezone}
-        </p>
-      ) : null}
+      <p className="mb-0 mt-2 text-[11px]" style={{ color: mut }}>
+        {monthLabel} · times in {timezone}
+      </p>
     </div>
+  );
+}
+
+function DayCard({
+  day,
+  on,
+  disabled,
+  accent,
+  onAccent,
+  ink,
+  mut,
+  line,
+  panel,
+  radius,
+  fixedWidth,
+  onClick,
+}: {
+  day: Date;
+  on: boolean;
+  disabled?: boolean;
+  accent: string;
+  onAccent: string;
+  ink: string;
+  mut: string;
+  line: string;
+  panel: string;
+  radius: number;
+  fixedWidth?: boolean;
+  onClick: () => void;
+}) {
+  const glyph = on ? onAccent : mut;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-1 border transition disabled:cursor-not-allowed disabled:opacity-35 ${
+        fixedWidth ? "h-[76px] w-[58px] shrink-0" : "min-h-[72px] w-full"
+      }`}
+      style={{
+        borderRadius: Math.max(radius - 4, 12),
+        borderColor: on ? accent : line,
+        background: on ? accent : panel,
+        color: on ? onAccent : ink,
+      }}
+    >
+      <CalendarGlyph color={glyph} />
+      <small
+        className="text-[10px] font-bold uppercase tracking-[0.04em]"
+        style={{ color: on ? onAccent : mut }}
+      >
+        {day.toLocaleDateString(undefined, { weekday: "short" })}
+      </small>
+      <b className="text-[16px] font-extrabold leading-none tracking-tight">{day.getDate()}</b>
+    </button>
   );
 }
