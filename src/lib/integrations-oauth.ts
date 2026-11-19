@@ -19,7 +19,7 @@ export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
 export type OAuthProvider = "google" | "microsoft" | "zoom" | "hubspot" | "mailchimp";
 
 /** Providers that use a credentials form instead of browser OAuth. */
-export const CREDENTIAL_PROVIDERS = ["apple_calendar"] as const;
+export const CREDENTIAL_PROVIDERS = ["apple_calendar", "hubspot"] as const;
 
 /** Map SiteIntegration.provider → OAuth app family. */
 export function oauthFamily(provider: IntegrationProvider): OAuthProvider | null {
@@ -94,12 +94,9 @@ export async function platformKeysConfigured(provider: IntegrationProvider) {
   if (family === "zoom") {
     return Boolean(secrets.zoomClientId?.trim() && secrets.zoomClientSecret?.trim());
   }
-  if (family === "hubspot") {
-    return Boolean(
-      (secrets as { hubspotClientId?: string | null }).hubspotClientId?.trim() &&
-        (secrets as { hubspotClientSecret?: string | null }).hubspotClientSecret?.trim(),
-    );
-  }
+  // HubSpot: site owners can paste a Private App / access token without platform OAuth keys.
+  // Platform Client ID/Secret are optional (CLI OAuth app) for one-click Connect.
+  if (family === "hubspot") return true;
   if (family === "mailchimp") {
     return Boolean(
       (secrets as { mailchimpClientId?: string | null }).mailchimpClientId?.trim() &&
@@ -578,7 +575,9 @@ export function missingKeysHint(provider: IntegrationProvider) {
       : "Outlook isn’t set up for your account yet";
   }
   if (family === "zoom") return "Zoom isn’t set up for your account yet";
-  if (family === "hubspot") return "HubSpot isn’t set up for your account yet";
+  if (family === "hubspot") {
+    return "Add a HubSpot Private App access token (or connect via OAuth if platform keys are set)";
+  }
   if (family === "mailchimp") return "Mailchimp isn’t set up for your account yet";
   return "This connection isn’t available yet";
 }

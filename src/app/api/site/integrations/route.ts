@@ -29,12 +29,8 @@ function keysReadyFor(
   if (provider === "zoom") {
     return Boolean(settings.zoomClientId && settings.zoomClientSecretSet);
   }
-  if (provider === "hubspot") {
-    return Boolean(
-      (settings as { hubspotClientId?: string | null }).hubspotClientId &&
-        (settings as { hubspotClientSecretSet?: boolean }).hubspotClientSecretSet,
-    );
-  }
+  // Always available — site owners use a Private App token; OAuth is optional
+  if (provider === "hubspot") return true;
   if (provider === "mailchimp") {
     return Boolean(
       (settings as { mailchimpClientId?: string | null }).mailchimpClientId &&

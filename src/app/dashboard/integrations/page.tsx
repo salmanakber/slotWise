@@ -60,7 +60,8 @@ const PROVIDER_META: Record<string, { label: string; blurb: string; credentials?
   },
   hubspot: {
     label: "HubSpot",
-    blurb: "Create contacts in HubSpot when someone books (needs platform Client ID/Secret)",
+    blurb: "Sync booking contacts to your HubSpot — paste a Private App access token",
+    credentials: true,
   },
   mailchimp: {
     label: "Mailchimp",
@@ -529,23 +530,69 @@ function IntegrationsClient() {
                   </div>
                 </div>
               ) : null}
-              {key === "hubspot" && !row.platformConfigured ? (
-                <p className="mb-0 mt-2 text-[12.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
-                  Ask your platform admin to create a HubSpot app at{" "}
-                  <a
-                    href="https://developers.hubspot.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-extrabold underline"
-                  >
-                    developers.hubspot.com
-                  </a>{" "}
-                  → Create app → Auth → copy Client ID &amp; Client secret into{" "}
-                  <Link href="/platform/settings" className="font-extrabold underline">
-                    Platform → Settings
-                  </Link>
-                  . No CLI install required.
-                </p>
+              {showForm && key === "hubspot" ? (
+                <div className="mt-3 grid gap-2 rounded-[12px] border border-[var(--ln)] bg-[var(--sf)] p-3">
+                  <p className="m-0 text-[12.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
+                    HubSpot’s new developer platform is CLI-only for OAuth apps. For Slotwise, each site
+                    owner connects <b>their own</b> HubSpot with a Private App token (no CLI):
+                    HubSpot → Settings → Integrations → Private Apps → Create → scopes{" "}
+                    <code className="font-semibold">crm.objects.contacts.read</code> +{" "}
+                    <code className="font-semibold">crm.objects.contacts.write</code> → copy the access
+                    token.
+                  </p>
+                  <input
+                    type="password"
+                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
+                    placeholder="Private App access token (pat-…)"
+                    value={credSecret}
+                    onChange={(e) => {
+                      setCredSecret(e.target.value);
+                      setCredError("");
+                    }}
+                    autoComplete="off"
+                    aria-invalid={Boolean(credError)}
+                  />
+                  <input
+                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
+                    placeholder="Label (optional) — e.g. Studio CRM"
+                    value={credAccount}
+                    onChange={(e) => setCredAccount(e.target.value)}
+                    autoComplete="off"
+                  />
+                  {credError ? (
+                    <p
+                      className="m-0 rounded-[10px] border px-3 py-2 text-[12.5px] font-semibold"
+                      style={{
+                        color: "#c0392b",
+                        borderColor: "color-mix(in srgb, #c0392b 35%, var(--ln))",
+                        background: "color-mix(in srgb, #c0392b 8%, var(--bg))",
+                      }}
+                      role="alert"
+                    >
+                      {credError}
+                    </p>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="sw-btn sw-btn-primary"
+                      disabled={pending || !credSecret.trim()}
+                      onClick={() => void saveCredentials(key)}
+                    >
+                      {pending ? "Verifying with HubSpot…" : "Verify & connect"}
+                    </button>
+                    <button
+                      type="button"
+                      className="sw-btn"
+                      onClick={() => {
+                        setCredProvider(null);
+                        setCredError("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : null}
             </div>
           );

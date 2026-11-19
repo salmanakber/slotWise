@@ -25,8 +25,9 @@ const bodySchema = z.object({
 
 /**
  * Connect credential-based integrations.
- * Apple Calendar requires a live CalDAV check — random credentials are rejected.
- * Prefer Mailchimp OAuth Connect when platform keys are configured.
+ * Apple Calendar: live CalDAV check.
+ * HubSpot: Private App / access token verified against CRM API (per site owner — not platform admin).
+ * Mailchimp: prefer OAuth; API key path still validated when used.
  */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -52,9 +53,73 @@ export async function POST(request: Request) {
   if (provider === "apple_calendar" && !parsed.data.account?.trim()) {
     return NextResponse.json({ error: "Apple ID email is required" }, { status: 400 });
   }
+  if (provider === "hubspot" && parsed.data.secret.trim().length < 20) {
+    return NextResponse.json(
+      { error: "Paste a HubSpot Private App access token (starts with pat-…)." },
+      { status: 400 },
+    );
+  }
 
   try {
     const site = await requireDemoSite();
+
+    if (provider === "hubspot") {
+      const token = parsed.data.secret.trim();
+      const ping = await fetch(
+        "https://api.hubapi.com/crm/v3/objects/contacts?limit=1&archived=false",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(12_000),
+        },
+      ).catch(() => null);
+      if (!ping) {
+        return NextResponse.json(
+          { error: "Could not reach HubSpot — check your connection and try again." },
+          { status: 400 },
+        );
+      }
+      if (ping.status === 401 || ping.status === 403) {
+        return NextResponse.json(
+          {
+            error:
+              "HubSpot rejected that token. Create a Private App with crm.objects.contacts read/write, then paste its access token.",
+          },
+          { status: 400 },
+        );
+      }
+      if (!ping.ok) {
+        return NextResponse.json(
+          { error: `HubSpot returned HTTP ${ping.status}. Check the token scopes and try again.` },
+          { status: 400 },
+        );
+      }
+
+      const meta = {
+        connectedVia: "private_app_token",
+        connectedAt: Date.now(),
+        verified: true,
+      } satisfies Prisma.InputJsonObject;
+
+      await prisma.siteIntegration.upsert({
+        where: { siteId_provider: { siteId: site.id, provider } },
+        create: {
+          siteId: site.id,
+          provider,
+          status: "connected",
+          accessTokenEncrypted: encryptSecret(token),
+          externalAccountEmail: parsed.data.account?.trim() || "HubSpot Private App",
+          meta,
+        },
+        update: {
+          status: "connected",
+          accessTokenEncrypted: encryptSecret(token),
+          externalAccountEmail: parsed.data.account?.trim() || "HubSpot Private App",
+          meta,
+        },
+      });
+
+      return NextResponse.json({ ok: true, provider, connected: true, verified: true });
+    }
 
     if (provider === "apple_calendar") {
       const check = await validateAppleCalDav({

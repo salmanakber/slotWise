@@ -472,16 +472,12 @@ export function PlatformSettingsForm({ initial, section }: Props) {
               />
             </Field>
             <p className="mb-3 text-[12.5px] leading-relaxed" style={{ color: "var(--mut)" }}>
-              HubSpot keys are from the{" "}
-              <a
-                href="https://developers.hubspot.com/"
-                target="_blank"
-                rel="noreferrer"
-                className="font-extrabold underline"
-              >
-                HubSpot Developer portal
-              </a>{" "}
-              (not a CLI). Create an app → Auth tab → Client ID &amp; Client secret. Add redirect URI:{" "}
+              Optional. HubSpot’s new OAuth apps are CLI-only (
+              <code className="font-semibold">hs project create</code>
+              ). Site owners can connect without this by pasting a{" "}
+              <b>Private App access token</b> in their workspace Integrations. Only add Client
+              ID/Secret here if you build a marketplace-style OAuth app via the HubSpot CLI.
+              Redirect URI:{" "}
               <code className="font-semibold">
                 /api/site/integrations/oauth/hubspot/callback
               </code>
