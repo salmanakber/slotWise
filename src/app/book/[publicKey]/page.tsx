@@ -51,7 +51,7 @@ export default async function BookPage({
         <style>{`html,body{margin:0;padding:0;height:0;overflow:hidden;background:transparent}`}</style>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{parent.postMessage({source:"slotwise",type:"resize",publicKey:${pk},height:0},"*");}catch(e){}`,
+            __html: `try{parent.postMessage({source:"slotwise",type:"unavailable",unavailable:true,publicKey:${pk},height:0},"*");}catch(e){}`,
           }}
         />
       </main>

@@ -228,8 +228,9 @@ export function BookingWidget({
 
   useEffect(() => {
     if (!embed || typeof window === "undefined" || !error) return;
+    // Do not send height:0 alone — host widget.js used to treat that as “destroy iframe”.
     window.parent.postMessage(
-      { source: "slotwise", type: "resize", publicKey, height: 0 },
+      { source: "slotwise", type: "unavailable", unavailable: true, publicKey, height: 0 },
       "*",
     );
   }, [embed, error, publicKey]);

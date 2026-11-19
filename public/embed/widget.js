@@ -102,32 +102,40 @@
     var existing = el.querySelector && el.querySelector("iframe");
     if (existing) {
       var key = publicKeyFromSrc(existing.getAttribute("src")) || site;
+      // Never blank a Designer-placed iframe on a flaky fetch — only size/style it.
       fetch(base + "/api/v1/sites/" + encodeURIComponent(key), { credentials: "omit" })
         .then(function (r) {
-          if (!r.ok) throw new Error("unavailable");
+          if (!r.ok) return null;
           return r.json();
         })
         .then(function (data) {
           el.classList.add("is-ready");
-          existing.style.minHeight = "640px";
-          existing.style.height = "640px";
-          applyFrameWidth(existing, data && data.branding && data.branding.calendarStyle);
+          if (!existing.style.minHeight || existing.style.minHeight === "0px") {
+            existing.style.minHeight = "640px";
+          }
+          if (!existing.style.height || existing.style.height === "0px") {
+            existing.style.height = "640px";
+          }
+          if (data) {
+            applyFrameWidth(existing, data.branding && data.branding.calendarStyle);
+          }
         })
         .catch(function () {
-          hideFrame(existing);
-          hide(el);
+          el.classList.add("is-ready");
         });
 
       window.addEventListener("message", function (ev) {
         var data = ev && ev.data;
         if (!data || data.source !== "slotwise") return;
         if (data.publicKey && data.publicKey !== key) return;
+        // Only hide when the embed explicitly reports uninstall/unavailable
+        if (data.type === "unavailable" || data.unavailable === true) {
+          hideFrame(existing);
+          hide(el);
+          return;
+        }
         if (data.type === "resize" && typeof data.height === "number") {
-          if (data.height <= 1) {
-            hideFrame(existing);
-            hide(el);
-            return;
-          }
+          if (data.height <= 1) return; // ignore transient 0-height; do not destroy canvas embeds
           var next = Math.max(320, Math.ceil(data.height) + 8);
           existing.style.minHeight = next + "px";
           existing.style.height = next + "px";
@@ -176,11 +184,12 @@
         function onMessage(ev) {
           var msg = ev && ev.data;
           if (!msg || msg.source !== "slotwise" || msg.publicKey !== site) return;
+          if (msg.type === "unavailable" || msg.unavailable === true) {
+            hide(el);
+            return;
+          }
           if (msg.type === "resize" && typeof msg.height === "number") {
-            if (msg.height <= 1) {
-              hide(el);
-              return;
-            }
+            if (msg.height <= 1) return;
             var next = Math.max(minH, Math.ceil(msg.height) + 8);
             iframe.style.minHeight = next + "px";
             iframe.style.height = next + "px";
@@ -223,32 +232,39 @@
       var key = publicKeyFromSrc(src);
       if (!key) continue;
       (function (frame, publicKey) {
+        // Canvas embeds on published pages: size them, never destroy on network blips.
+        if (!frame.style.minHeight || frame.style.minHeight === "0px") {
+          frame.style.minHeight = "640px";
+        }
+        if (!frame.style.height || frame.style.height === "0px") {
+          frame.style.height = "640px";
+        }
         fetch(base + "/api/v1/sites/" + encodeURIComponent(publicKey), { credentials: "omit" })
           .then(function (r) {
-            if (!r.ok) throw new Error("unavailable");
+            if (!r.ok) return null;
             return r.json();
           })
           .then(function (data) {
-            applyFrameWidth(frame, data && data.branding && data.branding.calendarStyle);
+            if (data) applyFrameWidth(frame, data.branding && data.branding.calendarStyle);
           })
-          .catch(function () {
-            hideFrame(frame);
-          });
+          .catch(function () {});
         window.addEventListener("message", function (ev) {
           var data = ev && ev.data;
           if (!data || data.source !== "slotwise" || data.publicKey !== publicKey) return;
+          if (data.type === "unavailable" || data.unavailable === true) {
+            hideFrame(frame);
+            return;
+          }
           if (data.type === "resize" && typeof data.height === "number") {
-            if (data.height <= 1) hideFrame(frame);
-            else {
-              var next = Math.max(320, Math.ceil(data.height) + 8);
-              frame.style.minHeight = next + "px";
-              frame.style.height = next + "px";
-              if (data.calendarStyle || data.frameWidth) {
-                applyFrameWidth(
-                  frame,
-                  data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
-                );
-              }
+            if (data.height <= 1) return;
+            var next = Math.max(320, Math.ceil(data.height) + 8);
+            frame.style.minHeight = next + "px";
+            frame.style.height = next + "px";
+            if (data.calendarStyle || data.frameWidth) {
+              applyFrameWidth(
+                frame,
+                data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
+              );
             }
           }
           if (data.type === "ready" && data.calendarStyle) {
