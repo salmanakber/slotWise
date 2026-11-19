@@ -192,7 +192,12 @@ export function BookingWidget({
               : "MONTH";
 
     const post = () => {
-      const height = Math.ceil(el.getBoundingClientRect().height);
+      const box = el.getBoundingClientRect().height;
+      const scroll = Math.max(
+        document.documentElement?.scrollHeight || 0,
+        document.body?.scrollHeight || 0,
+      );
+      const height = Math.ceil(Math.max(box, scroll, 640));
       window.parent.postMessage(
         {
           source: "slotwise",

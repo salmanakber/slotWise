@@ -27,6 +27,30 @@
     document.head.appendChild(css);
   }
 
+  function currentFrameHeight(iframe) {
+    var fromStyle = parseInt(iframe.style.height, 10);
+    if (fromStyle && fromStyle > 0) return fromStyle;
+    var match = (iframe.getAttribute("style") || "").match(/(?:^|;)\s*height\s*:\s*([0-9.]+)px/i);
+    if (match) return parseInt(match[1], 10) || 0;
+    return 0;
+  }
+
+  /** Grow/shrink iframe with content; never clamp to the old 320px floor. */
+  function sizeFrame(iframe, reportedPx, calendarStyle) {
+    if (!iframe || !(reportedPx > 40)) return;
+    var wide =
+      calendarStyle === "HORIZONTAL" ||
+      iframe.getAttribute("data-calendar-style") === "HORIZONTAL" ||
+      (iframe.classList && iframe.classList.contains("is-wide"));
+    var next = Math.max(wide ? 560 : 640, Math.ceil(reportedPx) + 16);
+    var prev = currentFrameHeight(iframe);
+    // Avoid tiny downward jitter; allow real shrinks (e.g. step change) of 80px+
+    if (prev && next < prev && prev - next < 80) next = prev;
+    iframe.style.minHeight = next + "px";
+    iframe.style.height = next + "px";
+    applyFrameWidth(iframe, wide ? "HORIZONTAL" : calendarStyle || iframe.getAttribute("data-calendar-style"));
+  }
+
   function applyFrameWidth(iframe, calendarStyle) {
     if (!iframe) return;
     var wide = calendarStyle === "HORIZONTAL";
@@ -44,7 +68,9 @@
         "style",
         "display:block;width:70%;max-width:70%;margin-left:auto;margin-right:auto;height:" +
           height +
-          ";min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;",
+          ";min-height:" +
+          height +
+          ";border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;",
       );
       iframe.setAttribute("data-calendar-style", "HORIZONTAL");
     } else {
@@ -53,9 +79,12 @@
         "style",
         "display:block;width:100%;max-width:29.2rem;margin-left:auto;margin-right:auto;height:" +
           height +
-          ";min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;",
+          ";min-height:" +
+          height +
+          ";border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;",
       );
       if (calendarStyle) iframe.setAttribute("data-calendar-style", calendarStyle);
+      else iframe.removeAttribute("data-calendar-style");
     }
   }
 
@@ -136,18 +165,17 @@
         }
         if (data.type === "resize" && typeof data.height === "number") {
           if (data.height <= 1) return; // ignore transient 0-height; do not destroy canvas embeds
-          var next = Math.max(320, Math.ceil(data.height) + 8);
-          existing.style.minHeight = next + "px";
-          existing.style.height = next + "px";
-          if (data.calendarStyle || data.frameWidth) {
-            applyFrameWidth(
-              existing,
-              data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
-            );
-          }
+          sizeFrame(
+            existing,
+            data.height,
+            data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : null),
+          );
         }
-        if (data.type === "ready" && data.calendarStyle) {
-          applyFrameWidth(existing, data.calendarStyle);
+        if (data.type === "ready") {
+          applyFrameWidth(
+            existing,
+            data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : null),
+          );
         }
       });
       return;
@@ -190,19 +218,18 @@
           }
           if (msg.type === "resize" && typeof msg.height === "number") {
             if (msg.height <= 1) return;
-            var next = Math.max(minH, Math.ceil(msg.height) + 8);
-            iframe.style.minHeight = next + "px";
-            iframe.style.height = next + "px";
-            if (msg.calendarStyle || msg.frameWidth) {
-              applyFrameWidth(
-                iframe,
-                msg.calendarStyle || (msg.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
-              );
-            }
+            sizeFrame(
+              iframe,
+              Math.max(minH, msg.height),
+              msg.calendarStyle || (msg.frameWidth === "70%" ? "HORIZONTAL" : null),
+            );
           }
           if (msg.type === "ready") {
             el.classList.add("is-ready");
-            if (msg.calendarStyle) applyFrameWidth(iframe, msg.calendarStyle);
+            applyFrameWidth(
+              iframe,
+              msg.calendarStyle || (msg.frameWidth === "70%" ? "HORIZONTAL" : null),
+            );
           }
         }
 
@@ -257,18 +284,17 @@
           }
           if (data.type === "resize" && typeof data.height === "number") {
             if (data.height <= 1) return;
-            var next = Math.max(320, Math.ceil(data.height) + 8);
-            frame.style.minHeight = next + "px";
-            frame.style.height = next + "px";
-            if (data.calendarStyle || data.frameWidth) {
-              applyFrameWidth(
-                frame,
-                data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : "MONTH"),
-              );
-            }
+            sizeFrame(
+              frame,
+              data.height,
+              data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : null),
+            );
           }
-          if (data.type === "ready" && data.calendarStyle) {
-            applyFrameWidth(frame, data.calendarStyle);
+          if (data.type === "ready") {
+            applyFrameWidth(
+              frame,
+              data.calendarStyle || (data.frameWidth === "70%" ? "HORIZONTAL" : null),
+            );
           }
         });
       })(iframe, key);

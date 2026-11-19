@@ -237,7 +237,7 @@ export async function fetchWebflowSites(accessToken: string) {
 }
 
 /** Hosted runtime version — bump when public/embed/widget.js bytes change. */
-export const SLOTWISE_WIDGET_SCRIPT_VERSION = "0.3.1";
+export const SLOTWISE_WIDGET_SCRIPT_VERSION = "0.3.2";
 export const SLOTWISE_WIDGET_SCRIPT_NAME = "Slotwise Widget";
 
 type RegisteredScript = {
@@ -286,21 +286,46 @@ export async function registerHostedWidgetScript(accessToken: string, siteId: st
   });
 
   if (res.ok) {
-    return (await res.json()) as RegisteredScript;
+    return { ...((await res.json()) as RegisteredScript), integrityHash };
   }
 
-  // Already registered for this version — look it up
+  // Same version already registered — reuse only if integrity still matches live bytes
   const listed = await listRegisteredScripts(accessToken, siteId);
   const existing = listed.find(
     (s) =>
-      s.hostedLocation === hostedLocation ||
-      s.displayName === SLOTWISE_WIDGET_SCRIPT_NAME ||
-      (s.id && s.id.toLowerCase().includes("slotwise")),
+      (s.hostedLocation === hostedLocation ||
+        s.displayName === SLOTWISE_WIDGET_SCRIPT_NAME ||
+        (s.id && s.id.toLowerCase().includes("slotwise"))) &&
+      s.version === SLOTWISE_WIDGET_SCRIPT_VERSION,
   );
-  if (existing?.id) return existing;
+  if (existing?.id && (!existing.integrityHash || existing.integrityHash === integrityHash)) {
+    return { ...existing, integrityHash };
+  }
+
+  // Integrity/version drift — register under a unique patch version so Webflow gets new SRI
+  const patchVersion = `${SLOTWISE_WIDGET_SCRIPT_VERSION}-${Date.now().toString(36).slice(-4)}`;
+  const retry = await fetch(`${WEBFLOW_API}/sites/${siteId}/registered_scripts/hosted`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      hostedLocation,
+      integrityHash,
+      canCopy: false,
+      version: patchVersion,
+      displayName: SLOTWISE_WIDGET_SCRIPT_NAME,
+    }),
+  });
+  if (retry.ok) {
+    return { ...((await retry.json()) as RegisteredScript), integrityHash, version: patchVersion };
+  }
 
   const text = await res.text();
-  throw new Error(`Register script failed: ${text}`);
+  const retryText = await retry.text();
+  throw new Error(`Register script failed: ${text} | retry: ${retryText}`);
 }
 
 export async function listRegisteredScripts(accessToken: string, siteId: string) {
