@@ -149,23 +149,6 @@ export function BookingWidget({
   }, [publicKey, site]);
 
   useEffect(() => {
-    if (!site || !brandingPreview) return;
-    setSite((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        branding: {
-          ...prev.branding,
-          ...brandingPreview,
-          theme: brandingPreview.theme
-            ? { ...prev.branding.theme, ...brandingPreview.theme }
-            : prev.branding.theme,
-        },
-      };
-    });
-  }, [brandingPreview, site]);
-
-  useEffect(() => {
     if (!site || !serviceId || !date) return;
     let cancelled = false;
     setLoadingSlots(true);
@@ -190,7 +173,7 @@ export function BookingWidget({
     return () => {
       cancelled = true;
     };
-  }, [site, serviceId, date, staffId, publicKey]);
+  }, [serviceId, date, staffId, publicKey, site?.publicKey]);
 
   useEffect(() => {
     if (!embed || typeof window === "undefined") return;
@@ -225,7 +208,19 @@ export function BookingWidget({
     [site, serviceId],
   );
 
-  const branding = site?.branding;
+  // Merge live branding overrides at render time — never write them into site
+  // state (that caused an infinite update loop + permanent loader in Branding preview).
+  const branding = useMemo(() => {
+    if (!site?.branding) return null;
+    if (!brandingPreview) return site.branding;
+    return {
+      ...site.branding,
+      ...brandingPreview,
+      theme: brandingPreview.theme
+        ? { ...site.branding.theme, ...brandingPreview.theme }
+        : site.branding.theme,
+    };
+  }, [site?.branding, brandingPreview]);
   const accent = branding?.accent ?? "#f5a000";
   const onAccent = contrastOn(accent);
   const radius = branding?.radius ?? 18;
@@ -381,10 +376,7 @@ export function BookingWidget({
     );
   }
 
-  const calendarStyle =
-    brandingPreview?.calendarStyle === "WEEK" || branding?.calendarStyle === "WEEK"
-      ? "WEEK"
-      : "MONTH";
+  const calendarStyle = branding?.calendarStyle === "WEEK" ? "WEEK" : "MONTH";
   const steps = [
     { key: "pick", label: "Time" },
     { key: "details", label: "Details" },
@@ -404,9 +396,9 @@ export function BookingWidget({
         border: `1px solid ${line}`,
         borderRadius: embed ? Math.min(radius, 18) : radius,
         width: "100%",
-        maxWidth: calendarStyle === "MONTH" ? "min(100%, 46rem)" : "min(100%, 36rem)",
-        maxHeight: embed ? "min(92vh, 720px)" : "min(92vh, 820px)",
-        marginTop: embed ? 20 : 0,
+        maxWidth: "min(100%, 1040px)",
+        maxHeight: embed ? "min(92vh, 880px)" : "min(96vh, 920px)",
+        marginTop: embed ? 12 : 0,
         marginInline: "auto",
         display: "flex",
         flexDirection: "column",
@@ -422,6 +414,7 @@ export function BookingWidget({
       data-slotwise-root
       data-embed={embed ? "1" : undefined}
       data-layout={branding?.layout || "INLINE"}
+      data-calendar={calendarStyle}
     >
       <style>{`
         @keyframes sw-w-in {
@@ -439,18 +432,16 @@ export function BookingWidget({
         .sw-w-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
         .sw-w-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 22%, transparent); border-radius: 99px; }
         .sw-widget *, .sw-widget *::before, .sw-widget *::after { box-sizing: border-box; }
-        .sw-w-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
-        .sw-w-when { display: grid; gap: 1rem; min-width: 0; }
-        @container (min-width: 34rem) {
-          .sw-w-when { grid-template-columns: 1.15fr 0.95fr; gap: 1.15rem; align-items: start; }
-          .sw-w-when.is-week { grid-template-columns: 1fr; }
-          .sw-w-times { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        @container (min-width: 22rem) {
-          .sw-w-times.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        }
-        @container (min-width: 28rem) {
-          .sw-w-times.is-compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .sw-w-board { display: grid; gap: 1.25rem; min-width: 0; align-items: start; }
+        .sw-w-times { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 0.5rem; }
+        @container (min-width: 52rem) {
+          .sw-w-board {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.9fr);
+            gap: 1.35rem;
+          }
+          .sw-w-board > * { min-width: 0; }
+          .sw-w-svc-list { max-height: min(52vh, 420px) !important; }
+          .sw-w-times { max-height: min(52vh, 420px) !important; }
         }
         @media (prefers-reduced-motion: reduce) {
           .sw-w-rise, .sw-w-check { animation: none !important; }
@@ -519,7 +510,7 @@ export function BookingWidget({
         </div>
       </header>
 
-      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 py-4">
+      <div className="relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
         {(loadingSlots || submitting) && branding?.showLoader !== false ? (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[3px]"
@@ -656,170 +647,163 @@ export function BookingWidget({
         ) : null}
 
         {step === "pick" ? (
-          <div className="sw-w-rise grid min-w-0 gap-2.5">
-            <section className="min-w-0">
-              <div className="mb-1.5 flex min-w-0 items-end justify-between gap-2">
-                <h3 className="text-[13px] font-extrabold tracking-tight">Service</h3>
-                <span className="shrink-0 text-[10px]" style={{ color: mut }}>
-                  {site.services.length} available
-                </span>
-              </div>
-              <div className="sw-w-scroll grid max-h-[132px] gap-1.5 overflow-y-auto pb-0.5">
-                {site.services.map((s) => {
-                  const on = s.id === serviceId;
-                  const priceLabel =
-                    branding?.showPrice !== false
-                      ? formatCustomerPrice(s.priceCents, site.currency)
-                      : null;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setServiceId(s.id)}
-                      className="group flex min-h-[40px] w-full min-w-0 items-center justify-between gap-2 border px-2.5 py-2 text-left transition"
-                      style={{
-                        borderRadius: Math.max(radius - 6, 10),
-                        borderColor: on ? accent : line,
-                        background: on
-                          ? `color-mix(in srgb, ${accent} 12%, ${panel})`
-                          : "transparent",
-                        boxShadow: on ? `0 0 0 1px ${accent}` : "none",
-                      }}
-                    >
-                      <span className="min-w-0 flex-1 overflow-hidden">
-                        <b className="block truncate text-[13px] font-extrabold tracking-tight">{s.name}</b>
-                        <span className="mt-0.5 block truncate text-[11px]" style={{ color: mut }}>
-                          {branding?.showDuration !== false ? `${s.durationMin} min` : ""}
-                          {s.description ? ` · ${s.description}` : ""}
-                        </span>
-                      </span>
-                      {priceLabel ? (
-                        <em
-                          className="shrink-0 rounded-full px-2 py-0.5 not-italic text-[12px] font-extrabold"
-                          style={{
-                            background: `color-mix(in srgb, ${accent} 14%, ${panel})`,
-                            color: accent,
-                          }}
-                        >
-                          {priceLabel}
-                        </em>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            {branding?.showStaff !== false && site.staff.length > 0 ? (
+          <div className="sw-w-rise sw-w-board">
+            <div className="grid min-w-0 gap-3.5">
               <section className="min-w-0">
-                <h3 className="mb-2 text-[14px] font-extrabold tracking-tight">Who</h3>
-                <div className="flex min-w-0 flex-wrap gap-1.5">
-                  <Chip active={!staffId} accent={accent} onAccent={onAccent} line={line} onClick={() => setStaffId("")}>
-                    Anyone
-                  </Chip>
-                  {site.staff.map((s) => (
+                <div className="mb-2 flex min-w-0 items-end justify-between gap-2">
+                  <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Choose a service</h3>
+                  <span className="shrink-0 text-[11px]" style={{ color: mut }}>
+                    {site.services.length} available
+                  </span>
+                </div>
+                <div className="sw-w-scroll sw-w-svc-list grid max-h-[220px] gap-2 overflow-y-auto pb-0.5">
+                  {site.services.map((s) => {
+                    const on = s.id === serviceId;
+                    const priceLabel =
+                      branding?.showPrice !== false
+                        ? formatCustomerPrice(s.priceCents, site.currency)
+                        : null;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setServiceId(s.id)}
+                        className="group flex min-h-[48px] w-full min-w-0 items-center justify-between gap-2.5 border px-3.5 py-3 text-left transition"
+                        style={{
+                          borderRadius: Math.max(radius - 6, 10),
+                          borderColor: on ? accent : line,
+                          background: on
+                            ? `color-mix(in srgb, ${accent} 12%, ${panel})`
+                            : "transparent",
+                          boxShadow: on ? `0 0 0 1px ${accent}` : "none",
+                        }}
+                      >
+                        <span className="min-w-0 flex-1 overflow-hidden">
+                          <b className="block truncate text-[14px] font-extrabold tracking-tight">
+                            {s.name}
+                          </b>
+                          <span className="mt-0.5 block truncate text-[12px]" style={{ color: mut }}>
+                            {branding?.showDuration !== false ? `${s.durationMin} min` : ""}
+                            {s.description ? ` · ${s.description}` : ""}
+                          </span>
+                        </span>
+                        {priceLabel ? (
+                          <em
+                            className="shrink-0 not-italic text-[14px] font-extrabold"
+                            style={{ color: accent }}
+                          >
+                            {priceLabel}
+                          </em>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {branding?.showStaff !== false && site.staff.length > 0 ? (
+                <section className="min-w-0">
+                  <h3 className="mb-2 text-[15px] font-extrabold tracking-tight">Who</h3>
+                  <div className="flex min-w-0 flex-wrap gap-1.5">
                     <Chip
-                      key={s.id}
-                      active={staffId === s.id}
+                      active={!staffId}
                       accent={accent}
                       onAccent={onAccent}
                       line={line}
-                      onClick={() => setStaffId(s.id)}
+                      onClick={() => setStaffId("")}
                     >
-                      {s.name}
+                      Anyone
                     </Chip>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-
-            <div className={`sw-w-when ${calendarStyle === "WEEK" ? "is-week" : ""}`}>
-              <section
-                className="min-w-0 rounded-[18px] border p-3"
-                style={{
-                  borderColor: line,
-                  background: `linear-gradient(165deg, color-mix(in srgb, ${accent} 7%, ${panel}), ${panel})`,
-                }}
-              >
-                <BookingCalendar
-                  mode={calendarStyle}
-                  date={date}
-                  timezone={site.timezone}
-                  accent={accent}
-                  onAccent={onAccent}
-                  ink={ink}
-                  mut={mut}
-                  line={line}
-                  panel={panel}
-                  radius={radius}
-                  onChange={(iso) => {
-                    setDate(iso);
-                    setSlotStart("");
-                  }}
-                />
-              </section>
-
-              <section className="min-w-0">
-                <div className="mb-2">
-                  <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Select time</h3>
-                  <p className="m-0 mt-0.5 text-[11.5px]" style={{ color: mut }}>
-                    {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                    {slots.filter((s) => s.available).length
-                      ? ` · ${slots.filter((s) => s.available).length} open`
-                      : ""}
-                  </p>
-                </div>
-                <div
-                  className={`sw-w-scroll sw-w-times max-h-[240px] w-full min-w-0 overflow-y-auto pb-0.5 ${
-                    calendarStyle === "WEEK" ? "is-compact" : ""
-                  }`}
-                >
-                  {slots.length === 0 && !loadingSlots ? (
-                    <div
-                      className="rounded-xl border border-dashed px-3 py-5 text-center text-[12.5px]"
-                      style={{
-                        borderColor: line,
-                        color: mut,
-                        gridColumn: "1 / -1",
-                      }}
-                    >
-                      No openings this day. Try another date.
-                    </div>
-                  ) : (
-                    slots.map((s) => {
-                      const on = slotStart === s.start;
-                      return (
-                        <button
-                          key={s.start}
-                          type="button"
-                          disabled={!s.available}
-                          onClick={() => setSlotStart(s.start)}
-                          className="flex min-h-[48px] min-w-0 items-center justify-center border px-2 text-[14px] font-bold transition disabled:cursor-not-allowed disabled:opacity-35"
-                          style={{
-                            borderRadius: Math.max(radius - 4, 14),
-                            borderColor: on ? accent : line,
-                            background: on
-                              ? `color-mix(in srgb, ${accent} 16%, ${panel})`
-                              : panel,
-                            color: ink,
-                            fontWeight: on ? 800 : 650,
-                            boxShadow: on
-                              ? `0 8px 18px color-mix(in srgb, ${accent} 16%, transparent)`
-                              : "none",
-                          }}
-                        >
-                          {s.label}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
+                    {site.staff.map((s) => (
+                      <Chip
+                        key={s.id}
+                        active={staffId === s.id}
+                        accent={accent}
+                        onAccent={onAccent}
+                        line={line}
+                        onClick={() => setStaffId(s.id)}
+                      >
+                        {s.name}
+                      </Chip>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
             </div>
+
+            <section className="min-w-0">
+              <BookingCalendar
+                mode={calendarStyle}
+                date={date}
+                timezone={site.timezone}
+                accent={accent}
+                onAccent={onAccent}
+                ink={ink}
+                mut={mut}
+                line={line}
+                panel={panel}
+                radius={radius}
+                onChange={(iso) => {
+                  setDate(iso);
+                  setSlotStart("");
+                }}
+              />
+            </section>
+
+            <section className="min-w-0">
+              <div className="mb-2">
+                <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Pick a time</h3>
+                <p className="m-0 mt-0.5 text-[12px]" style={{ color: mut }}>
+                  {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                  {slots.filter((s) => s.available).length
+                    ? ` · ${slots.filter((s) => s.available).length} open`
+                    : ""}
+                </p>
+              </div>
+              <div className="sw-w-scroll sw-w-times max-h-[280px] w-full min-w-0 overflow-y-auto pb-0.5">
+                {slots.length === 0 && !loadingSlots ? (
+                  <div
+                    className="rounded-xl border border-dashed px-3 py-5 text-center text-[12.5px]"
+                    style={{
+                      borderColor: line,
+                      color: mut,
+                      gridColumn: "1 / -1",
+                    }}
+                  >
+                    No openings this day. Try another date.
+                  </div>
+                ) : (
+                  slots.map((s) => {
+                    const on = slotStart === s.start;
+                    return (
+                      <button
+                        key={s.start}
+                        type="button"
+                        disabled={!s.available}
+                        onClick={() => setSlotStart(s.start)}
+                        className="flex min-h-[42px] min-w-0 items-center justify-center border px-2 text-[13.5px] font-bold transition disabled:cursor-not-allowed disabled:opacity-35"
+                        style={{
+                          borderRadius: Math.max(radius - 6, 10),
+                          borderColor: on ? accent : line,
+                          background: on ? accent : "transparent",
+                          color: on ? onAccent : ink,
+                          fontWeight: on ? 800 : 650,
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              <p className="mb-0 mt-2.5 text-[12px]" style={{ color: mut }}>
+                Times shown in {site.timezone}
+              </p>
+            </section>
           </div>
         ) : null}
 

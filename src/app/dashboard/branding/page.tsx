@@ -187,8 +187,8 @@ export default function BrandingPage() {
   }
 
   return (
-    <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-      <div className="grid gap-3.5 content-start">
+    <div className="grid gap-3.5">
+      <div className="grid gap-3.5 content-start xl:grid-cols-2">
         <section className="sw-card">
           <h2 className="mb-1 text-[15px] font-extrabold">Theme and color</h2>
           <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
@@ -332,74 +332,73 @@ export default function BrandingPage() {
           </Row>
         </section>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            className="sw-btn sw-btn-primary"
-            disabled={saving}
-            onClick={() => void saveBranding()}
-          >
-            {saving ? "Saving…" : "Save branding"}
-          </button>
-          {savedMsg ? (
-            <span className="text-[13px] font-semibold text-[var(--at)]">{savedMsg}</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          className="sw-btn sw-btn-primary"
+          disabled={saving}
+          onClick={() => void saveBranding()}
+        >
+          {saving ? "Saving…" : "Save branding"}
+        </button>
+        {savedMsg ? (
+          <span className="text-[13px] font-semibold text-[var(--at)]">{savedMsg}</span>
+        ) : null}
+      </div>
+
+      <section className="sw-card !p-3 sm:!p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+          <div>
+            <h2 className="m-0 text-[15px] font-extrabold">Live booking preview</h2>
+            <p className="m-0 mt-0.5 text-[12px]" style={{ color: "var(--mut)" }}>
+              Full-width calendar — Service, date, and time side by side
+            </p>
+          </div>
+          {publicKey ? (
+            <Link href={`/book/${publicKey}`} className="sw-btn" target="_blank">
+              Open full page
+            </Link>
           ) : null}
         </div>
-      </div>
-
-      <div className="grid gap-3.5 content-start">
-        <section className="sw-card !p-3 sm:!p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
-            <div>
-              <h2 className="m-0 text-[15px] font-extrabold">Live booking preview</h2>
-              <p className="m-0 mt-0.5 text-[12px]" style={{ color: "var(--mut)" }}>
-                Real calendar widget — same as your public booking page
-              </p>
+        <div
+          className="overflow-x-auto overflow-y-hidden rounded-2xl border"
+          style={{
+            borderColor: theme.line,
+            background: theme.bg,
+            minHeight: 480,
+          }}
+        >
+          {publicKey ? (
+            <BookingWidget
+              key={`${publicKey}-${widgetKey}`}
+              publicKey={publicKey}
+              embed
+              brandingPreview={brandingPreview}
+            />
+          ) : (
+            <div className="flex min-h-[280px] items-center justify-center text-[13px]" style={{ color: "var(--mut)" }}>
+              Loading widget…
             </div>
-            {publicKey ? (
-              <Link href={`/book/${publicKey}`} className="sw-btn" target="_blank">
-                Open full page
-              </Link>
-            ) : null}
-          </div>
-          <div
-            className="overflow-hidden rounded-2xl border"
-            style={{
-              borderColor: theme.line,
-              background: theme.bg,
-              minHeight: 420,
-            }}
-          >
-            {publicKey ? (
-              <BookingWidget
-                key={`${publicKey}-${widgetKey}`}
-                publicKey={publicKey}
-                embed
-                brandingPreview={brandingPreview}
-              />
-            ) : (
-              <div className="flex min-h-[280px] items-center justify-center text-[13px]" style={{ color: "var(--mut)" }}>
-                Loading widget…
-              </div>
-            )}
-          </div>
-        </section>
+          )}
+        </div>
+      </section>
 
-        <section className="sw-card">
-          <h2 className="mb-1 text-[15px] font-extrabold">Add to your website</h2>
-          <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
-            In Webflow Designer, open Slotwise and choose Place on canvas. Theme changes there sync
-            here automatically.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {publicKey ? (
-              <Link href={`/book/${publicKey}`} className="sw-btn sw-btn-primary">
-                Open live preview
-              </Link>
-            ) : null}
-          </div>
-        </section>
-      </div>
+      <section className="sw-card">
+        <h2 className="mb-1 text-[15px] font-extrabold">Add to your website</h2>
+        <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+          In Webflow Designer, open Slotwise and choose Place on canvas. Theme changes there sync
+          here automatically.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {publicKey ? (
+            <Link href={`/book/${publicKey}`} className="sw-btn sw-btn-primary">
+              Open live preview
+            </Link>
+          ) : null}
+        </div>
+      </section>
     </div>
   );
 }
