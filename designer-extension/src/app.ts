@@ -45,6 +45,7 @@ export async function boot(root: HTMLElement) {
     branding: null as api.DesignerBranding | null,
     selectedBookingId: null as string | null,
     calMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    calDayKey: null as string | null,
     calendarChat: null as api.CalendarChatPayload | null,
     availability: null as api.AvailabilityPayload | null,
     inbox: null as { unread: number; items: api.InboxItem[] } | null,
@@ -534,6 +535,77 @@ export async function boot(root: HTMLElement) {
     </section>`;
   }
 
+  function dayKey(d: Date) {
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+
+  function downloadText(filename: string, content: string, mime: string) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportBookingsCsv(
+    list: NonNullable<api.Bootstrap["recentBookings"]>,
+    slug: string,
+  ) {
+    const header = ["Reference", "Customer", "Email", "Service", "Starts", "Ends", "Status"];
+    const lines = [
+      header.join(","),
+      ...list.map((b) =>
+        [
+          b.reference,
+          b.customerName,
+          b.customerEmail || "",
+          b.serviceName,
+          b.startsAt,
+          b.endsAt || "",
+          b.status,
+        ]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(","),
+      ),
+    ];
+    downloadText(`slotwise-bookings-${slug}.csv`, lines.join("\n"), "text/csv;charset=utf-8");
+  }
+
+  function exportBookingsIcs(
+    list: NonNullable<api.Bootstrap["recentBookings"]>,
+    slug: string,
+  ) {
+    const stamp = (iso: string) =>
+      new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+    const events = list
+      .map((b) => {
+        const ends = b.endsAt || b.startsAt;
+        return [
+          "BEGIN:VEVENT",
+          `UID:${b.reference.replace(/\W/g, "")}@slotwise`,
+          `DTSTAMP:${stamp(new Date().toISOString())}`,
+          `DTSTART:${stamp(b.startsAt)}`,
+          `DTEND:${stamp(ends)}`,
+          `SUMMARY:${(`${b.serviceName} · ${b.customerName}`).replace(/[,;]/g, " ")}`,
+          "END:VEVENT",
+        ].join("\r\n");
+      })
+      .join("\r\n");
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Slotwise//Bookings//EN",
+      "CALSCALE:GREGORIAN",
+      events,
+      "END:VCALENDAR",
+    ].join("\r\n");
+    downloadText(`slotwise-bookings-${slug}.ics`, ics, "text/calendar;charset=utf-8");
+  }
+
   function monthCalendar() {
     const bookings = (state.bootstrap?.recentBookings || []).filter(
       (b) => b.status !== "CANCELLED" && b.status !== "NO_SHOW",
@@ -559,17 +631,62 @@ export async function boot(root: HTMLElement) {
     const sameDay = (a: Date, b: Date) =>
       a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
+    const monthItems = bookings.filter((b) => {
+      const d = new Date(b.startsAt);
+      return d.getFullYear() === year && d.getMonth() === month;
+    });
+
     const cells: string[] = [];
+    let dayPopupHtml = "";
     for (let i = 0; i < 42; i++) {
       const date = new Date(gridStart);
       date.setDate(gridStart.getDate() + i);
       const inMonth = date.getMonth() === month;
       const isToday = sameDay(date, today);
+      const key = dayKey(date);
       const dayItems = bookings
         .filter((b) => sameDay(new Date(b.startsAt), date))
         .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
       const visible = dayItems.slice(0, 2);
       const more = dayItems.length - visible.length;
+      if (state.calDayKey === key) {
+        const dayTitle = date.toLocaleDateString(undefined, {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        });
+        dayPopupHtml = `<div class="cal-day-modal" id="calDayModal">
+          <button type="button" class="cal-day-backdrop" id="calDayClose" aria-label="Close"></button>
+          <div class="cal-day-panel" role="dialog" aria-modal="true">
+            <header class="cal-day-head">
+              <div>
+                <div class="eyebrow">${dayItems.length} booking${dayItems.length === 1 ? "" : "s"}</div>
+                <h3>${escapeHtml(dayTitle)}</h3>
+              </div>
+              <button type="button" class="btn btn-icon btn-ghost" id="calDayClose2" aria-label="Close">✕</button>
+            </header>
+            <div class="cal-day-body">
+              ${dayItems
+                .map((ev) => {
+                  const t = tone(ev.serviceName || ev.id);
+                  return `<button type="button" class="cal-day-row" data-booking-id="${escapeHtml(ev.id)}">
+                    <i style="background:${t.solid}"></i>
+                    <span>
+                      <b>${escapeHtml(ev.customerName)}</b>
+                      <small>${escapeHtml(formatWhen(ev.startsAt))} · ${escapeHtml(ev.serviceName)}</small>
+                    </span>
+                  </button>`;
+                })
+                .join("")}
+            </div>
+            <footer class="cal-day-foot">
+              <button type="button" class="btn btn-sm" id="calDayExportCsv">CSV</button>
+              <button type="button" class="btn btn-sm" id="calDayExportIcs">ICS</button>
+              <button type="button" class="btn btn-primary btn-sm" id="calDayClose3">Close</button>
+            </footer>
+          </div>
+        </div>`;
+      }
       cells.push(`<div class="cal-cell ${inMonth ? "" : "is-out"}">
         <div class="cal-date ${isToday ? "is-today" : ""}">${date.getDate()}</div>
         <div class="cal-events">
@@ -582,12 +699,17 @@ export async function boot(root: HTMLElement) {
               return `<button type="button" class="cal-chip" style="background:${t.soft};color:${t.text}" data-booking-id="${escapeHtml(ev.id)}"><i style="background:${t.solid}"></i><span>${escapeHtml(ev.customerName)}</span></button>`;
             })
             .join("")}
-          ${more > 0 ? `<span class="cal-more">+${more}</span>` : ""}
+          ${
+            more > 0
+              ? `<button type="button" class="cal-more" data-cal-day="${escapeHtml(key)}">+${more} more</button>`
+              : ""
+          }
         </div>
       </div>`);
     }
 
     const tz = state.bootstrap?.site.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
+    const slug = label.toLowerCase().replace(/\s+/g, "-");
 
     return `<section class="card cal-card">
       <div class="cal-toolbar">
@@ -597,17 +719,29 @@ export async function boot(root: HTMLElement) {
           <button type="button" class="btn btn-icon btn-sm" id="calNext" aria-label="Next month">›</button>
           <h3 class="cal-title">${escapeHtml(label)}</h3>
         </div>
-        <div class="cal-modes">
-          <span class="is-on">Month</span>
-          <span>Week</span>
+        <div class="cal-toolbar-right">
+          <div class="cal-export">
+            <button type="button" class="btn btn-sm" id="calExportToggle">Export ▾</button>
+            <div class="cal-export-menu" id="calExportMenu" hidden>
+              <button type="button" data-cal-export="month-csv" data-slug="${escapeHtml(slug)}">Month CSV</button>
+              <button type="button" data-cal-export="month-ics" data-slug="${escapeHtml(slug)}">Month ICS</button>
+              <button type="button" data-cal-export="all-csv" data-slug="all-bookings">All CSV</button>
+              <button type="button" data-cal-export="all-ics" data-slug="all-bookings">All ICS</button>
+            </div>
+          </div>
+          <div class="cal-modes">
+            <span class="is-on">Month</span>
+            <span>Week</span>
+          </div>
         </div>
       </div>
       <div class="cal-weekdays">${weekdays.map((d) => `<div>${d}</div>`).join("")}</div>
       <div class="cal-grid">${cells.join("")}</div>
       <div class="cal-foot">
-        <span class="cal-tz">🌐 ${escapeHtml(tz)}</span>
+        <span class="cal-tz">🌐 ${escapeHtml(tz)} · ${monthItems.length} this month</span>
         <a class="link-quiet" href="${api.APP_URL}/dashboard/bookings" target="_blank" rel="noreferrer">Open workspace →</a>
       </div>
+      ${dayPopupHtml}
     </section>`;
   }
 
@@ -1391,6 +1525,69 @@ export async function boot(root: HTMLElement) {
       state.calMonth = new Date(state.calMonth.getFullYear(), state.calMonth.getMonth() + 1, 1);
       void render();
     });
+    root.querySelector("#calExportToggle")?.addEventListener("click", () => {
+      const menu = root.querySelector("#calExportMenu") as HTMLElement | null;
+      if (!menu) return;
+      menu.hidden = !menu.hidden;
+    });
+    root.querySelectorAll("[data-cal-export]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const kind = (el as HTMLElement).dataset.calExport || "";
+        const slug = (el as HTMLElement).dataset.slug || "bookings";
+        const all = (state.bootstrap?.recentBookings || []).filter(
+          (b) => b.status !== "CANCELLED" && b.status !== "NO_SHOW",
+        );
+        const month = all.filter((b) => {
+          const d = new Date(b.startsAt);
+          return (
+            d.getFullYear() === state.calMonth.getFullYear() &&
+            d.getMonth() === state.calMonth.getMonth()
+          );
+        });
+        if (kind === "month-csv") exportBookingsCsv(month, slug);
+        if (kind === "month-ics") exportBookingsIcs(month, slug);
+        if (kind === "all-csv") exportBookingsCsv(all, slug);
+        if (kind === "all-ics") exportBookingsIcs(all, slug);
+        const menu = root.querySelector("#calExportMenu") as HTMLElement | null;
+        if (menu) menu.hidden = true;
+        setStatus("Export downloaded");
+      });
+    });
+    root.querySelectorAll("[data-cal-day]").forEach((el) => {
+      el.addEventListener("click", () => {
+        state.calDayKey = (el as HTMLElement).dataset.calDay || null;
+        void render();
+      });
+    });
+    const closeDay = () => {
+      state.calDayKey = null;
+      void render();
+    };
+    root.querySelector("#calDayClose")?.addEventListener("click", closeDay);
+    root.querySelector("#calDayClose2")?.addEventListener("click", closeDay);
+    root.querySelector("#calDayClose3")?.addEventListener("click", closeDay);
+    root.querySelector("#calDayExportCsv")?.addEventListener("click", () => {
+      if (!state.calDayKey) return;
+      const list = (state.bootstrap?.recentBookings || []).filter(
+        (b) =>
+          b.status !== "CANCELLED" &&
+          b.status !== "NO_SHOW" &&
+          dayKey(new Date(b.startsAt)) === state.calDayKey,
+      );
+      exportBookingsCsv(list, `day-${state.calDayKey}`);
+      setStatus("Day CSV downloaded");
+    });
+    root.querySelector("#calDayExportIcs")?.addEventListener("click", () => {
+      if (!state.calDayKey) return;
+      const list = (state.bootstrap?.recentBookings || []).filter(
+        (b) =>
+          b.status !== "CANCELLED" &&
+          b.status !== "NO_SHOW" &&
+          dayKey(new Date(b.startsAt)) === state.calDayKey,
+      );
+      exportBookingsIcs(list, `day-${state.calDayKey}`);
+      setStatus("Day ICS downloaded");
+    });
     root.querySelector("#gotoCreate")?.addEventListener("click", () => {
       state.tab = "create";
       void render();
@@ -1646,6 +1843,7 @@ export async function boot(root: HTMLElement) {
 
     root.querySelectorAll("[data-booking-id]").forEach((btn) => {
       btn.addEventListener("click", () => {
+        state.calDayKey = null;
         state.selectedBookingId = (btn as HTMLElement).dataset.bookingId || null;
         void render();
       });
