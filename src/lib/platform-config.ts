@@ -56,6 +56,9 @@ export type PlatformPublicSettings = {
   hubspotClientId: string | null;
   hubspotClientSecretSet: boolean;
   hubspotClientSecretHint: string | null;
+  mailchimpClientId: string | null;
+  mailchimpClientSecretSet: boolean;
+  mailchimpClientSecretHint: string | null;
   aiProvider: string;
   openaiApiKeySet: boolean;
   openaiApiKeyHint: string | null;
@@ -188,6 +191,20 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       hubspotClientSecretHint: maskSecret(
         safeDecrypt((row as { hubspotClientSecretEncrypted?: string | null }).hubspotClientSecretEncrypted),
       ),
+      mailchimpClientId:
+        (row as { mailchimpClientId?: string | null }).mailchimpClientId ||
+        process.env.MAILCHIMP_CLIENT_ID ||
+        null,
+      mailchimpClientSecretSet: Boolean(
+        safeDecrypt(
+          (row as { mailchimpClientSecretEncrypted?: string | null }).mailchimpClientSecretEncrypted,
+        ) || process.env.MAILCHIMP_CLIENT_SECRET,
+      ),
+      mailchimpClientSecretHint: maskSecret(
+        safeDecrypt(
+          (row as { mailchimpClientSecretEncrypted?: string | null }).mailchimpClientSecretEncrypted,
+        ) || process.env.MAILCHIMP_CLIENT_SECRET,
+      ),
       aiProvider: row.aiProvider || "openai",
       openaiApiKeySet: Boolean(
         safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY,
@@ -254,6 +271,9 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       hubspotClientId: process.env.HUBSPOT_CLIENT_ID || null,
       hubspotClientSecretSet: Boolean(process.env.HUBSPOT_CLIENT_SECRET),
       hubspotClientSecretHint: maskSecret(process.env.HUBSPOT_CLIENT_SECRET),
+      mailchimpClientId: process.env.MAILCHIMP_CLIENT_ID || null,
+      mailchimpClientSecretSet: Boolean(process.env.MAILCHIMP_CLIENT_SECRET),
+      mailchimpClientSecretHint: maskSecret(process.env.MAILCHIMP_CLIENT_SECRET),
       aiProvider: "openai",
       openaiApiKeySet: Boolean(process.env.OPENAI_API_KEY),
       openaiApiKeyHint: maskSecret(process.env.OPENAI_API_KEY),
@@ -332,6 +352,16 @@ export async function getPlatformSecrets() {
         ) ||
         process.env.HUBSPOT_CLIENT_SECRET ||
         null,
+      mailchimpClientId:
+        (row as { mailchimpClientId?: string | null }).mailchimpClientId ||
+        process.env.MAILCHIMP_CLIENT_ID ||
+        null,
+      mailchimpClientSecret:
+        safeDecrypt(
+          (row as { mailchimpClientSecretEncrypted?: string | null }).mailchimpClientSecretEncrypted,
+        ) ||
+        process.env.MAILCHIMP_CLIENT_SECRET ||
+        null,
       aiProvider: (row.aiProvider || "openai") as "openai" | "groq" | "template",
       openaiApiKey: safeDecrypt(row.openaiApiKeyEncrypted) || process.env.OPENAI_API_KEY || null,
       openaiModel: row.openaiModel || process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -372,6 +402,8 @@ export async function getPlatformSecrets() {
       zapierSigningSecret: process.env.ZAPIER_SIGNING_SECRET || null,
       hubspotClientId: process.env.HUBSPOT_CLIENT_ID || null,
       hubspotClientSecret: process.env.HUBSPOT_CLIENT_SECRET || null,
+      mailchimpClientId: process.env.MAILCHIMP_CLIENT_ID || null,
+      mailchimpClientSecret: process.env.MAILCHIMP_CLIENT_SECRET || null,
       aiProvider: "openai" as const,
       openaiApiKey: process.env.OPENAI_API_KEY || null,
       openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -422,6 +454,8 @@ export type PlatformSettingsUpdate = {
   zapierEnabled?: boolean;
   hubspotClientId?: string | null;
   hubspotClientSecret?: string;
+  mailchimpClientId?: string | null;
+  mailchimpClientSecret?: string;
   aiProvider?: "openai" | "groq" | "template";
   openaiApiKey?: string;
   openaiModel?: string | null;
@@ -504,6 +538,10 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
   if (input.hubspotClientId !== undefined) data.hubspotClientId = input.hubspotClientId || null;
   if (input.hubspotClientSecret?.trim()) {
     data.hubspotClientSecretEncrypted = encryptSecret(input.hubspotClientSecret.trim());
+  }
+  if (input.mailchimpClientId !== undefined) data.mailchimpClientId = input.mailchimpClientId || null;
+  if (input.mailchimpClientSecret?.trim()) {
+    data.mailchimpClientSecretEncrypted = encryptSecret(input.mailchimpClientSecret.trim());
   }
   if (input.aiProvider) data.aiProvider = input.aiProvider;
   if (input.openaiApiKey?.trim()) data.openaiApiKeyEncrypted = encryptSecret(input.openaiApiKey.trim());

@@ -22,6 +22,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [microsoftClientSecret, setMicrosoftClientSecret] = useState("");
   const [zoomClientSecret, setZoomClientSecret] = useState("");
   const [hubspotClientSecret, setHubspotClientSecret] = useState("");
+  const [mailchimpClientSecret, setMailchimpClientSecret] = useState("");
   const [zapierSigningSecret, setZapierSigningSecret] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [groqApiKey, setGroqApiKey] = useState("");
@@ -70,6 +71,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.microsoftClientId = form.microsoftClientId;
         payload.zoomClientId = form.zoomClientId;
         payload.hubspotClientId = form.hubspotClientId;
+        payload.mailchimpClientId = form.mailchimpClientId;
         payload.aiProvider = form.aiProvider;
         payload.openaiModel = form.openaiModel;
         payload.groqModel = form.groqModel;
@@ -84,6 +86,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         if (microsoftClientSecret.trim()) payload.microsoftClientSecret = microsoftClientSecret.trim();
         if (zoomClientSecret.trim()) payload.zoomClientSecret = zoomClientSecret.trim();
         if (hubspotClientSecret.trim()) payload.hubspotClientSecret = hubspotClientSecret.trim();
+        if (mailchimpClientSecret.trim()) payload.mailchimpClientSecret = mailchimpClientSecret.trim();
         payload.zapierEnabled = Boolean(form.zapierEnabled);
         if (zapierSigningSecret.trim()) payload.zapierSigningSecret = zapierSigningSecret.trim();
         if (openaiApiKey.trim()) payload.openaiApiKey = openaiApiKey.trim();
@@ -112,6 +115,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
       setMicrosoftClientSecret("");
       setZoomClientSecret("");
       setHubspotClientSecret("");
+      setMailchimpClientSecret("");
       setZapierSigningSecret("");
       setOpenaiApiKey("");
       setGroqApiKey("");
@@ -480,6 +484,26 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={hubspotClientSecret}
                 onChange={(e) => setHubspotClientSecret(e.target.value)}
+                placeholder="Paste new secret to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="Mailchimp client ID">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.mailchimpClientId ?? ""}
+                onChange={(e) => set("mailchimpClientId", e.target.value || null)}
+              />
+            </Field>
+            <Field
+              label="Mailchimp client secret"
+              hint={form.mailchimpClientSecretHint ?? "Not set"}
+            >
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={mailchimpClientSecret}
+                onChange={(e) => setMailchimpClientSecret(e.target.value)}
                 placeholder="Paste new secret to rotate"
                 autoComplete="new-password"
               />

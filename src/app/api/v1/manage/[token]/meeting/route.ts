@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  provider: z.enum(["zoom", "meet", "google_calendar", "teams"]),
+  provider: z.enum(["zoom", "meet", "google_calendar", "teams", "apple_calendar"]),
 });
 
 export async function GET(
@@ -45,7 +45,7 @@ export async function POST(
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Pick Zoom, Google Meet, or Google Calendar" },
+      { error: "Pick a partner app (Zoom, Meet, Teams, Google or Apple Calendar)" },
       { status: 400 },
     );
   }
@@ -92,9 +92,13 @@ export async function POST(
     const providerLabel =
       created.provider === "zoom"
         ? "Zoom"
-        : created.provider === "google_calendar"
-          ? "Google Calendar"
-          : "Google Meet";
+        : created.provider === "teams"
+          ? "Microsoft Teams"
+          : created.provider === "google_calendar"
+            ? "Google Calendar"
+            : created.provider === "apple_calendar"
+              ? "Apple Calendar"
+              : "Google Meet";
     await createOwnerNotification({
       siteId: booking.siteId,
       type: "meeting",

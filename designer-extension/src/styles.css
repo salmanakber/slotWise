@@ -96,12 +96,17 @@ html[data-panel="full"] .app,
 }
 .app-full .home-columns {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 10px;
-  align-items: start;
+  align-items: stretch;
 }
 .app-full .home-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 900px) {
+  .app-full .home-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .app-full .main-full {
   display: grid;
@@ -272,36 +277,53 @@ html[data-panel="full"] .app,
 }
 .side-foot-row {
   display: grid;
-  grid-template-columns: 1fr 32px 32px;
   gap: 6px;
   align-items: center;
 }
-.side-foot-link {
+.side-foot-row-switch {
+  grid-template-columns: 32px minmax(0, 1fr);
+}
+.side-foot-row-tools {
+  grid-template-columns: 32px 32px;
+  justify-content: start;
+}
+.panel-switch {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  min-height: 32px;
+  padding: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+}
+.panel-switch-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-height: 32px;
-  padding: 0 8px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-  background: var(--soft);
+  min-height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mut);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.panel-switch-btn:hover {
   color: var(--ink);
-  font-size: 11px;
-  font-weight: 800;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease;
 }
-.side-foot-link:hover {
-  background: color-mix(in srgb, var(--ac) 12%, var(--soft));
-  border-color: color-mix(in srgb, var(--ac) 30%, var(--line));
-}
-.side-foot-link .ico,
-.side-foot-link .ico svg {
-  width: 12px;
-  height: 12px;
+.panel-switch-btn.is-on {
+  background: var(--panel);
   color: var(--ac);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.panel-switch-btn .ico,
+.panel-switch-btn .ico svg {
+  width: 14px;
+  height: 14px;
+}
+.nav-actions .panel-switch {
+  flex-shrink: 0;
 }
 .side-foot-icon {
   display: inline-flex;
@@ -1225,6 +1247,12 @@ details summary {
 .home-columns {
   display: grid;
   gap: 8px;
+  min-width: 0;
+}
+.home-events-card,
+.home-bookings-card {
+  min-width: 0;
+  overflow: visible;
 }
 .home-grid {
   display: grid;
@@ -1261,25 +1289,41 @@ details summary {
   display: grid;
   gap: 6px;
   margin-bottom: 4px;
+  min-width: 0;
 }
 .home-booking {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 8px 10px;
   background: var(--panel);
+  min-width: 0;
 }
 .home-booking .mini-meta {
   min-width: 0;
-  flex: 1;
+  overflow: hidden;
+}
+.home-booking .mini-meta b,
+.home-booking .mini-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .home-booking-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
+}
+.home-booking-actions .pill {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .stats-compact {
   grid-template-columns: 1fr 1fr;

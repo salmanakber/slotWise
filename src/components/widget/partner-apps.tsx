@@ -39,6 +39,17 @@ function BrandMark({ id }: { id: string }) {
       </svg>
     );
   }
+  if (id === "apple_calendar") {
+    return (
+      <svg width={28} height={28} viewBox="0 0 24 24" aria-hidden>
+        <rect width="24" height="24" rx="7" fill="#111" />
+        <path
+          fill="#fff"
+          d="M14.7 7.4c-.7.1-1.6.5-2.1 1.1-.5.5-.9 1.3-.8 2 .8.1 1.6-.4 2.1-1 .5-.5.9-1.3.8-2.1zm1.9 3c-1.1-.1-2 .6-2.5.6s-1.3-.6-2.2-.6c-1.1 0-2.2.7-2.7 1.7-1.2 2.1-.3 5.2.8 6.9.6.8 1.2 1.7 2.1 1.7.8 0 1.1-.5 2.1-.5s1.2.5 2.1.5c.9 0 1.4-.8 2-.1.3-.5.5-.7.7-1.2-1.7-.7-2-3.1-.5-4.1-.7-.9-1.8-1.4-1.9-1.4z"
+        />
+      </svg>
+    );
+  }
   // meet default
   return (
     <svg width={28} height={28} viewBox="0 0 24 24" aria-hidden>
@@ -55,11 +66,13 @@ function tint(id: string) {
   if (id === "zoom") return "#2D8CFF";
   if (id === "teams") return "#6264A7";
   if (id === "google_calendar") return "#4285F4";
+  if (id === "apple_calendar") return "#111111";
   return "#00897B";
 }
 
 function ctaLabel(provider: string | null | undefined) {
   if (provider === "google_calendar") return "Open in Google Calendar";
+  if (provider === "apple_calendar") return "Add to Apple Calendar";
   if (provider === "zoom") return "Join Zoom";
   if (provider === "teams") return "Join Teams";
   return "Join Google Meet";

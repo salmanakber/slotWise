@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import { pushAppleCalendarEvent } from "@/lib/apple-caldav";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import {
   normalizeIntegrationProvider,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/integrations-oauth";
 import { prisma } from "@/lib/prisma";
 
-export type MeetingToolId = "zoom" | "meet" | "google_calendar" | "teams";
+export type MeetingToolId = "zoom" | "meet" | "google_calendar" | "teams" | "apple_calendar";
 
 export type MeetingTool = {
   id: MeetingToolId;
@@ -153,7 +154,54 @@ export async function listMeetingTools(siteId: string): Promise<MeetingTool[]> {
     tools.push({ id: "meet", label: "Google Meet" });
   }
 
+  const apple = await loadTokens(siteId, "apple_calendar");
+  if (apple) tools.push({ id: "apple_calendar", label: "Apple Calendar" });
+
   return tools;
+}
+
+async function createAppleCalendarLink(input: {
+  siteId: string;
+  reference: string;
+  customerName: string;
+  serviceName: string;
+  startsAt: Date;
+  endsAt: Date;
+  manageUrl: string;
+}): Promise<{ meetingUrl: string; provider: "apple_calendar" }> {
+  const row = await prisma.siteIntegration.findUnique({
+    where: { siteId_provider: { siteId: input.siteId, provider: "apple_calendar" } },
+  });
+  if (!row?.accessTokenEncrypted || !row.externalAccountEmail) {
+    throw new Error("Apple Calendar is not connected. Connect it under Integrations.");
+  }
+  const password = decryptSecret(row.accessTokenEncrypted);
+  if (!password) throw new Error("Apple Calendar credentials missing — reconnect in Integrations.");
+
+  const meta = (row.meta || {}) as { calDavUrl?: string; principalUrl?: string };
+  const uid = `${input.reference.replace(/\W/g, "")}@slotwise`;
+  const pushed = await pushAppleCalendarEvent({
+    appleId: row.externalAccountEmail,
+    appPassword: password,
+    calDavUrl: meta.calDavUrl,
+    calendarHome: meta.principalUrl,
+    uid,
+    summary: `${input.serviceName} · ${input.customerName}`,
+    description: `Booking ${input.reference}\n${input.manageUrl}`,
+    startsAt: input.startsAt,
+    endsAt: input.endsAt,
+  });
+  if (!pushed.ok) {
+    console.error("[meeting:apple]", pushed.detail);
+  }
+
+  // Customer-facing ICS download (Apple Calendar / Outlook / Google)
+  const token = input.manageUrl.split("/manage/").pop()?.split("?")[0] || "";
+  const origin = input.manageUrl.replace(/\/manage\/.*/, "");
+  return {
+    meetingUrl: `${origin}/api/v1/manage/${token}/calendar.ics`,
+    provider: "apple_calendar",
+  };
 }
 
 export async function hasGoogleCalendar(siteId: string) {
@@ -441,6 +489,9 @@ export async function createMeetingLink(input: {
   }
   if (input.provider === "teams") {
     return createTeamsMeeting(input);
+  }
+  if (input.provider === "apple_calendar") {
+    return createAppleCalendarLink(input);
   }
   if (input.provider === "google_calendar") {
     return createGoogleCalendarEvent({ ...input, withMeet: false });

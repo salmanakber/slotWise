@@ -1,3 +1,4 @@
+import { pushAppleCalendarEvent } from "@/lib/apple-caldav";
 import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 
@@ -56,16 +57,26 @@ export async function syncBookingMarketing(input: BookingMarketingInput) {
   if (mailchimp) {
     try {
       const audienceId = String(mailchimp.meta?.audienceId || "");
-      // API key format: {key}-{dc}
+      const oauthDc = typeof mailchimp.meta?.dc === "string" ? mailchimp.meta.dc : "";
+      const apiEndpoint =
+        typeof mailchimp.meta?.apiEndpoint === "string"
+          ? mailchimp.meta.apiEndpoint.replace(/\/$/, "")
+          : "";
+      // API key format: {key}-{dc} · OAuth uses meta.dc + OAuth auth header
       const parts = mailchimp.token.split("-");
-      const dc = parts.length > 1 ? parts[parts.length - 1] : "us1";
+      const keyDc = parts.length > 1 ? parts[parts.length - 1] : "";
+      const dc = oauthDc || keyDc || "us1";
+      const base = apiEndpoint || `https://${dc}.api.mailchimp.com`;
+      const authHeader = oauthDc || apiEndpoint
+        ? `OAuth ${mailchimp.token}`
+        : `Bearer ${mailchimp.token}`;
       if (audienceId) {
         const res = await fetch(
-          `https://${dc}.api.mailchimp.com/3.0/lists/${encodeURIComponent(audienceId)}/members`,
+          `${base}/3.0/lists/${encodeURIComponent(audienceId)}/members`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${mailchimp.token}`,
+              Authorization: authHeader,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -87,47 +98,24 @@ export async function syncBookingMarketing(input: BookingMarketingInput) {
     }
   }
 
-  // Apple Calendar / iCloud — best-effort CalDAV VEVENT PUT
+  // Apple Calendar / iCloud — verified CalDAV VEVENT PUT
   const apple = await integration(input.siteId, "apple_calendar");
   if (apple?.email) {
     try {
-      const calDavBase = String(apple.meta?.calDavUrl || "https://caldav.icloud.com/").replace(
-        /\/$/,
-        "",
-      );
-      const uid = `${input.reference.replace(/\W/g, "")}@slotwise`;
-      const stamp = input.startsAt.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-      const end = new Date(input.startsAt.getTime() + 60 * 60 * 1000)
-        .toISOString()
-        .replace(/[-:]/g, "")
-        .replace(/\.\d{3}Z$/, "Z");
-      const ics = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Slotwise//EN",
-        "BEGIN:VEVENT",
-        `UID:${uid}`,
-        `DTSTAMP:${stamp}`,
-        `DTSTART:${stamp}`,
-        `DTEND:${end}`,
-        `SUMMARY:${input.serviceName} · ${input.customerName}`,
-        `DESCRIPTION:Booking ${input.reference}`,
-        "END:VEVENT",
-        "END:VCALENDAR",
-      ].join("\r\n");
-      const auth = Buffer.from(`${apple.email}:${apple.token}`).toString("base64");
-      // Discovery can vary; try a common home calendar path pattern
-      const putUrl = `${calDavBase}/${encodeURIComponent(apple.email)}/calendars/home/${uid}.ics`;
-      const res = await fetch(putUrl, {
-        method: "PUT",
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "text/calendar; charset=utf-8",
-        },
-        body: ics,
+      const endsAt = new Date(input.startsAt.getTime() + 60 * 60 * 1000);
+      const pushed = await pushAppleCalendarEvent({
+        appleId: apple.email,
+        appPassword: apple.token,
+        calDavUrl: String(apple.meta?.calDavUrl || "https://caldav.icloud.com"),
+        calendarHome: typeof apple.meta?.principalUrl === "string" ? apple.meta.principalUrl : null,
+        uid: `${input.reference.replace(/\W/g, "")}@slotwise`,
+        summary: `${input.serviceName} · ${input.customerName}`,
+        description: `Booking ${input.reference}`,
+        startsAt: input.startsAt,
+        endsAt,
       });
-      if (res.ok || res.status === 201 || res.status === 204) results.push("apple_calendar");
-      else console.error("[marketing:apple]", res.status, await res.text());
+      if (pushed.ok) results.push("apple_calendar");
+      else console.error("[marketing:apple]", pushed.detail);
     } catch (e) {
       console.error("[marketing:apple]", e);
     }

@@ -35,7 +35,13 @@ function keysReadyFor(
         (settings as { hubspotClientSecretSet?: boolean }).hubspotClientSecretSet,
     );
   }
-  if (provider === "apple_calendar" || provider === "mailchimp") return true;
+  if (provider === "mailchimp") {
+    return Boolean(
+      (settings as { mailchimpClientId?: string | null }).mailchimpClientId &&
+        (settings as { mailchimpClientSecretSet?: boolean }).mailchimpClientSecretSet,
+    );
+  }
+  if (provider === "apple_calendar") return true;
   return true;
 }
 

@@ -19,7 +19,7 @@ export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
 export type OAuthProvider = "google" | "microsoft" | "zoom" | "hubspot" | "mailchimp";
 
 /** Providers that use a credentials form instead of browser OAuth. */
-export const CREDENTIAL_PROVIDERS = ["apple_calendar", "mailchimp"] as const;
+export const CREDENTIAL_PROVIDERS = ["apple_calendar"] as const;
 
 /** Map SiteIntegration.provider → OAuth app family. */
 export function oauthFamily(provider: IntegrationProvider): OAuthProvider | null {
@@ -84,7 +84,7 @@ export function decodeOAuthState(state: string): { siteId: string; provider: Int
 export async function platformKeysConfigured(provider: IntegrationProvider) {
   const secrets = await getPlatformSecrets();
   const family = oauthFamily(provider);
-  if (provider === "apple_calendar" || provider === "mailchimp") return true; // site credentials
+  if (provider === "apple_calendar") return true; // Apple ID + app-specific password
   if (family === "google") {
     return Boolean(secrets.googleClientId?.trim() && secrets.googleClientSecret?.trim());
   }
@@ -98,6 +98,12 @@ export async function platformKeysConfigured(provider: IntegrationProvider) {
     return Boolean(
       (secrets as { hubspotClientId?: string | null }).hubspotClientId?.trim() &&
         (secrets as { hubspotClientSecret?: string | null }).hubspotClientSecret?.trim(),
+    );
+  }
+  if (family === "mailchimp") {
+    return Boolean(
+      (secrets as { mailchimpClientId?: string | null }).mailchimpClientId?.trim() &&
+        (secrets as { mailchimpClientSecret?: string | null }).mailchimpClientSecret?.trim(),
     );
   }
   return true; // zapier / credential providers
@@ -170,6 +176,19 @@ export async function buildAuthorizeUrl(siteId: string, provider: IntegrationPro
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("scope", "crm.objects.contacts.write crm.objects.contacts.read oauth");
+    url.searchParams.set("state", state);
+    return url.toString();
+  }
+
+  if (family === "mailchimp") {
+    const clientId = (secrets as { mailchimpClientId?: string | null }).mailchimpClientId?.trim();
+    const clientSecret = (secrets as { mailchimpClientSecret?: string | null }).mailchimpClientSecret?.trim();
+    if (!clientId || !clientSecret) throw new Error("Mailchimp Client ID/Secret missing");
+    const redirectUri = oauthRedirectUri("mailchimp");
+    const url = new URL("https://login.mailchimp.com/oauth2/authorize");
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     return url.toString();
   }
@@ -329,6 +348,73 @@ export async function exchangeOAuthCode(
     };
   }
 
+  if (family === "mailchimp") {
+    const clientId = (secrets as { mailchimpClientId?: string | null }).mailchimpClientId?.trim() || "";
+    const clientSecret =
+      (secrets as { mailchimpClientSecret?: string | null }).mailchimpClientSecret?.trim() || "";
+    const redirectUri = oauthRedirectUri("mailchimp");
+    const res = await fetch("https://login.mailchimp.com/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code,
+      }),
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (!res.ok || !data.access_token) {
+      throw new Error(
+        typeof data.error_description === "string"
+          ? data.error_description
+          : typeof data.error === "string"
+            ? data.error
+            : "Mailchimp token exchange failed",
+      );
+    }
+    const accessToken = String(data.access_token);
+    let email: string | null = null;
+    let dc: string | null = null;
+    let apiEndpoint: string | null = null;
+    let audienceId: string | null = null;
+    try {
+      const metaRes = await fetch("https://login.mailchimp.com/oauth2/metadata", {
+        headers: { Authorization: `OAuth ${accessToken}` },
+      });
+      if (metaRes.ok) {
+        const meta = (await metaRes.json()) as {
+          dc?: string;
+          api_endpoint?: string;
+          accountname?: string;
+          login?: { email?: string };
+        };
+        dc = meta.dc || null;
+        apiEndpoint = meta.api_endpoint || null;
+        email = meta.login?.email || meta.accountname || null;
+      }
+      if (apiEndpoint) {
+        const listsRes = await fetch(`${apiEndpoint.replace(/\/$/, "")}/3.0/lists?count=1&fields=lists.id,lists.name`, {
+          headers: { Authorization: `OAuth ${accessToken}` },
+        });
+        if (listsRes.ok) {
+          const lists = (await listsRes.json()) as { lists?: { id?: string; name?: string }[] };
+          audienceId = lists.lists?.[0]?.id || null;
+        }
+      }
+    } catch {
+      /* optional enrichment */
+    }
+    return {
+      accessToken,
+      refreshToken: null,
+      expiresIn: null,
+      email,
+      raw: { ...data, dc, apiEndpoint, audienceId },
+    };
+  }
+
   // zoom
   const clientId = secrets.zoomClientId?.trim() || "";
   const clientSecret = secrets.zoomClientSecret?.trim() || "";
@@ -481,8 +567,9 @@ export async function refreshOAuthAccessToken(
 
 export function missingKeysHint(provider: IntegrationProvider) {
   if (provider === "zapier") return "Coming soon";
-  if (provider === "apple_calendar") return "Add your Apple ID and an app-specific password";
-  if (provider === "mailchimp") return "Add your Mailchimp API key and audience ID";
+  if (provider === "apple_calendar") {
+    return "Add your Apple ID and an app-specific password (appleid.apple.com)";
+  }
   const family = oauthFamily(provider);
   if (family === "google") return "Google Calendar isn’t set up for your account yet";
   if (family === "microsoft") {
@@ -492,5 +579,6 @@ export function missingKeysHint(provider: IntegrationProvider) {
   }
   if (family === "zoom") return "Zoom isn’t set up for your account yet";
   if (family === "hubspot") return "HubSpot isn’t set up for your account yet";
+  if (family === "mailchimp") return "Mailchimp isn’t set up for your account yet";
   return "This connection isn’t available yet";
 }

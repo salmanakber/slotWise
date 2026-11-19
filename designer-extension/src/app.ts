@@ -31,9 +31,11 @@ const TAB_META: Record<Tab, { label: string; icon: string }> = {
 export async function boot(root: HTMLElement) {
   await setExtensionLarge();
 
+  // Fresh installs / first open default to mobile panel
+  const savedPanel = localStorage.getItem(PANEL_MODE_KEY) as "mobile" | "full" | null;
   const state = {
     theme: (localStorage.getItem(THEME_KEY) as "light" | "dark") || "light",
-    panelMode: (localStorage.getItem(PANEL_MODE_KEY) as "mobile" | "full") || "mobile",
+    panelMode: savedPanel === "full" || savedPanel === "mobile" ? savedPanel : "mobile",
     canvasWide: localStorage.getItem(CANVAS_WIDE_KEY) === "1",
     tab: "home" as Tab,
     webflowSiteId: null as string | null,
@@ -183,6 +185,19 @@ export async function boot(root: HTMLElement) {
     </button>`;
   }
 
+  function panelSwitcher() {
+    const mobileOn = state.panelMode === "mobile";
+    const fullOn = state.panelMode === "full";
+    return `<div class="panel-switch" role="group" aria-label="Panel layout">
+      <button type="button" class="panel-switch-btn${mobileOn ? " is-on" : ""}" id="panelMobile" title="Mobile view" aria-pressed="${mobileOn}">
+        <span class="ico">${icons.phone}</span>
+      </button>
+      <button type="button" class="panel-switch-btn${fullOn ? " is-on" : ""}" id="panelFull" title="Desktop view" aria-pressed="${fullOn}">
+        <span class="ico">${icons.monitor}</span>
+      </button>
+    </div>`;
+  }
+
   function shell(body: string) {
     const plan = state.bootstrap?.plan.tier || "FREE";
     const name = state.bootstrap?.site.name || "Slotwise";
@@ -196,11 +211,13 @@ export async function boot(root: HTMLElement) {
           <span class="ico">${icons.rocket}</span>
           <span>Publish</span>
         </button>
-        <div class="side-foot-row">
-          <a class="side-foot-link" href="${upgradeUrl()}" target="_blank" rel="noreferrer">
+        <div class="side-foot-row side-foot-row-switch">
+          <a class="side-foot-icon" href="${upgradeUrl()}" target="_blank" rel="noreferrer" title="Upgrade plan">
             <span class="ico">${icons.spark}</span>
-            Upgrade
           </a>
+          ${panelSwitcher()}
+        </div>
+        <div class="side-foot-row side-foot-row-tools">
           <a class="side-foot-icon" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">
             <span class="ico">${icons.grid}</span>
           </a>
@@ -210,7 +227,10 @@ export async function boot(root: HTMLElement) {
         </div>
       </div>`
       : `
-      <a class="link-upgrade" href="${upgradeUrl()}" target="_blank" rel="noreferrer">Upgrade</a>
+      ${panelSwitcher()}
+      <a class="btn btn-icon btn-soft" href="${upgradeUrl()}" target="_blank" rel="noreferrer" title="Upgrade plan">
+        <span class="ico">${icons.spark}</span>
+      </a>
       <div class="side-tools">
         <a class="btn btn-icon btn-soft" href="${api.APP_URL}/dashboard" target="_blank" rel="noreferrer" title="Open dashboard">
           <span class="ico">${icons.grid}</span>
@@ -286,6 +306,14 @@ export async function boot(root: HTMLElement) {
       void render();
     });
     root.querySelector("#publishBtn")?.addEventListener("click", () => void onPublish());
+    root.querySelector("#panelMobile")?.addEventListener("click", () => {
+      setPanelMode("mobile");
+      void render();
+    });
+    root.querySelector("#panelFull")?.addEventListener("click", () => {
+      setPanelMode("full");
+      void render();
+    });
     root.querySelector("#fabNew")?.addEventListener("click", () => {
       state.tab = "create";
       void render();
@@ -489,7 +517,7 @@ export async function boot(root: HTMLElement) {
 
   function eventsPreview() {
     const events = state.bootstrap?.activeEvents || state.services.filter((s) => s.active).slice(0, 8);
-    return `<section class="card">
+    return `<section class="card home-events-card">
       <div class="card-h-row">
         ${cardTitle(icons.calendar, "Events")}
         <button type="button" class="link-quiet" id="gotoEvents">See all</button>
@@ -500,7 +528,7 @@ export async function boot(root: HTMLElement) {
         ${events
           .slice(0, 6)
           .map(
-            (s) => `<article class="home-tile">
+            (s) => `<article class="home-tile" title="${escapeHtml(s.name)}">
             <i class="dot" style="background:${s.color || "var(--ac)"}"></i>
             <b>${escapeHtml(s.name)}</b>
             <small>${s.durationMin} min${s.priceCents > 0 ? ` · ${money(s.priceCents, state.bootstrap?.site.currency)}` : ""}</small>
@@ -515,8 +543,8 @@ export async function boot(root: HTMLElement) {
   }
 
   function bookingsPreview() {
-    const bookings = state.bootstrap?.recentBookings || [];
-    return `<section class="card">
+    const bookings = (state.bootstrap?.recentBookings || []).slice(0, 6);
+    return `<section class="card home-bookings-card">
       <div class="card-h-row">
         ${cardTitle(icons.check, "Bookings")}
         <a class="link-quiet" href="${api.APP_URL}/dashboard/bookings" target="_blank" rel="noreferrer">Open</a>
@@ -527,11 +555,21 @@ export async function boot(root: HTMLElement) {
         ${bookings
           .map((b) => {
             const meet =
-              b.meetingProvider === "zoom" ? "Zoom" : b.meetingProvider === "meet" ? "Meet" : null;
+              b.meetingProvider === "zoom"
+                ? "Zoom"
+                : b.meetingProvider === "teams"
+                  ? "Teams"
+                  : b.meetingProvider === "apple_calendar"
+                    ? "Apple"
+                    : b.meetingProvider === "google_calendar"
+                      ? "Calendar"
+                      : b.meetingProvider === "meet"
+                        ? "Meet"
+                        : null;
             return `<div class="home-booking">
             <div class="mini-meta">
-              <b>${escapeHtml(b.customerName)}</b>
-              <small>${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}${
+              <b title="${escapeHtml(b.customerName)}">${escapeHtml(b.customerName)}</b>
+              <small title="${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}">${escapeHtml(b.serviceName)} · ${escapeHtml(formatWhen(b.startsAt))}${
                 meet ? ` · ${meet}` : ""
               }</small>
             </div>

@@ -43,7 +43,7 @@ const PROVIDER_META: Record<string, { label: string; blurb: string; credentials?
   },
   apple_calendar: {
     label: "Apple Calendar / iCloud",
-    blurb: "Sync bookings with an Apple ID + app-specific password",
+    blurb: "Verified CalDAV sync — Apple ID + app-specific password (not your normal password)",
     credentials: true,
   },
   teams: {
@@ -64,8 +64,7 @@ const PROVIDER_META: Record<string, { label: string; blurb: string; credentials?
   },
   mailchimp: {
     label: "Mailchimp",
-    blurb: "Add bookers to a Mailchimp audience",
-    credentials: true,
+    blurb: "Connect with Mailchimp — one-click OAuth, no API key paste",
   },
   zapier: {
     label: "Zapier",
@@ -109,7 +108,6 @@ function IntegrationsClient() {
   const [credProvider, setCredProvider] = useState<string | null>(null);
   const [credAccount, setCredAccount] = useState("");
   const [credSecret, setCredSecret] = useState("");
-  const [credAudience, setCredAudience] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/site/integrations");
@@ -149,7 +147,6 @@ function IntegrationsClient() {
           provider,
           account: credAccount.trim() || undefined,
           secret: credSecret.trim(),
-          audienceId: credAudience.trim() || undefined,
         }),
       });
       const json = await res.json();
@@ -157,7 +154,6 @@ function IntegrationsClient() {
       setCredProvider(null);
       setCredAccount("");
       setCredSecret("");
-      setCredAudience("");
       setMsg(`Connected ${provider.replace(/_/g, " ")}`);
       await load();
     } catch (e) {
@@ -389,45 +385,44 @@ function IntegrationsClient() {
                   )}
                 </div>
               </div>
-              {showForm ? (
+              {showForm && key === "apple_calendar" ? (
                 <div className="mt-3 grid gap-2 rounded-[12px] border border-[var(--ln)] bg-[var(--sf)] p-3 sm:grid-cols-2">
-                  {key === "apple_calendar" || key === "mailchimp" ? (
-                    <input
-                      className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
-                      placeholder={key === "apple_calendar" ? "Apple ID email" : "Account email (optional)"}
-                      value={credAccount}
-                      onChange={(e) => setCredAccount(e.target.value)}
-                    />
-                  ) : null}
+                  <p className="m-0 text-[12.5px] leading-relaxed sm:col-span-2" style={{ color: "var(--mut)" }}>
+                    Apple doesn’t offer Calendar OAuth. Create an{" "}
+                    <a
+                      href="https://appleid.apple.com/account/manage"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-extrabold underline"
+                    >
+                      app-specific password
+                    </a>{" "}
+                    at appleid.apple.com → Sign-In and Security. Random emails are rejected — we verify
+                    against iCloud CalDAV before saving.
+                  </p>
+                  <input
+                    className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
+                    placeholder="Apple ID email"
+                    value={credAccount}
+                    onChange={(e) => setCredAccount(e.target.value)}
+                    autoComplete="username"
+                  />
                   <input
                     type="password"
                     className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px]"
-                    placeholder={
-                      key === "apple_calendar"
-                        ? "App-specific password"
-                        : key === "mailchimp"
-                          ? "Mailchimp API key"
-                          : "Secret"
-                    }
+                    placeholder="App-specific password"
                     value={credSecret}
                     onChange={(e) => setCredSecret(e.target.value)}
+                    autoComplete="current-password"
                   />
-                  {key === "mailchimp" ? (
-                    <input
-                      className="rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2 text-[13px] sm:col-span-2"
-                      placeholder="Audience / list ID"
-                      value={credAudience}
-                      onChange={(e) => setCredAudience(e.target.value)}
-                    />
-                  ) : null}
                   <div className="flex gap-2 sm:col-span-2">
                     <button
                       type="button"
                       className="sw-btn sw-btn-primary"
-                      disabled={pending || !credSecret.trim()}
+                      disabled={pending || !credSecret.trim() || !credAccount.trim()}
                       onClick={() => void saveCredentials(key)}
                     >
-                      {pending ? "Saving…" : "Save & connect"}
+                      {pending ? "Verifying…" : "Verify & connect"}
                     </button>
                     <button
                       type="button"

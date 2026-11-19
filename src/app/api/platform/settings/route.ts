@@ -61,6 +61,8 @@ const bodySchema = z.object({
   zoomClientSecret: z.string().optional(),
   hubspotClientId: z.string().nullable().optional(),
   hubspotClientSecret: z.string().optional(),
+  mailchimpClientId: z.string().nullable().optional(),
+  mailchimpClientSecret: z.string().optional(),
   zapierSigningSecret: z.string().optional(),
   zapierEnabled: z.boolean().optional(),
   aiProvider: z

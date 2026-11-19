@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { encryptSecret } from "@/lib/crypto";
 import {
   decodeOAuthState,
@@ -70,6 +71,22 @@ export async function GET(request: Request, context: Ctx) {
         ? Date.now() + tokens.expiresIn * 1000
         : null;
 
+    const raw = (tokens.raw || {}) as Record<string, unknown>;
+    const meta = {
+      expiresIn: tokens.expiresIn ?? null,
+      expiresAt,
+      connectedVia: "oauth",
+      ...(provider === "mailchimp" && typeof raw.dc === "string"
+        ? { dc: raw.dc }
+        : {}),
+      ...(provider === "mailchimp" && typeof raw.apiEndpoint === "string"
+        ? { apiEndpoint: raw.apiEndpoint }
+        : {}),
+      ...(provider === "mailchimp" && typeof raw.audienceId === "string"
+        ? { audienceId: raw.audienceId }
+        : {}),
+    } satisfies Prisma.InputJsonObject;
+
     const existing = await prisma.siteIntegration.findUnique({
       where: { siteId_provider: { siteId: decoded.siteId, provider } },
       select: { refreshTokenEncrypted: true },
@@ -86,10 +103,7 @@ export async function GET(request: Request, context: Ctx) {
           ? encryptSecret(tokens.refreshToken)
           : null,
         externalAccountEmail: tokens.email || null,
-        meta: {
-          expiresIn: tokens.expiresIn ?? null,
-          expiresAt,
-        },
+        meta,
       },
       update: {
         status: "connected",
@@ -101,10 +115,7 @@ export async function GET(request: Request, context: Ctx) {
             ? {}
             : { refreshTokenEncrypted: null }),
         externalAccountEmail: tokens.email || null,
-        meta: {
-          expiresIn: tokens.expiresIn ?? null,
-          expiresAt,
-        },
+        meta,
       },
     });
 

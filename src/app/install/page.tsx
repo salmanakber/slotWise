@@ -44,27 +44,49 @@ export default async function InstallPage({
     clientId: secrets?.webflowClientId || process.env.WEBFLOW_CLIENT_ID || null,
   });
 
+  const lightShell = connected;
+
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a1018] px-5 py-12 text-[#f4f1ea]">
+    <main
+      className={`relative min-h-screen overflow-hidden px-5 py-12 ${
+        lightShell ? "bg-[#f4f6fa] text-[#152033]" : "bg-[#0a1018] text-[#f4f1ea]"
+      }`}
+    >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            "radial-gradient(900px 480px at 70% -10%, rgba(245,160,0,.22), transparent 55%), linear-gradient(160deg,#070b12,#101826 45%,#0a1018)",
+          background: lightShell
+            ? "radial-gradient(900px 480px at 70% -10%, rgba(245,160,0,.16), transparent 55%), linear-gradient(180deg,#ffffff 0%, #f4f6fa 55%, #eef2f7 100%)"
+            : "radial-gradient(900px 480px at 70% -10%, rgba(245,160,0,.22), transparent 55%), linear-gradient(160deg,#070b12,#101826 45%,#0a1018)",
         }}
       />
       <div className="relative mx-auto w-full max-w-lg">
         <div className="mb-8 flex items-center gap-3">
           <Image src="/logo.png" alt="" width={40} height={40} className="rounded-xl" />
           <div>
-            <div className="text-lg font-extrabold tracking-tight">Slotwise</div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a000]">
+            <div
+              className="text-lg font-extrabold tracking-tight"
+              style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
+            >
+              Slotwise
+            </div>
+            <div
+              className={`text-xs font-semibold uppercase tracking-[0.18em] ${
+                lightShell ? "text-[#c47d00]" : "text-[#f5a000]"
+              }`}
+            >
               Webflow install
             </div>
           </div>
         </div>
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_30px_80px_rgba(0,0,0,.35)] sm:p-8">
+        <section
+          className={`rounded-[28px] p-6 sm:p-8 ${
+            lightShell
+              ? "border border-[#e5ebf3] bg-white shadow-[0_24px_60px_rgba(21,32,51,.08)]"
+              : "border border-white/10 bg-white/[0.04] shadow-[0_30px_80px_rgba(0,0,0,.35)]"
+          }`}
+        >
           {connected ? (
             <InstallSuccess
               siteName={name || "Your Webflow site"}
@@ -154,9 +176,14 @@ export default async function InstallPage({
           ) : null}
         </section>
 
-        <p className="mt-6 text-center text-xs text-[#6b7788]">
+        <p
+          className={`mt-6 text-center text-xs ${lightShell ? "text-[#8a96a8]" : "text-[#6b7788]"}`}
+        >
           {appOrigin()} ·{" "}
-          <a className="text-[#f5a000]" href={`mailto:${CONTACT_EMAIL}`}>
+          <a
+            className={lightShell ? "text-[#c47d00]" : "text-[#f5a000]"}
+            href={`mailto:${CONTACT_EMAIL}`}
+          >
             {CONTACT_EMAIL}
           </a>
         </p>

@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { validateAppleCalDav } from "@/lib/apple-caldav";
 import { authOptions } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { normalizeIntegrationProvider } from "@/lib/integrations-oauth";
@@ -12,18 +13,20 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   provider: z.string().min(1),
-  /** Apple ID email / Mailchimp account email / HubSpot portal label */
+  /** Apple ID email */
   account: z.string().min(1).max(200).optional(),
-  /** Apple app-specific password, Mailchimp API key, or HubSpot private app token */
+  /** Apple app-specific password (or legacy Mailchimp API key fallback) */
   secret: z.string().min(4).max(500),
-  /** Mailchimp audience/list ID */
+  /** Mailchimp audience/list ID (legacy credential connect) */
   audienceId: z.string().max(80).optional(),
   /** Optional CalDAV principal URL override */
   calDavUrl: z.string().url().optional(),
 });
 
 /**
- * Connect credential-based integrations (Apple Calendar / iCloud, Mailchimp, HubSpot token).
+ * Connect credential-based integrations.
+ * Apple Calendar requires a live CalDAV check — random credentials are rejected.
+ * Prefer Mailchimp OAuth Connect when platform keys are configured.
  */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -52,15 +55,85 @@ export async function POST(request: Request) {
 
   try {
     const site = await requireDemoSite();
+
+    if (provider === "apple_calendar") {
+      const check = await validateAppleCalDav({
+        appleId: parsed.data.account!.trim(),
+        appPassword: parsed.data.secret.trim(),
+        calDavUrl: parsed.data.calDavUrl?.trim(),
+      });
+      if (!check.ok) {
+        return NextResponse.json({ error: check.error }, { status: 400 });
+      }
+
+      const meta = {
+        connectedVia: "credentials",
+        connectedAt: Date.now(),
+        calDavUrl: parsed.data.calDavUrl?.trim() || "https://caldav.icloud.com",
+        principalUrl: check.principalUrl,
+        verified: true,
+      } satisfies Prisma.InputJsonObject;
+
+      await prisma.siteIntegration.upsert({
+        where: { siteId_provider: { siteId: site.id, provider } },
+        create: {
+          siteId: site.id,
+          provider,
+          status: "connected",
+          accessTokenEncrypted: encryptSecret(parsed.data.secret.replace(/\s+/g, "")),
+          externalAccountEmail: parsed.data.account!.trim().toLowerCase(),
+          meta,
+        },
+        update: {
+          status: "connected",
+          accessTokenEncrypted: encryptSecret(parsed.data.secret.replace(/\s+/g, "")),
+          externalAccountEmail: parsed.data.account!.trim().toLowerCase(),
+          meta,
+        },
+      });
+
+      return NextResponse.json({ ok: true, provider, connected: true, verified: true });
+    }
+
+    if (provider === "mailchimp") {
+      const key = parsed.data.secret.trim();
+      const parts = key.split("-");
+      const dc = parts.length > 1 ? parts[parts.length - 1] : "";
+      if (!dc || parts.length < 2) {
+        return NextResponse.json(
+          {
+            error:
+              "Mailchimp API key looks invalid. Prefer Connect with Mailchimp (OAuth), or paste a key ending in -us1 / -us2…",
+          },
+          { status: 400 },
+        );
+      }
+      const audienceId = parsed.data.audienceId!.trim();
+      const ping = await fetch(
+        `https://${dc}.api.mailchimp.com/3.0/lists/${encodeURIComponent(audienceId)}`,
+        {
+          headers: { Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(12_000),
+        },
+      ).catch(() => null);
+      if (!ping || (!ping.ok && ping.status !== 404)) {
+        return NextResponse.json(
+          {
+            error:
+              "Mailchimp rejected that API key. Prefer Connect with Mailchimp (OAuth) from Integrations.",
+          },
+          { status: 400 },
+        );
+      }
+      if (ping.status === 404) {
+        return NextResponse.json({ error: "Audience / list ID not found for this account" }, { status: 400 });
+      }
+    }
+
     const meta = {
       connectedVia: "credentials",
       connectedAt: Date.now(),
-      ...(provider === "mailchimp"
-        ? { audienceId: parsed.data.audienceId!.trim() }
-        : {}),
-      ...(provider === "apple_calendar"
-        ? { calDavUrl: parsed.data.calDavUrl?.trim() || "https://caldav.icloud.com/" }
-        : {}),
+      ...(provider === "mailchimp" ? { audienceId: parsed.data.audienceId!.trim() } : {}),
     } satisfies Prisma.InputJsonObject;
 
     await prisma.siteIntegration.upsert({
