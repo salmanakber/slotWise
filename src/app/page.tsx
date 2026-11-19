@@ -9,25 +9,26 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://slotwise.hindaralabs.com"),
-  title: "Slotwise — Webflow-Native Appointment & Calendar Booking App",
+  title: "Slotwise — Webflow-Native Booking & Appointment Calendar App",
   description:
-    "The Webflow-native booking and calendar widget for agencies and service brands. Inherit your site theme, take zero-commission Stripe deposits, and sync Google Meet, Zoom & Teams.",
+    "The Webflow-native appointment scheduling & booking calendar for agencies and service brands. Match your Webflow theme automatically, collect zero-commission Stripe deposits, and sync Google Meet, Zoom & Teams.",
   keywords: [
     "Webflow booking app",
     "Webflow calendar widget",
     "Webflow appointment scheduling",
-    "Stripe booking Webflow",
+    "Calendly alternative for Webflow",
+    "Stripe booking for Webflow",
     "zero commission scheduler",
-    "Webflow Designer scheduling app",
+    "Webflow Designer scheduling extension",
     "Slotwise",
   ],
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Slotwise — Bookings That Look Native to Your Webflow Site",
+    title: "Slotwise — Webflow-Native Appointment & Calendar Booking App",
     description:
-      "Install in Webflow, inherit your brand styles automatically, accept Stripe payouts with 0% booking fees, and sync team calendars.",
+      "Bookings that look native to your Webflow site. Zero booking commission, automatic CSS theme inheritance, and instant Google Meet, Zoom & Stripe sync.",
     url: "https://slotwise.hindaralabs.com",
     siteName: "Slotwise",
     type: "website",
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
         url: "/hero-image.png",
         width: 1200,
         height: 630,
-        alt: "Slotwise Webflow-native booking calendar preview",
+        alt: "Slotwise Webflow-native booking calendar and scheduler",
       },
     ],
   },
@@ -54,61 +55,133 @@ export const metadata: Metadata = {
 };
 
 const INTEGRATIONS = [
-  { id: "webflow", name: "Webflow", hint: "Native Marketplace" },
-  { id: "stripe", name: "Stripe", hint: "Direct 0%-fee payouts" },
+  { id: "webflow", name: "Webflow", hint: "Marketplace + Designer" },
+  { id: "stripe", name: "Stripe Connect", hint: "0%-fee direct payouts" },
   { id: "google", name: "Google Calendar", hint: "2-way sync + Meet" },
-  { id: "zoom", name: "Zoom", hint: "Auto meeting links" },
-  { id: "teams", name: "Microsoft Teams", hint: "Outlook ready" },
-  { id: "apple", name: "Apple Calendar", hint: "iCloud CalDAV" },
+  { id: "zoom", name: "Zoom", hint: "Auto video links" },
+  { id: "teams", name: "Microsoft Teams", hint: "Outlook & M365 ready" },
+  { id: "apple", name: "Apple Calendar", hint: "iCloud CalDAV sync" },
   { id: "hubspot", name: "HubSpot", hint: "CRM contact sync" },
-  { id: "mailchimp", name: "Mailchimp", hint: "Audience sync" },
+  { id: "mailchimp", name: "Mailchimp", hint: "Audience tag sync" },
 ];
 
 const STEPS = [
   {
     n: "01",
-    badge: "2-minute setup",
-    title: "Connect Webflow natively",
-    body: "Install from the Webflow Marketplace or Designer. Slotwise binds cleanly to your site — CMS-aware, responsive, with clean uninstall hygiene.",
+    badge: "2-min install",
+    title: "Connect your Webflow site",
+    body: "Authorize Slotwise via the Webflow Marketplace or launch the Designer extension. Bind directly to static pages or Webflow CMS templates with zero iframe height glitches.",
   },
   {
     n: "02",
-    badge: "Automatic styling",
-    title: "Match your design system",
-    body: "Pick from eight curated themes or bind your CSS variables, fonts, and brand colors so your calendar feels hand-built, never pasted on.",
+    badge: "Auto-themed",
+    title: "Inherit your brand system",
+    body: "Select from eight curated themes and map your CSS variables, corner radius, accent colors, and site typography so your calendar feels hand-coded into your layout.",
   },
   {
     n: "03",
     badge: "0% commission",
     title: "Accept paid bookings",
-    body: "Clients book slots and pay deposits straight to your Stripe Connect account. Rescheduling works via magic links — no client logins required.",
+    body: "Publish your Webflow site and collect Stripe deposits or full session fees straight to your bank. Clients reschedule via passwordless magic links.",
+  },
+];
+
+const USE_CASES = [
+  {
+    tag: "Webflow Agencies",
+    title: "Client sites & discovery calls",
+    body: "Deploy branded booking calendars across dozens of client Webflow projects from one agency console. Switch client workspaces, toggle features, and keep uninstalls spotless.",
+    highlights: ["Multi-site agency switching", "Per-client branding & secrets", "Clean embed deactivation"],
+    accent: "bg-blue-50 text-[#146EF5] border-blue-200",
+  },
+  {
+    tag: "Consultants & Coaches",
+    title: "Paid strategy & advisory sessions",
+    body: "Sell 1-on-1 consultations, audits, and workshops directly on your Webflow landing page. Automatically attach Google Meet or Zoom links and protect your time with buffers.",
+    highlights: ["Upfront Stripe session fees", "Automated Meet / Zoom links", "Timezone & buffer protection"],
+    accent: "bg-amber-50 text-amber-800 border-amber-200",
+  },
+  {
+    tag: "Studios, Salons & Clinics",
+    title: "Multi-staff service scheduling",
+    body: "Let clients pick a service, choose a specific team member under the Who picker, and pay a no-show protection deposit — without creating an account or password.",
+    highlights: ["Staff availability & capacity", "No-show deposit rules", "Magic-link self-reschedule"],
+    accent: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  },
+  {
+    tag: "B2B SaaS & Marketing",
+    title: "High-converting demo funnels",
+    body: "Replace sluggish third-party popups that hurt Core Web Vitals. Qualify leads with AI availability chat and push every new booking straight to HubSpot and Mailchimp.",
+    highlights: ["Zero layout shift embed", "AI availability concierge", "HubSpot & Mailchimp sync"],
+    accent: "bg-violet-50 text-violet-800 border-violet-200",
+  },
+];
+
+const COMPARISON_ROWS = [
+  {
+    feature: "Built natively for Webflow Designer & CMS",
+    slotwise: "Native app & OAuth bind",
+    generic: "Copy-paste generic iframe",
+  },
+  {
+    feature: "Booking & payout commission",
+    slotwise: "0% platform fee forever",
+    generic: "Often marks up or gates Stripe",
+  },
+  {
+    feature: "Matches your site typography & CSS variables",
+    slotwise: "8 themes + automatic CSS sync",
+    generic: "Clashes with site design system",
+  },
+  {
+    feature: "Uninstall hygiene",
+    slotwise: "Deactivates leftover embeds",
+    generic: "Leaves broken snippets behind",
+  },
+  {
+    feature: "Customer account required to reschedule",
+    slotwise: "No — 1-click magic links",
+    generic: "Often forces login or emails",
+  },
+  {
+    feature: "In-widget AI availability chat",
+    slotwise: "Included (on-brand & gated)",
+    generic: "Not available",
   },
 ];
 
 const FAQ = [
   {
     q: "Does Slotwise charge a booking commission or transaction fee?",
-    a: "No. Your Stripe Connect payouts go 100% to you. You only pay your Slotwise subscription plan and standard Stripe card processing fees.",
+    a: "Never. Your Stripe Connect payouts go 100% directly to your Stripe account. You only pay your Slotwise subscription plan (or start on Free) plus standard Stripe card processing fees.",
   },
   {
-    q: "How is Slotwise built specifically for Webflow?",
-    a: "Slotwise installs via Webflow Marketplace OAuth and the Designer extension, inherits CSS variables and site typography, works with Webflow CMS flows, and cleanly deactivates leftover embeds if uninstalled.",
+    q: "Why use Slotwise instead of pasting a generic calendar iframe into Webflow?",
+    a: "Generic iframes often look out of place, cause awkward double scrollbars, slow down Largest Contentful Paint, and force visitors onto external domains. Slotwise connects natively through Webflow, inherits your brand styles, stays responsive across breakpoints, and cleans up embeds automatically if uninstalled.",
   },
   {
-    q: "Which calendars and video conferencing tools sync with Slotwise?",
-    a: "You can connect Google Calendar & Google Meet, Zoom, Microsoft Teams & Outlook, Apple iCloud Calendar (CalDAV), plus HubSpot and Mailchimp directly from Integrations.",
+    q: "Can I use Slotwise with Webflow CMS Collection pages?",
+    a: "Yes. Slotwise supports CMS-aware booking flows so agencies, clinics, or multi-service businesses can dynamically route bookings to specific services or team members from Webflow CMS pages.",
   },
   {
-    q: "What is included on the Free plan?",
-    a: "The Free plan includes a live Webflow booking widget, email reminders, buffer & timezone protection, and core themes — everything needed to launch. Upgrade as your team or volume grows.",
+    q: "Which calendars and video tools integrate with Slotwise?",
+    a: "Slotwise connects with Google Calendar and Google Meet, Zoom, Microsoft Teams and Outlook, Apple iCloud Calendar (CalDAV), plus HubSpot and Mailchimp for CRM and audience sync.",
   },
   {
-    q: "Do my customers need to create an account to book or reschedule?",
-    a: "No. Customers book in seconds and receive a secure magic link to cancel or reschedule within your policy rules, eliminating login friction and drop-offs.",
+    q: "Do clients have to create an account to cancel or reschedule?",
+    a: "No. Every booking confirmation includes a secure, passwordless magic link allowing clients to cancel or reschedule according to your notice-window policies.",
   },
   {
-    q: "Can Webflow agencies manage multiple client sites?",
-    a: "Yes. Slotwise includes agency controls with multi-site management, platform feature flags, and per-site branding from a unified dashboard.",
+    q: "Does embedding Slotwise hurt Webflow SEO or Core Web Vitals?",
+    a: "Slotwise is engineered for lightweight loading with predictable layout sizing and clean brand loaders, preventing Cumulative Layout Shift (CLS) while keeping visitors on your domain to improve engagement metrics.",
+  },
+  {
+    q: "What is included in the Free plan?",
+    a: "You get a live booking widget for your Webflow site, automated email confirmations and reminders, timezone detection, and core styling themes so you can launch without a credit card.",
+  },
+  {
+    q: "How does Slotwise support Webflow agencies managing multiple clients?",
+    a: "Agency controls provide multi-site management, isolated platform secrets, feature flags per workspace, and centralized billing oversight so you can standardize scheduling across client builds.",
   },
 ];
 
@@ -234,9 +307,7 @@ function PricingCards({ plans }: { plans: PublicPlan[] }) {
           <Link
             href="/login"
             className={`mt-8 inline-flex items-center justify-center rounded-full px-5 py-3 text-center text-sm font-bold transition ${
-              p.highlighted
-                ? "bg-slate-950 text-white shadow-md hover:bg-slate-800"
-                : "border border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:bg-slate-100"
+              p.highlighted ? "sw-btn-dark" : "sw-btn-outline"
             }`}
           >
             {p.tier === "FREE" ? "Start free" : `Choose ${p.name}`}
@@ -254,18 +325,38 @@ export default async function HomePage() {
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "Organization",
+        name: "Slotwise",
+        url: "https://slotwise.hindaralabs.com",
+        logo: "https://slotwise.hindaralabs.com/logo.png",
+        parentOrganization: {
+          "@type": "Organization",
+          name: "Hindara Labs",
+        },
+      },
+      {
         "@type": "SoftwareApplication",
         name: "Slotwise",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web, Webflow",
         url: "https://slotwise.hindaralabs.com",
         description:
-          "Webflow-native booking and appointment scheduling software with zero-commission Stripe payouts, CSS theme inheritance, and Google Meet, Zoom, and Teams sync.",
+          "Webflow-native appointment scheduling & booking calendar software with CSS theme inheritance, zero-commission Stripe payouts, and Google Meet, Zoom & Teams sync.",
         offers: plans.map((p) => ({
           "@type": "Offer",
           name: p.name,
           price: p.priceLabel.replace(/[^0-9.]/g, "") || "0",
           priceCurrency: "USD",
+        })),
+      },
+      {
+        "@type": "HowTo",
+        name: "How to add a booking calendar to Webflow with Slotwise",
+        step: STEPS.map((s, idx) => ({
+          "@type": "HowToStep",
+          position: idx + 1,
+          name: s.title,
+          text: s.body,
         })),
       },
       {
@@ -296,7 +387,7 @@ export default async function HomePage() {
         }
         @keyframes sw-float {
           0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
+          50% { transform: translateY(-9px); }
         }
         @keyframes sw-marquee {
           from { transform: translateX(0); }
@@ -310,6 +401,48 @@ export default async function HomePage() {
         .sw-float-delayed { animation: sw-float 7s 1.2s ease-in-out infinite; }
         .sw-marquee { animation: sw-marquee 34s linear infinite; }
         .sw-marquee:hover { animation-play-state: paused; }
+
+        /* Bulletproof high-contrast buttons (immune to global link overrides) */
+        .sw-btn-amber {
+          background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important;
+          color: #0f172a !important;
+          border: 1px solid rgba(217, 119, 6, 0.35) !important;
+          box-shadow: 0 12px 28px -8px rgba(245, 158, 11, 0.52);
+        }
+        .sw-btn-amber:hover {
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+          color: #0f172a !important;
+          transform: translateY(-1px);
+        }
+        .sw-btn-dark {
+          background-color: #0f172a !important;
+          color: #ffffff !important;
+          border: 1px solid #0f172a !important;
+          box-shadow: 0 10px 24px -8px rgba(15, 23, 42, 0.35);
+        }
+        .sw-btn-dark:hover {
+          background-color: #1e293b !important;
+          color: #ffffff !important;
+          transform: translateY(-1px);
+        }
+        .sw-btn-outline {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+        .sw-btn-outline:hover {
+          background-color: #f8fafc !important;
+          border-color: #94a3b8 !important;
+          color: #0f172a !important;
+        }
+        .sw-nav-link {
+          color: #475569 !important;
+        }
+        .sw-nav-link:hover {
+          color: #0f172a !important;
+        }
+
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
         @media (prefers-reduced-motion: reduce) {
@@ -318,7 +451,7 @@ export default async function HomePage() {
       `}</style>
 
       {/* ===== STICKY TOP NAVIGATION ===== */}
-      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
         <nav
           aria-label="Primary"
           className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8"
@@ -338,42 +471,45 @@ export default async function HomePage() {
             >
               Slotwise
             </span>
-            <span className="hidden rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#146EF5] ring-1 ring-blue-500/20 sm:inline-block">
+            <span className="hidden rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#146EF5] ring-1 ring-blue-500/20 sm:inline-block">
               For Webflow
             </span>
           </Link>
 
-          <div className="hidden items-center gap-7 text-sm font-semibold text-slate-600 md:flex">
-            <a href="#features" className="transition hover:text-slate-950">
+          <div className="hidden items-center gap-7 text-sm font-semibold md:flex">
+            <a href="#features" className="sw-nav-link transition">
               Features
             </a>
-            <a href="#how-it-works" className="transition hover:text-slate-950">
-              How it works
+            <a href="#use-cases" className="sw-nav-link transition">
+              Use cases
             </a>
-            <a href="#pricing" className="transition hover:text-slate-950">
+            <a href="#compare" className="sw-nav-link transition">
+              Compare
+            </a>
+            <a href="#pricing" className="sw-nav-link transition">
               Pricing
             </a>
-            <a href="#faq" className="transition hover:text-slate-950">
+            <a href="#faq" className="sw-nav-link transition">
               FAQ
             </a>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href={`/book/${DEMO_PUBLIC_KEY}`}
-              className="hidden rounded-full px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 sm:inline-flex"
+              className="sw-nav-link hidden rounded-full px-3.5 py-2 text-sm font-semibold transition hover:bg-slate-100 sm:inline-flex"
             >
               Live demo
             </Link>
             <Link
               href="/login"
-              className="rounded-full px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
+              className="sw-btn-outline rounded-full px-4 py-2 text-sm font-bold transition"
             >
               Sign in
             </Link>
             <Link
               href="/login"
-              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
+              className="sw-btn-dark rounded-full px-4 py-2 text-sm font-bold transition"
             >
               Start free
             </Link>
@@ -383,8 +519,7 @@ export default async function HomePage() {
 
       <main>
         {/* ===== HERO SECTION ===== */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-[#FFFDF7] via-white to-slate-50/70 pb-20 pt-12 sm:pb-28 sm:pt-20">
-          {/* Architectural Grid + Soft Ambient Glows */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-[#FFFDF7] via-white to-slate-50/70 pb-20 pt-10 sm:pb-28 sm:pt-16">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.45]"
             style={{
@@ -394,9 +529,9 @@ export default async function HomePage() {
               maskImage: "radial-gradient(ellipse 80% 70% at 50% 30%, black 35%, transparent 100%)",
             }}
           />
-          <div className="pointer-events-none absolute -top-24 left-1/2 h-[440px] w-[780px] -translate-x-1/2 rounded-full bg-gradient-to-r from-amber-200/40 via-amber-100/30 to-blue-200/30 blur-3xl" />
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-[440px] w-[780px] -translate-x-1/2 rounded-full bg-gradient-to-r from-amber-200/45 via-amber-100/35 to-blue-200/30 blur-3xl" />
 
-          <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:px-8">
+          <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[1.04fr_0.96fr] lg:gap-10 lg:px-8">
             <div>
               <div className="sw-rise-1 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50/90 px-3.5 py-1.5 text-xs font-bold text-amber-900 shadow-xs">
                 <span className="flex h-2 w-2 rounded-full bg-amber-500" />
@@ -404,7 +539,7 @@ export default async function HomePage() {
               </div>
 
               <h1
-                className="sw-rise-2 mt-6 text-[clamp(2.5rem,5.2vw,4.35rem)] font-extrabold leading-[1.02] tracking-[-0.035em] text-slate-950"
+                className="sw-rise-2 mt-6 text-[clamp(2.45rem,5vw,4.25rem)] font-extrabold leading-[1.03] tracking-[-0.035em] text-slate-950"
                 style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
               >
                 Bookings that look{" "}
@@ -429,16 +564,16 @@ export default async function HomePage() {
                 to your Webflow site.
               </h1>
 
-              <p className="sw-rise-3 mt-6 max-w-[46ch] text-base leading-relaxed text-slate-600 sm:text-lg">
-                Stop pasting clunky third-party iframes. Slotwise installs straight inside Webflow,
-                inherits your site’s design tokens, and sends Stripe deposits directly to you with{" "}
-                <strong className="font-semibold text-slate-900">0% booking commission</strong>.
+              <p className="sw-rise-3 mt-6 max-w-[47ch] text-base leading-relaxed text-slate-600 sm:text-lg">
+                Stop embedding clunky third-party iframes. Slotwise installs inside Webflow,
+                inherits your site’s design tokens automatically, and sends Stripe deposits straight
+                to you with <strong className="font-semibold text-slate-900">0% booking commission</strong>.
               </p>
 
               <div className="sw-rise-4 mt-8 flex flex-wrap items-center gap-3.5">
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-7 py-3.5 text-sm font-extrabold text-slate-950 shadow-[0_14px_30px_-8px_rgba(245,158,11,0.55)] transition hover:-translate-y-0.5 hover:bg-amber-400"
+                  className="sw-btn-amber inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-extrabold transition"
                 >
                   Start free on Webflow
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
@@ -451,52 +586,49 @@ export default async function HomePage() {
                 </Link>
                 <Link
                   href={`/book/${DEMO_PUBLIC_KEY}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-3.5 text-sm font-bold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                  className="sw-btn-outline inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold transition"
                 >
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Try live demo
+                  Try live booking demo
                 </Link>
               </div>
 
-              {/* Trust Strip */}
-              <div className="sw-rise-4 mt-8 flex flex-wrap items-center gap-x-6 gap-y-2.5 text-xs font-semibold text-slate-500">
+              <div className="sw-rise-4 mt-8 flex flex-wrap items-center gap-x-6 gap-y-2.5 text-xs font-semibold text-slate-600">
                 <span className="flex items-center gap-1.5">
                   <CheckIcon className="h-4 w-4 text-emerald-600" />
-                  Free tier available
+                  Free forever starter plan
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckIcon className="h-4 w-4 text-emerald-600" />
-                  0% payout commission
+                  0% Stripe payout commission
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckIcon className="h-4 w-4 text-emerald-600" />
-                  Clean Webflow uninstall
+                  No customer account required
                 </span>
               </div>
             </div>
 
-            {/* Hero Visual Showcase Stage */}
-            <div className="relative mx-auto w-full max-w-[540px] lg:ml-auto">
-              {/* Main Glass Stage */}
+            {/* Hero Showcase Composition */}
+            <div className="relative mx-auto w-full max-w-[550px] lg:ml-auto">
               <div className="relative overflow-hidden rounded-[2rem] border border-slate-200/90 bg-gradient-to-br from-amber-50/90 via-white to-blue-50/80 p-5 shadow-[0_32px_80px_-20px_rgba(15,23,42,0.14)] sm:p-7">
-                {/* Browser Top Bar */}
-                <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200/80 bg-white/90 px-3.5 py-2 shadow-2xs">
+                <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200/80 bg-white/95 px-3.5 py-2 shadow-2xs">
                   <div className="flex items-center gap-1.5">
                     <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
                     <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                   </div>
-                  <div className="rounded-md bg-slate-100 px-3 py-0.5 text-[11px] font-medium text-slate-500">
-                    your-agency.webflow.io/book
+                  <div className="rounded-md bg-slate-100 px-3 py-0.5 text-[11px] font-medium text-slate-600">
+                    studio.webflow.io/book
                   </div>
-                  <span className="text-[10px] font-bold text-[#146EF5]">Webflow Sync</span>
+                  <span className="text-[10px] font-extrabold text-[#146EF5]">Webflow Sync</span>
                 </div>
 
-                {/* 3D Product Image + Visual Overlay */}
-                <div className="relative flex items-center justify-center rounded-2xl bg-gradient-to-b from-slate-900/[0.03] to-amber-500/[0.08] py-4">
+                {/* Hero App Visual */}
+                <div className="relative flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/[0.03] to-amber-500/[0.08] py-4">
                   <Image
                     src="/hero-image.png"
-                    alt="Slotwise 3D booking calendar, time slots, and Webflow module preview"
+                    alt="Slotwise 3D calendar, scheduling clock, and Webflow booking modules"
                     width={860}
                     height={860}
                     priority
@@ -504,34 +636,26 @@ export default async function HomePage() {
                   />
                 </div>
 
-                {/* Quick Status Bar inside Frame */}
                 <div className="mt-4 grid grid-cols-3 gap-2.5 text-center">
-                  <div className="rounded-xl border border-slate-200/80 bg-white/90 px-2.5 py-2">
+                  <div className="rounded-xl border border-slate-200/80 bg-white/95 px-2.5 py-2">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Theme</div>
-                    <div className="mt-0.5 text-xs font-extrabold text-slate-900">Auto-Matched</div>
+                    <div className="mt-0.5 text-xs font-extrabold text-slate-900">CSS Matched</div>
                   </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white/90 px-2.5 py-2">
+                  <div className="rounded-xl border border-slate-200/80 bg-white/95 px-2.5 py-2">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Fee</div>
                     <div className="mt-0.5 text-xs font-extrabold text-emerald-600">$0 Commission</div>
                   </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white/90 px-2.5 py-2">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Video</div>
+                  <div className="rounded-xl border border-slate-200/80 bg-white/95 px-2.5 py-2">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Meeting</div>
                     <div className="mt-0.5 text-xs font-extrabold text-slate-900">Meet / Zoom</div>
                   </div>
                 </div>
               </div>
 
-              {/* Floating Notification Pill 1 */}
-              <div className="sw-float-delayed absolute -left-3 top-20 z-20 hidden items-center gap-2.5 rounded-2xl border border-slate-200 bg-white/95 px-3.5 py-2.5 shadow-lg backdrop-blur sm:flex">
+              {/* Floating Card: Stripe Paid */}
+              <div className="sw-float-delayed absolute -left-4 top-20 z-20 hidden items-center gap-2.5 rounded-2xl border border-slate-200 bg-white/95 px-3.5 py-2.5 shadow-lg backdrop-blur sm:flex">
                 <span className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-                    <path d="M10.75 10.818v2.614A3.13 3.13 0 0 0 11.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 0 0-1.138-.432ZM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 0 0-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.202.592.037.051.08.102.128.152Z" />
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-6a.75.75 0 0 1 .75.75v.316a3.78 3.78 0 0 1 1.653.713c.426.33.744.74.925 1.2a.75.75 0 0 1-1.395.55 1.35 1.35 0 0 0-.447-.563 2.187 2.187 0 0 0-.736-.363V9.3c.698.093 1.383.32 1.959.696.787.514 1.29 1.27 1.29 2.13 0 .86-.504 1.616-1.29 2.13-.576.377-1.261.603-1.96.696v.299a.75.75 0 1 1-1.5 0v-.3c-.697-.092-1.382-.318-1.958-.695-.482-.315-.857-.717-1.078-1.188a.75.75 0 1 1 1.359-.636c.08.173.245.376.54.569.313.205.706.353 1.138.432v-2.748a3.782 3.782 0 0 1-1.653-.713C6.9 9.433 6.5 8.681 6.5 7.875c0-.805.4-1.558 1.097-2.096a3.78 3.78 0 0 1 1.653-.713V4.75A.75.75 0 0 1 10 4Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  <IntegrationIcon id="stripe" />
                 </span>
                 <div>
                   <div className="text-xs font-extrabold text-slate-900">+$150.00 Paid</div>
@@ -539,7 +663,7 @@ export default async function HomePage() {
                 </div>
               </div>
 
-              {/* Floating Notification Pill 2 */}
+              {/* Floating Card: Webflow Variables */}
               <div className="sw-float absolute -right-4 bottom-24 z-20 hidden items-center gap-2.5 rounded-2xl border border-slate-200 bg-white/95 px-3.5 py-2.5 shadow-lg backdrop-blur sm:flex">
                 <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-50 text-[#146EF5]">
                   <IntegrationIcon id="webflow" />
@@ -557,7 +681,7 @@ export default async function HomePage() {
         <section className="border-y border-slate-200/80 bg-slate-50/70 py-10" aria-label="Supported integrations">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <p className="mb-6 text-center text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500">
-              Seamlessly connects with your existing stack
+              Connects natively with your calendars, video calls, payments &amp; CRM
             </p>
           </div>
           <div className="relative overflow-hidden">
@@ -567,7 +691,7 @@ export default async function HomePage() {
               {[...INTEGRATIONS, ...INTEGRATIONS].map((item, i) => (
                 <div
                   key={`${item.name}-${i}`}
-                  className="flex min-w-[210px] items-center gap-3.5 rounded-2xl border border-slate-200/90 bg-white px-4 py-3 shadow-2xs transition hover:border-amber-300"
+                  className="flex min-w-[215px] items-center gap-3.5 rounded-2xl border border-slate-200/90 bg-white px-4 py-3 shadow-2xs transition hover:border-amber-300"
                 >
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-50 ring-1 ring-slate-200/70">
                     <IntegrationIcon id={item.id} />
@@ -582,88 +706,254 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ===== BENTO CAPABILITIES SECTION ===== */}
-        <section id="features" className="scroll-mt-20 mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-          <div className="max-w-2xl">
-            <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-600">
-              Built for Webflow
+        {/* ===== VISUAL SHOWCASE 1: WEBFLOW DESIGNER CANVAS ILLUSTRATION ===== */}
+        <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#146EF5]">
+              Inside the Webflow Designer
             </span>
             <h2
               className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-5xl"
               style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
             >
-              Not bolted on. Truly Webflow-native.
+              Place it on your canvas. Watch it inherit your brand.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
-              Generic schedulers break your typography and send users off-site. Slotwise blends
-              into your Webflow layout and keeps your brand front and center.
+              Forget brittle embed snippets that clash with your Webflow design system. Slotwise
+              binds cleanly to your Designer tokens, CMS collections, and breakpoints.
             </p>
           </div>
 
-          {/* Bento Grid */}
-          <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Card 1: Native Themes */}
-            <article className="group flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300/80 hover:shadow-lg">
-              <div>
-                <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
-                    <span>8 Theme Presets + CSS Vars</span>
-                    <span className="text-amber-600">Live Preview</span>
+          {/* Illustrated Webflow Designer Studio UI */}
+          <div className="mt-14 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_80px_-20px_rgba(15,23,42,0.12)]">
+            {/* Designer Top Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3">
+              <div className="flex items-center gap-3">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#146EF5] text-white">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                    <path d="M17.8 6.5 15.1 14l-1.9-5.8c-.2-.6-.8-1-1.4-1-.7 0-1.2.4-1.4 1L8.5 14 6.2 6.5H2.8l3.7 11c.2.6.8 1 1.5 1 .7 0 1.2-.4 1.5-1l2-5.6 2 5.6c.2.6.8 1 1.5 1 .7 0 1.3-.4 1.5-1l4-11h-2.7Z" />
+                  </svg>
+                </span>
+                <span className="text-xs font-bold text-slate-800">Webflow Designer · Booking Page</span>
+                <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                  Slotwise App Connected
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500">
+                <span className="rounded-md bg-white px-2.5 py-1 text-slate-900 shadow-2xs ring-1 ring-slate-200">
+                  Desktop 1440px
+                </span>
+                <span className="hidden rounded-md px-2 py-1 sm:inline">Tablet</span>
+                <span className="hidden rounded-md px-2 py-1 sm:inline">Mobile</span>
+                <span className="rounded-md bg-[#146EF5] px-3 py-1 text-white">Publish</span>
+              </div>
+            </div>
+
+            {/* 3-Column Designer Workspace */}
+            <div className="grid lg:grid-cols-[220px_1fr_250px]">
+              {/* Left Navigator */}
+              <div className="hidden border-r border-slate-200 bg-slate-50/50 p-4 lg:block">
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Navigator
+                </div>
+                <div className="mt-3 space-y-1.5 text-xs font-medium text-slate-600">
+                  <div className="rounded-lg px-2 py-1.5">Body</div>
+                  <div className="rounded-lg px-2 py-1.5 pl-4">Navbar_Global</div>
+                  <div className="rounded-lg px-2 py-1.5 pl-4">Section_Hero</div>
+                  <div className="rounded-lg bg-blue-50 px-2 py-1.5 pl-6 font-bold text-[#146EF5] ring-1 ring-blue-200">
+                    Slotwise_Calendar
                   </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    {[
-                      "bg-slate-950",
-                      "bg-amber-500",
-                      "bg-[#146EF5]",
-                      "bg-emerald-600",
-                      "bg-rose-500",
-                      "bg-violet-600",
-                    ].map((bg, idx) => (
-                      <span
-                        key={bg}
-                        className={`h-7 w-7 rounded-full ${bg} ${
-                          idx === 1 ? "ring-2 ring-amber-500 ring-offset-2" : "opacity-80"
-                        }`}
-                      />
-                    ))}
+                  <div className="rounded-lg px-2 py-1.5 pl-4">Section_Testimonials</div>
+                  <div className="rounded-lg px-2 py-1.5 pl-4">Footer_Main</div>
+                </div>
+              </div>
+
+              {/* Center Live Canvas */}
+              <div className="bg-gradient-to-br from-slate-50 via-white to-amber-50/40 p-5 sm:p-8">
+                <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-md sm:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                    <div>
+                      <div className="text-xs font-bold text-amber-600">BRAND STRATEGY STUDIO</div>
+                      <div className="text-lg font-extrabold text-slate-950">Book a Discovery Session</div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-700">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      EST (UTC-5)
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                    {/* Calendar Grid Visual */}
+                    <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3.5">
+                      <div className="flex items-center justify-between text-xs font-extrabold text-slate-900">
+                        <span>November 2026</span>
+                        <span className="text-slate-400">‹ ›</span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                        {["M", "T", "W", "T", "F", "S", "S"].map((d, idx) => (
+                          <span key={`${d}-${idx}`}>{d}</span>
+                        ))}
+                      </div>
+                      <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[11px] font-bold">
+                        {[12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].map((num) => (
+                          <span
+                            key={num}
+                            className={`rounded-lg py-1.5 ${
+                              num === 19
+                                ? "bg-amber-500 text-slate-950 shadow-2xs"
+                                : num === 20 || num === 23
+                                ? "bg-white text-slate-900 ring-1 ring-slate-200"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            {num}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Time Slots & Team Visual */}
+                    <div className="flex flex-col justify-between space-y-2.5">
+                      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="grid h-6 w-6 place-items-center rounded-full bg-amber-100 text-[10px] font-extrabold text-amber-900">
+                            MK
+                          </span>
+                          <span className="text-xs font-bold text-slate-800">Maya Khan · Partner</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-600">Available</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {["09:30 AM", "11:00 AM", "01:30 PM", "03:45 PM"].map((slot, i) => (
+                          <div
+                            key={slot}
+                            className={`rounded-xl border py-2 text-center text-xs font-bold ${
+                              i === 1
+                                ? "border-slate-950 bg-slate-950 text-white"
+                                : "border-slate-200 bg-white text-slate-700"
+                            }`}
+                          >
+                            {slot}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="rounded-xl bg-amber-500 py-2.5 text-center text-xs font-extrabold text-slate-950">
+                        Reserve 11:00 AM · $0 Due
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-950">Native Webflow Themes</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  Eight curated aesthetics, customizable CSS variables, brand loaders, and layout
-                  densities that inherit your site’s look automatically.
-                </p>
               </div>
-            </article>
 
-            {/* Card 2: Zero Commission */}
-            <article className="group flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300/80 hover:shadow-lg">
-              <div>
-                <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">Client Deposit</span>
-                    <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      0% Platform Fee
-                    </span>
+              {/* Right Style Inspector */}
+              <div className="hidden border-l border-slate-200 bg-slate-50/50 p-4 lg:block">
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Slotwise Theme Tokens
+                </div>
+                <div className="mt-3 space-y-3 text-xs">
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <div className="text-[10px] font-bold text-slate-400">Preset</div>
+                    <div className="mt-1 font-bold text-slate-900">Editorial Light</div>
                   </div>
-                  <div className="mt-2.5 flex items-baseline justify-between">
-                    <span className="text-2xl font-extrabold text-slate-950">$250.00</span>
-                    <span className="text-xs font-semibold text-emerald-700">100% → Your Stripe</span>
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <div className="text-[10px] font-bold text-slate-400">Accent Color</div>
+                    <div className="mt-1.5 flex items-center gap-2 font-mono text-[11px] font-bold text-slate-800">
+                      <span className="h-4 w-4 rounded bg-amber-500" />
+                      #F59E0B
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <div className="text-[10px] font-bold text-slate-400">Font Inheritance</div>
+                    <div className="mt-1 font-bold text-slate-800">var(--font-sora)</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <div className="text-[10px] font-bold text-slate-400">Border Radius</div>
+                    <div className="mt-1 font-bold text-slate-800">16px (Matched)</div>
                   </div>
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-950">Zero-Commission Payouts</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  Accept full payments or no-show deposits via Stripe Connect. Money lands straight
-                  in your bank — we never skim a percentage.
-                </p>
               </div>
-            </article>
+            </div>
+          </div>
+        </section>
 
-            {/* Card 3: Team Scheduling */}
-            <article className="group flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300/80 hover:shadow-lg">
-              <div>
-                <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
-                  <div className="space-y-2">
+        {/* ===== BENTO CAPABILITIES SECTION ===== */}
+        <section id="features" className="scroll-mt-20 border-t border-slate-200/80 bg-slate-50/50 py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl">
+              <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-600">
+                Built for Performance &amp; Revenue
+              </span>
+              <h2
+                className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-5xl"
+                style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
+              >
+                Every scheduling feature your agency needs.
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
+                From multi-staff routing to AI availability chat and Stripe Connect payouts,
+                Slotwise replaces fragmented scheduling stacks with one Webflow-native workflow.
+              </p>
+            </div>
+
+            <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {/* Card 1 */}
+              <article className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300 hover:shadow-lg">
+                <div>
+                  <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                      <span>8 Curated Themes</span>
+                      <span className="text-amber-600">CSS Vars</span>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      {["bg-slate-950", "bg-amber-500", "bg-[#146EF5]", "bg-emerald-600", "bg-rose-500", "bg-violet-600"].map(
+                        (bg, idx) => (
+                          <span
+                            key={bg}
+                            className={`h-7 w-7 rounded-full ${bg} ${
+                              idx === 1 ? "ring-2 ring-amber-500 ring-offset-2" : "opacity-85"
+                            }`}
+                          />
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-950">Native Webflow Themes</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Eight curated designs, CSS variable overrides, brand loaders, and compact or
+                    spacious layouts that feel native to every Webflow site.
+                  </p>
+                </div>
+              </article>
+
+              {/* Card 2 */}
+              <article className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300 hover:shadow-lg">
+                <div>
+                  <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Stripe Deposit</span>
+                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                        0% Fee
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex items-baseline justify-between">
+                      <span className="text-2xl font-extrabold text-slate-950">$250.00</span>
+                      <span className="text-xs font-semibold text-emerald-700">100% → Your Bank</span>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-950">Zero-Commission Payouts</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Collect upfront payments or no-show deposits directly via Stripe Connect. Keep
+                    every dollar you earn — we never skim your revenue.
+                  </p>
+                </div>
+              </article>
+
+              {/* Card 3 */}
+              <article className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300 hover:shadow-lg">
+                <div>
+                  <div className="mb-6 space-y-2 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
                     {[
                       { name: "Maya · Design Lead", time: "09:00 – 13:00", active: true },
                       { name: "Liam · Strategist", time: "11:00 – 17:00", active: false },
@@ -684,82 +974,216 @@ export default async function HomePage() {
                       </div>
                     ))}
                   </div>
+                  <h3 className="text-lg font-extrabold text-slate-950">Team Scheduling &amp; Buffers</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Manage staff under the Who picker, set working hours, capacity limits, and
+                    buffers so calendars stay 100% conflict-free.
+                  </p>
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-950">Team &amp; Capacity Rules</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  Assign staff under “Who”, configure working windows, pre/post buffers, and slot
-                  capacity so calendars stay 100% conflict-free.
-                </p>
-              </div>
-            </article>
+              </article>
 
-            {/* Card 4: Partner Apps */}
-            <article className="group flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300/80 hover:shadow-lg">
-              <div>
-                <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
-                  {[
-                    { id: "google", label: "Google Meet" },
-                    { id: "zoom", label: "Zoom" },
-                    { id: "teams", label: "MS Teams" },
-                    { id: "apple", label: "iCloud" },
-                  ].map((app) => (
-                    <span
-                      key={app.label}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs"
-                    >
-                      <IntegrationIcon id={app.id} />
-                      {app.label}
-                    </span>
-                  ))}
-                </div>
-                <h3 className="text-lg font-extrabold text-slate-950">Instant Video &amp; Calendar Sync</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  Google Meet, Zoom, and Microsoft Teams links attach automatically after booking.
-                  Two-way sync prevents double bookings everywhere.
-                </p>
-              </div>
-            </article>
-
-            {/* Card 5: AI Calendar Chat */}
-            <article className="group flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300/80 hover:shadow-lg">
-              <div>
-                <div className="mb-6 space-y-2 rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
-                  <div className="ml-auto w-fit rounded-2xl rounded-br-sm bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white">
-                    Any morning slots this Thursday?
+              {/* Card 4 */}
+              <article className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300 hover:shadow-lg">
+                <div>
+                  <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
+                    {[
+                      { id: "google", label: "Google Meet" },
+                      { id: "zoom", label: "Zoom" },
+                      { id: "teams", label: "MS Teams" },
+                      { id: "apple", label: "iCloud" },
+                    ].map((app) => (
+                      <span
+                        key={app.label}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs"
+                      >
+                        <IntegrationIcon id={app.id} />
+                        {app.label}
+                      </span>
+                    ))}
                   </div>
-                  <div className="w-fit rounded-2xl rounded-bl-sm border border-amber-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-2xs">
-                    Yes — 9:30 AM &amp; 11:00 AM with Maya ✨
-                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-950">Automatic Video &amp; Sync</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Google Meet, Zoom, and Microsoft Teams links generate after booking. Real-time
+                    two-way sync prevents double bookings across all your calendars.
+                  </p>
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-950">On-Brand AI Concierge</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  Visitors ask natural-language availability questions right inside your widget.
-                  Answers stay accurate, on-brand, and plan-gated.
-                </p>
-              </div>
-            </article>
+              </article>
 
-            {/* Card 6: Agency Controls */}
-            <article className="group flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300/80 hover:shadow-lg">
-              <div>
-                <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
-                  <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2.5 shadow-2xs ring-1 ring-slate-200/60">
-                    <div>
-                      <div className="text-xs font-extrabold text-slate-900">Agency Multi-Site</div>
-                      <div className="text-[11px] text-slate-500">12 Webflow clients active</div>
+              {/* Card 5 */}
+              <article className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300 hover:shadow-lg">
+                <div>
+                  <div className="mb-6 space-y-2 rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
+                    <div className="ml-auto w-fit rounded-2xl rounded-br-sm bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white">
+                      Any morning slots this Thursday?
                     </div>
-                    <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#146EF5]">
-                      Managed
-                    </span>
+                    <div className="w-fit rounded-2xl rounded-bl-sm border border-amber-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-2xs">
+                      Yes — 9:30 AM &amp; 11:00 AM with Maya ✨
+                    </div>
                   </div>
+                  <h3 className="text-lg font-extrabold text-slate-950">AI Calendar Assistant</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Visitors ask natural availability questions inside the widget. Responses stay
+                    accurate, brand-safe, and plan-gated.
+                  </p>
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-950">Agency-Grade Controls</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  Built for Webflow studios: multi-site switching, platform secrets, feature flags,
-                  and clean embed deactivation on uninstall.
-                </p>
+              </article>
+
+              {/* Card 6 */}
+              <article className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-7 shadow-2xs transition hover:border-amber-300 hover:shadow-lg">
+                <div>
+                  <div className="mb-6 rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2.5 shadow-2xs ring-1 ring-slate-200/60">
+                      <div>
+                        <div className="text-xs font-extrabold text-slate-900">Agency Multi-Site</div>
+                        <div className="text-[11px] text-slate-500">12 Webflow clients live</div>
+                      </div>
+                      <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#146EF5]">
+                        Active
+                      </span>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-950">Agency Multi-Site Console</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Manage multiple client Webflow websites, platform secrets, feature flags, and
+                    clean embed deactivation from one dashboard.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== VISUAL SHOWCASE 2: ANALYTICS & REVENUE DASHBOARD GRAPHIC ===== */}
+        <section className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-24 sm:px-6 lg:grid-cols-2 lg:px-8">
+          {/* Analytics & Stripe Payout Graphic */}
+          <div className="order-2 lg:order-1">
+            <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_28px_70px_-15px_rgba(15,23,42,0.1)] sm:p-8">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Slotwise Funnel Analytics
+                  </div>
+                  <div className="text-lg font-extrabold text-slate-950">Booking Conversion &amp; Payouts</div>
+                </div>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-extrabold text-amber-900">
+                  Last 30 Days
+                </span>
               </div>
-            </article>
+
+              {/* KPI Strip */}
+              <div className="mt-5 grid grid-cols-3 gap-3">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-500">Completed</div>
+                  <div className="mt-1 text-xl font-extrabold text-slate-950">148</div>
+                  <div className="mt-0.5 text-[11px] font-bold text-emerald-600">+24% vs prior</div>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-500">Drop-off</div>
+                  <div className="mt-1 text-xl font-extrabold text-slate-950">5.8%</div>
+                  <div className="mt-0.5 text-[11px] font-bold text-emerald-600">Low friction</div>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-500">Gross Paid</div>
+                  <div className="mt-1 text-xl font-extrabold text-slate-950">$11,420</div>
+                  <div className="mt-0.5 text-[11px] font-bold text-amber-600">$0 Slotwise fee</div>
+                </div>
+              </div>
+
+              {/* Custom SVG Area Chart */}
+              <div className="mt-5 rounded-2xl border border-slate-100 bg-gradient-to-b from-amber-50/40 to-white p-4">
+                <div className="mb-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
+                  <span>Daily confirmed bookings</span>
+                  <span className="text-slate-900">Avg. 42s checkout</span>
+                </div>
+                <svg viewBox="0 0 420 120" className="w-full" fill="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="swChartGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.32" />
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M0 95 C45 92, 65 68, 105 72 C145 76, 175 42, 215 48 C255 54, 285 26, 330 30 C365 33, 390 14, 420 10 L420 120 L0 120 Z"
+                    fill="url(#swChartGrad)"
+                  />
+                  <path
+                    d="M0 95 C45 92, 65 68, 105 72 C145 76, 175 42, 215 48 C255 54, 285 26, 330 30 C365 33, 390 14, 420 10"
+                    stroke="#F59E0B"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="215" cy="48" r="4.5" fill="#0F172A" stroke="#FFFFFF" strokeWidth="2" />
+                  <circle cx="330" cy="30" r="4.5" fill="#0F172A" stroke="#FFFFFF" strokeWidth="2" />
+                  <circle cx="416" cy="11" r="5" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
+                </svg>
+              </div>
+
+              {/* Recent Transactions Mini Ledger */}
+              <div className="mt-4 space-y-2">
+                {[
+                  { client: "Elena R. · Architecture Audit", amount: "+$180.00", badge: "Paid" },
+                  { client: "Marcus V. · Brand Workshop", amount: "+$420.00", badge: "Paid" },
+                ].map((tx) => (
+                  <div
+                    key={tx.client}
+                    className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-3.5 py-2.5 text-xs"
+                  >
+                    <span className="font-bold text-slate-800">{tx.client}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-950">{tx.amount}</span>
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        {tx.badge}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Copy */}
+          <div className="order-1 lg:order-2">
+            <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-600">
+              Revenue &amp; Drop-Off Visibility
+            </span>
+            <h2
+              className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl"
+              style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
+            >
+              Turn website visitors into paid calendar slots.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-600">
+              See exactly where prospects drop off in your booking flow, eliminate login walls with
+              passwordless magic links, and collect Stripe Connect deposits without surrendering a
+              cut to your scheduling tool.
+            </p>
+            <ul className="mt-7 space-y-3 text-sm font-medium text-slate-700">
+              {[
+                "Real-time booking funnel tracking across every Webflow page",
+                "Automated confirmation, reminder, and magic-link reschedule emails",
+                "Customizable deposit rules to stop last-minute no-shows",
+                "Instant HubSpot & Mailchimp contact enrichment after checkout",
+              ].map((pt) => (
+                <li key={pt} className="flex items-start gap-3">
+                  <CheckIcon className="mt-0.5 h-5 w-5 text-amber-500" />
+                  <span>{pt}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href={`/book/${DEMO_PUBLIC_KEY}`}
+                className="sw-btn-dark rounded-full px-6 py-3 text-sm font-bold transition"
+              >
+                Experience the booking flow
+              </Link>
+              <Link
+                href="/login"
+                className="sw-btn-outline rounded-full px-6 py-3 text-sm font-bold transition"
+              >
+                Create free account
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -768,25 +1192,25 @@ export default async function HomePage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-600">
-                Simple Workflow
+                Simple Setup
               </span>
               <h2
                 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl"
                 style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
               >
-                From blank page to paid bookings in three steps.
+                Launch your Webflow calendar in three steps.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-slate-600">
-                Launch an appointment flow inside Webflow without custom backend code or fighting
-                iframe height bugs.
+                Go from an empty Webflow section to taking paid appointments in minutes — no
+                custom backend code required.
               </p>
             </div>
 
             <div className="mt-14 grid gap-6 lg:grid-cols-3">
               {STEPS.map((s) => (
-                <div
+                <article
                   key={s.n}
-                  className="relative flex flex-col rounded-3xl border border-slate-200/90 bg-white p-8 shadow-2xs"
+                  className="flex flex-col rounded-3xl border border-slate-200/90 bg-white p-8 shadow-2xs"
                 >
                   <div className="flex items-center justify-between">
                     <span
@@ -801,181 +1225,104 @@ export default async function HomePage() {
                   </div>
                   <h3 className="mt-6 text-xl font-extrabold text-slate-950">{s.title}</h3>
                   <p className="mt-3 text-sm leading-relaxed text-slate-600">{s.body}</p>
-                </div>
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ===== PRODUCT PROOF & INTERACTIVE MOCKUP ===== */}
-        <section className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-24 sm:px-6 lg:grid-cols-2 lg:px-8">
-          <div>
+        {/* ===== INDUSTRY USE CASES (SEO TOPICAL AUTHORITY) ===== */}
+        <section id="use-cases" className="scroll-mt-20 mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
             <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#146EF5]">
-              Conversion-First Flow
+              Built for Service Businesses
             </span>
             <h2
-              className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl"
+              className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-5xl"
               style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
             >
-              Smooth for your visitors. Powerful for your team.
+              Tailored for agencies, studios &amp; modern service brands.
             </h2>
-            <p className="mt-4 max-w-[46ch] text-base leading-relaxed text-slate-600">
-              Customers pick a service, choose a team member, and lock a time in one clean view.
-              You get instant deposits, magic-link rescheduling, and funnel drop-off analytics.
+            <p className="mt-4 text-base text-slate-600">
+              Whether you build Webflow websites for clients or run your own practice, Slotwise
+              adapts to your scheduling model.
             </p>
-            <ul className="mt-8 space-y-3.5 text-sm font-medium text-slate-700">
-              {[
-                "Real-time double-book locks with buffers & automatic time zones",
-                "Passwordless magic links for client self-reschedule & cancel",
-                "Optional team 'Who' picker plus HubSpot & Mailchimp contact sync",
-                "Webflow Designer extension for instant place-and-style control",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3">
-                  <CheckIcon className="mt-0.5 h-5 w-5 text-amber-500" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Link
-                href={`/book/${DEMO_PUBLIC_KEY}`}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
-              >
-                Open interactive live demo
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
-              >
-                Create workspace
-              </Link>
-            </div>
           </div>
 
-          {/* Crisp Light-Mode Booking Widget Mockup */}
-          <div className="relative">
-            <div className="pointer-events-none absolute -inset-4 rounded-[2.5rem] bg-gradient-to-tr from-amber-100/70 via-transparent to-blue-100/70 blur-2xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_28px_70px_-15px_rgba(15,23,42,0.12)] sm:p-8">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500 text-sm font-extrabold text-slate-950">
-                    S9
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            {USE_CASES.map((uc) => (
+              <article
+                key={uc.tag}
+                className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-8 shadow-2xs transition hover:border-amber-300 hover:shadow-md"
+              >
+                <div>
+                  <span
+                    className={`inline-block rounded-full border px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider ${uc.accent}`}
+                  >
+                    {uc.tag}
                   </span>
-                  <div>
-                    <div className="text-sm font-extrabold text-slate-950">Studio Nine</div>
-                    <div className="text-[11px] text-slate-500">Brand &amp; Webflow Consultancy</div>
+                  <h3 className="mt-4 text-xl font-extrabold text-slate-950">{uc.title}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-slate-600">{uc.body}</p>
+                </div>
+                <ul className="mt-6 grid gap-2 border-t border-slate-100 pt-5 sm:grid-cols-3">
+                  {uc.highlights.map((h) => (
+                    <li key={h} className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                      <CheckIcon className="h-3.5 w-3.5 text-amber-500" />
+                      <span>{h}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* ===== COMPARISON TABLE (SEO HIGH-INTENT SECTION) ===== */}
+        <section id="compare" className="scroll-mt-20 border-t border-slate-200/80 bg-slate-50/70 py-24">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-600">
+                Why Switch
+              </span>
+              <h2
+                className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl"
+                style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
+              >
+                Slotwise vs. generic iframe schedulers
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-base text-slate-600">
+                See why Webflow agencies choose a native Webflow calendar over pasting generic
+                third-party booking embeds.
+              </p>
+            </div>
+
+            <div className="mt-12 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+              <div className="grid grid-cols-[1.3fr_1fr_1fr] border-b border-slate-200 bg-slate-50 px-5 py-4 text-xs font-extrabold uppercase tracking-wider text-slate-500 sm:px-8">
+                <div>Capability</div>
+                <div className="text-amber-700">Slotwise (Webflow-Native)</div>
+                <div>Generic Iframe Tools</div>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {COMPARISON_ROWS.map((row) => (
+                  <div
+                    key={row.feature}
+                    className="grid grid-cols-[1.3fr_1fr_1fr] items-center gap-3 px-5 py-4 text-xs sm:px-8 sm:text-sm"
+                  >
+                    <div className="font-bold text-slate-900">{row.feature}</div>
+                    <div className="flex items-center gap-2 font-semibold text-emerald-700">
+                      <CheckIcon className="h-4 w-4 text-emerald-600" />
+                      <span>{row.slotwise}</span>
+                    </div>
+                    <div className="font-medium text-slate-500">{row.generic}</div>
                   </div>
-                </div>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-600/20">
-                  Live Widget
-                </span>
-              </div>
-
-              <div className="mt-5">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  1. Select a service
-                </div>
-                <div className="mt-2.5 space-y-2">
-                  {[
-                    { name: "Discovery Consultation", meta: "30 min · Free", selected: true },
-                    { name: "Webflow Architecture Audit", meta: "45 min · $80", selected: false },
-                    { name: "Design System Workshop", meta: "90 min · $210", selected: false },
-                  ].map((row) => (
-                    <div
-                      key={row.name}
-                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm transition ${
-                        row.selected
-                          ? "border-amber-400 bg-amber-50/70 shadow-2xs"
-                          : "border-slate-200/80 bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold text-slate-900">{row.name}</div>
-                        <div className="text-xs text-slate-500">{row.meta}</div>
-                      </div>
-                      {row.selected ? (
-                        <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-950">
-                          Selected
-                        </span>
-                      ) : (
-                        <span className="h-4 w-4 rounded-full border border-slate-300" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-5">
-                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  <span>2. Pick day &amp; time</span>
-                  <span className="text-slate-500 normal-case">America/New_York</span>
-                </div>
-                <div className="mt-2.5 grid grid-cols-4 gap-2">
-                  {[
-                    { day: "Mon", date: "16", active: false },
-                    { day: "Tue", date: "17", active: false },
-                    { day: "Wed", date: "18", active: true },
-                    { day: "Thu", date: "19", active: false },
-                  ].map((d) => (
-                    <div
-                      key={d.day}
-                      className={`rounded-xl border py-2.5 text-center transition ${
-                        d.active
-                          ? "border-slate-950 bg-slate-950 text-white shadow-sm"
-                          : "border-slate-200 bg-slate-50/70 text-slate-700"
-                      }`}
-                    >
-                      <div className={`text-[10px] font-semibold ${d.active ? "text-slate-300" : "text-slate-400"}`}>
-                        {d.day}
-                      </div>
-                      <div className="text-sm font-extrabold">{d.date}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-2.5 grid grid-cols-3 gap-2">
-                  {["09:30 AM", "11:00 AM", "02:15 PM"].map((slot, i) => (
-                    <div
-                      key={slot}
-                      className={`rounded-xl border py-2 text-center text-xs font-bold ${
-                        i === 1
-                          ? "border-amber-500 bg-amber-50 text-amber-900"
-                          : "border-slate-200 bg-white text-slate-700"
-                      }`}
-                    >
-                      {slot}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50 px-4 py-3">
-                <span className="text-xs font-bold text-slate-600">Auto video link</span>
-                <div className="flex gap-1.5">
-                  {["Meet", "Zoom", "Teams"].map((t, idx) => (
-                    <span
-                      key={t}
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                        idx === 0
-                          ? "bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200"
-                          : "text-slate-500"
-                      }`}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-5 w-full rounded-2xl bg-amber-500 py-3.5 text-center text-sm font-extrabold text-slate-950 shadow-md">
-                Confirm booking →
+                ))}
               </div>
             </div>
           </div>
         </section>
 
         {/* ===== PRICING (live backend catalog) ===== */}
-        <section id="pricing" className="scroll-mt-20 border-y border-slate-200/80 bg-slate-50/70 py-24">
+        <section id="pricing" className="scroll-mt-20 border-y border-slate-200/80 bg-white py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl">
               <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-600">
@@ -988,16 +1335,16 @@ export default async function HomePage() {
                 Priced for agencies. Zero booking tax.
               </h2>
               <p className="mt-4 text-base text-slate-600">
-                Start free and ship today. Upgrade only when you need team seats, advanced calendar
-                integrations, or AI scheduling chat — we never skim your Stripe payouts.
+                Start free and publish today. Upgrade only when you need team seats, multi-calendar
+                sync, or AI availability chat — we never skim your Stripe payouts.
               </p>
             </div>
 
             <PricingCards plans={plans} />
 
             <p className="mt-8 text-center text-xs font-medium text-slate-500">
-              Plan pricing updates live from your Slotwise catalog. Standard Stripe card processing
-              fees apply.
+              Live pricing synced from your Slotwise catalog. Standard Stripe card processing fees
+              apply.
             </p>
           </div>
         </section>
@@ -1006,16 +1353,16 @@ export default async function HomePage() {
         <section id="faq" className="scroll-mt-20 mx-auto max-w-4xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="text-center">
             <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-600">
-              FAQ
+              Frequently Asked Questions
             </span>
             <h2
               className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl"
               style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
             >
-              Frequently asked questions
+              Everything about Slotwise for Webflow
             </h2>
             <p className="mt-3 text-base text-slate-600">
-              Everything you need to know about embedding Slotwise in Webflow.
+              Answers on Webflow integration, Stripe payouts, SEO performance, and agency accounts.
             </p>
           </div>
 
@@ -1053,7 +1400,7 @@ export default async function HomePage() {
             <div className="relative z-10 mx-auto max-w-2xl">
               <Image
                 src="/logo.png"
-                alt="Slotwise icon"
+                alt="Slotwise Webflow booking app icon"
                 width={56}
                 height={56}
                 className="mx-auto rounded-2xl shadow-md ring-1 ring-slate-900/5"
@@ -1065,21 +1412,21 @@ export default async function HomePage() {
                 Make booking feel native to your Webflow brand.
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-base text-slate-600">
-                Launch your calendar in minutes, accept zero-commission Stripe deposits, and manage
-                every client site from one dashboard.
+                Launch your appointment calendar in minutes, keep 100% of your Stripe payouts, and
+                manage every client site from one clean console.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3.5">
                 <Link
                   href="/login"
-                  className="rounded-full bg-slate-950 px-8 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  className="sw-btn-dark rounded-full px-8 py-3.5 text-sm font-extrabold transition"
                 >
                   Start free now
                 </Link>
                 <Link
                   href={`/book/${DEMO_PUBLIC_KEY}`}
-                  className="rounded-full border border-slate-300 bg-white px-8 py-3.5 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
+                  className="sw-btn-outline rounded-full px-8 py-3.5 text-sm font-bold transition"
                 >
-                  View live demo
+                  Open live demo
                 </Link>
               </div>
             </div>
@@ -1088,7 +1435,7 @@ export default async function HomePage() {
       </main>
 
       {/* ===== FOOTER ===== */}
-      <footer className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-12 sm:px-6 lg:px-8">
+      <footer className="border-t border-slate-200/80 bg-slate-50/80 px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <Link href="/" className="flex items-center gap-2.5">
@@ -1100,9 +1447,10 @@ export default async function HomePage() {
                 Slotwise
               </span>
             </Link>
-            <p className="mt-3 max-w-[34ch] text-xs leading-relaxed text-slate-500">
-              Webflow-native appointment scheduling &amp; booking calendar for agencies and service
-              brands. © {new Date().getFullYear()} Slotwise by Hindara Labs.
+            <p className="mt-3 max-w-[36ch] text-xs leading-relaxed text-slate-500">
+              Webflow-native appointment scheduling &amp; booking calendar for agencies,
+              consultants, and service brands. © {new Date().getFullYear()} Slotwise by Hindara
+              Labs.
             </p>
           </div>
 
@@ -1111,31 +1459,37 @@ export default async function HomePage() {
               <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-900">
                 Product
               </div>
-              <div className="mt-3 flex flex-col gap-2.5 text-sm text-slate-600">
-                <a href="#features" className="hover:text-amber-600">
+              <div className="mt-3 flex flex-col gap-2.5 text-sm">
+                <a href="#features" className="sw-nav-link hover:underline">
                   Features
                 </a>
-                <a href="#pricing" className="hover:text-amber-600">
+                <a href="#use-cases" className="sw-nav-link hover:underline">
+                  Use cases
+                </a>
+                <a href="#compare" className="sw-nav-link hover:underline">
+                  Slotwise vs. Iframes
+                </a>
+                <a href="#pricing" className="sw-nav-link hover:underline">
                   Pricing
                 </a>
-                <Link href={`/book/${DEMO_PUBLIC_KEY}`} className="hover:text-amber-600">
+                <Link href={`/book/${DEMO_PUBLIC_KEY}`} className="sw-nav-link hover:underline">
                   Live demo
-                </Link>
-                <Link href="/login" className="hover:text-amber-600">
-                  Sign in
                 </Link>
               </div>
             </div>
 
             <div>
               <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-900">
-                Legal
+                Legal &amp; Account
               </div>
-              <div className="mt-3 flex flex-col gap-2.5 text-sm text-slate-600">
-                <Link href="/privacy" className="hover:text-amber-600">
+              <div className="mt-3 flex flex-col gap-2.5 text-sm">
+                <Link href="/login" className="sw-nav-link hover:underline">
+                  Sign in
+                </Link>
+                <Link href="/privacy" className="sw-nav-link hover:underline">
                   Privacy Policy
                 </Link>
-                <Link href="/terms" className="hover:text-amber-600">
+                <Link href="/terms" className="sw-nav-link hover:underline">
                   Terms of Service
                 </Link>
               </div>
@@ -1145,8 +1499,8 @@ export default async function HomePage() {
               <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-900">
                 Contact
               </div>
-              <div className="mt-3 flex flex-col gap-2.5 text-sm text-slate-600">
-                <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-amber-600">
+              <div className="mt-3 flex flex-col gap-2.5 text-sm">
+                <a href={`mailto:${CONTACT_EMAIL}`} className="sw-nav-link hover:underline">
                   {CONTACT_EMAIL}
                 </a>
               </div>
