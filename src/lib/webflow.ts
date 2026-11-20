@@ -47,14 +47,13 @@ export function webflowRedirectUri() {
 }
 
 export function webflowScopes() {
+  // Only scopes we actually call. Unused scopes (e.g. cms:*) risk Marketplace rejection.
   return [
     "authorized_user:read",
     "sites:read",
     "sites:write",
     "pages:read",
     "pages:write",
-    "cms:read",
-    "cms:write",
     "custom_code:read",
     "custom_code:write",
   ].join(" ");

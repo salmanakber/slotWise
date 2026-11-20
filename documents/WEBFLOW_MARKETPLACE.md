@@ -13,12 +13,12 @@ Redirect URI (production):
 
 After OAuth, users land on `/install?status=connected` then open **Designer → Apps → Slotwise → Launch App** to embed.
 
-## Scopes
-- `authorized_user:read`
-- `sites:read` `sites:write`
-- `pages:read` `pages:write`
-- `cms:read` `cms:write`
-- `custom_code:read` `custom_code:write`
+## Scopes (used — do not request CMS)
+- `authorized_user:read` — installer identity on OAuth
+- `sites:read` / `sites:write` — list/link sites; publish; site-level custom code lifecycle
+- `pages:read` / `pages:write` — list pages + page-level custom code cleanup on uninstall
+- `custom_code:read` / `custom_code:write` — register/apply/purge `widget.js`
+- **Do not request** `cms:read` / `cms:write` (unused)
 
 ## Listing
 
