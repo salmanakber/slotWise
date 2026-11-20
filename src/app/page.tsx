@@ -1465,6 +1465,9 @@ export default async function HomePage() {
                 <Link href="/login" className="sw-nav-link hover:underline">
                   Sign in
                 </Link>
+                <Link href="/docs/webflow" className="sw-nav-link hover:underline">
+                  Webflow docs
+                </Link>
                 <Link href="/privacy" className="sw-nav-link hover:underline">
                   Privacy Policy
                 </Link>

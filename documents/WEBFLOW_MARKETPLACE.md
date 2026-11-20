@@ -30,6 +30,9 @@ Bookings that look like your site. Slotwise adds paid scheduling to Webflow with
 
 **Long description:** see product README / prior Marketplace copy in chat history.
 
+## Documentation URL (Marketplace form)
+`https://slotwise.hindaralabs.com/docs/webflow`
+
 ## Support contact
 `tidyflaw@gmail.com`
 
