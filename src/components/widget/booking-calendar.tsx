@@ -278,7 +278,7 @@ export function BookingCalendar({
             </NavBtn>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-2.5">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {days.map((d) => {
             const iso = toIsoLocal(d);
             const past = d < today;
@@ -296,6 +296,7 @@ export function BookingCalendar({
                 line={line}
                 panel={panel}
                 radius={radius}
+                compact
                 onClick={() => onChange(iso)}
               />
             );
@@ -423,6 +424,7 @@ function DayCard({
   panel,
   radius,
   fixedWidth,
+  compact,
   onClick,
 }: {
   day: Date;
@@ -436,30 +438,37 @@ function DayCard({
   panel: string;
   radius: number;
   fixedWidth?: boolean;
+  /** Week strip: tighter 7-column cells */
+  compact?: boolean;
   onClick: () => void;
 }) {
   const glyph = on ? onAccent : mut;
+  const weekday = day.toLocaleDateString(undefined, { weekday: "short" });
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`sw-day-card flex flex-col items-center justify-center gap-1 border transition disabled:cursor-not-allowed disabled:opacity-35 ${
-        fixedWidth ? "h-[72px] w-[54px] shrink-0" : "min-h-[70px] w-full"
+      className={`sw-day-card flex flex-col items-center justify-center border transition disabled:cursor-not-allowed disabled:opacity-35 ${
+        fixedWidth
+          ? "h-[72px] w-[54px] shrink-0 gap-1"
+          : compact
+            ? "min-h-[64px] w-full gap-0.5 px-0.5 py-1.5"
+            : "min-h-[70px] w-full gap-1"
       }`}
       style={{
-        borderRadius: Math.max(radius - 4, 12),
+        borderRadius: Math.max(radius - (compact ? 6 : 4), compact ? 10 : 12),
         borderColor: on ? accent : line,
         background: on ? accent : panel,
         color: on ? onAccent : ink,
         boxShadow: on ? `0 6px 14px color-mix(in srgb, ${accent} 24%, transparent)` : "none",
       }}
     >
-      <CalendarGlyph color={glyph} />
-      <small style={{ color: on ? onAccent : mut }}>
-        {day.toLocaleDateString(undefined, { weekday: "short" })}
+      {!compact ? <CalendarGlyph color={glyph} /> : null}
+      <small style={{ color: on ? onAccent : mut, fontSize: compact ? 9 : undefined }}>
+        {compact ? weekday.slice(0, 2) : weekday}
       </small>
-      <b>{day.getDate()}</b>
+      <b style={compact ? { fontSize: 14 } : undefined}>{day.getDate()}</b>
     </button>
   );
 }

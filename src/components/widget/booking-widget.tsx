@@ -301,14 +301,15 @@ export function BookingWidget({
     return formatCustomerPrice(payCents, site.currency);
   }, [payCents, site]);
 
+  const calendarStyleRaw = String(branding?.calendarStyle || "MONTH").toUpperCase();
   const calendarStyle =
-    branding?.calendarStyle === "WEEK"
+    calendarStyleRaw === "WEEK"
       ? "WEEK"
-      : branding?.calendarStyle === "HORIZONTAL"
+      : calendarStyleRaw === "HORIZONTAL"
         ? "HORIZONTAL"
         : "MONTH";
   const isHorizontal = calendarStyle === "HORIZONTAL";
-  const calendarMode = calendarStyle === "WEEK" ? "WEEK" : "MONTH";
+  const calendarMode: "MONTH" | "WEEK" = calendarStyle === "WEEK" ? "WEEK" : "MONTH";
   // Prefer stripWidthPx; map legacy percent (50–100) onto 320–750px.
   const rawStrip = Number(branding?.stripWidthPx ?? 450) || 450;
   const stripWidthPx =
@@ -572,8 +573,15 @@ export function BookingWidget({
         .sw-widget h3 {
           font-size: 13px !important;
           font-weight: 800 !important;
-          line-height: 1.25 !important;
-          margin: 0 !important;
+          line-height: 1.3 !important;
+          margin-top: 0 !important;
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+          margin-bottom: 0 !important;
+        }
+        .sw-widget h3.sw-staff-head {
+          margin-bottom: 14px !important;
+          padding-bottom: 2px !important;
         }
         .sw-widget p {
           font-size: 12px !important;
@@ -932,8 +940,8 @@ export function BookingWidget({
 
               {branding?.showStaff !== false && site.staff.length > 0 ? (
                 <section className="min-w-0">
-                  <h3 className="sw-title-lg mb-3">Book with</h3>
-                  <div className="flex min-w-0 flex-wrap gap-2.5">
+                  <h3 className="sw-title-lg sw-staff-head">Book with</h3>
+                  <div className="flex min-w-0 flex-wrap gap-2.5 pt-0.5">
                     <StaffChip
                       label="Anyone"
                       active={!staffId}
@@ -1100,8 +1108,8 @@ export function BookingWidget({
 
             {branding?.showStaff !== false && site.staff.length > 0 ? (
               <section className="min-w-0">
-                <h3 className="sw-title-lg mb-3">Book with</h3>
-                <div className="flex min-w-0 flex-wrap gap-2.5">
+                <h3 className="sw-title-lg sw-staff-head">Book with</h3>
+                <div className="flex min-w-0 flex-wrap gap-2.5 pt-0.5">
                   <StaffChip
                     label="Anyone"
                     active={!staffId}
@@ -1133,6 +1141,7 @@ export function BookingWidget({
 
             <section className="min-w-0">
               <BookingCalendar
+                key={`cal-${calendarMode}`}
                 mode={calendarMode}
                 look="classic"
                 date={date}
