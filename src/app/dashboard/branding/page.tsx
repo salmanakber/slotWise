@@ -21,7 +21,8 @@ export default function BrandingPage() {
   const [font, setFont] = useState("Match my site");
   const [layout, setLayout] = useState<"INLINE" | "POPUP">("INLINE");
   const [calendarStyle, setCalendarStyle] = useState<"MONTH" | "WEEK" | "HORIZONTAL">("MONTH");
-  const [stripWidthPx, setStripWidthPx] = useState(360);
+  const [stripWidthPx, setStripWidthPx] = useState(450);
+  const [popupButtonText, setPopupButtonText] = useState("Book now");
   const [name, setName] = useState("Your business");
   const [showLoader, setShowLoader] = useState(true);
   const [loaderStyle, setLoaderStyle] = useState("PULSE");
@@ -45,6 +46,7 @@ export default function BrandingPage() {
       layout,
       calendarStyle,
       stripWidthPx,
+      popupButtonText,
       businessName: name,
       showStaff,
       showPrice,
@@ -68,6 +70,7 @@ export default function BrandingPage() {
       layout,
       calendarStyle,
       stripWidthPx,
+      popupButtonText,
       name,
       showStaff,
       showPrice,
@@ -122,9 +125,12 @@ export default function BrandingPage() {
           const n = data.stripWidthPx;
           const px =
             n > 0 && n <= 100
-              ? Math.round(280 + ((n - 50) / 50) * 240)
-              : Math.min(520, Math.max(280, n));
+              ? Math.round(320 + ((n - 50) / 50) * 430)
+              : Math.min(750, Math.max(320, n));
           setStripWidthPx(px);
+        }
+        if (typeof data.popupButtonText === "string" && data.popupButtonText.trim()) {
+          setPopupButtonText(data.popupButtonText.trim());
         }
         if (data.businessName) setName(data.businessName);
         if (typeof data.showLoader === "boolean") setShowLoader(data.showLoader);
@@ -176,6 +182,7 @@ export default function BrandingPage() {
           layout,
           calendarStyle,
           stripWidthPx,
+          popupButtonText,
           businessName: name,
           showStaff,
           showPrice,
@@ -320,12 +327,23 @@ export default function BrandingPage() {
             <Row label={`Strip width · ${stripWidthPx}px`}>
               <input
                 type="range"
-                min={280}
-                max={520}
+                min={320}
+                max={750}
                 step={10}
                 value={stripWidthPx}
                 onChange={(e) => setStripWidthPx(Number(e.target.value))}
                 className="w-full max-w-[220px]"
+              />
+            </Row>
+          ) : null}
+          {layout === "POPUP" ? (
+            <Row label="Popup button text">
+              <input
+                className="w-full max-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={popupButtonText}
+                maxLength={48}
+                onChange={(e) => setPopupButtonText(e.target.value)}
+                placeholder="Book now"
               />
             </Row>
           ) : null}

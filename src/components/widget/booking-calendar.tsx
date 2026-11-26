@@ -168,10 +168,10 @@ export function BookingCalendar({
 
     return (
       <div className="min-w-0">
-        <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="mb-3.5 flex items-start justify-between gap-2">
           <div>
             <h3 className="sw-title-lg m-0">Pick a day</h3>
-            <p className="sw-title-sm m-0 mt-0.5" style={{ color: mut }}>
+            <p className="sw-title-sm m-0 mt-1" style={{ color: mut }}>
               {label}
             </p>
           </div>
@@ -249,14 +249,14 @@ export function BookingCalendar({
 
     return (
       <div className="min-w-0">
-        <div className="mb-2.5 flex items-center justify-between gap-2">
+        <div className="mb-3.5 flex items-center justify-between gap-2">
           <div>
             <h3 className="sw-title-lg m-0">Choose a day</h3>
-            <p className="sw-title-sm m-0 mt-0.5" style={{ color: mut }}>
+            <p className="sw-title-sm m-0 mt-1" style={{ color: mut }}>
               {label}
             </p>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <NavBtn
               label="Previous week"
               disabled={!canPrev}
@@ -278,7 +278,7 @@ export function BookingCalendar({
             </NavBtn>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-2.5">
           {days.map((d) => {
             const iso = toIsoLocal(d);
             const past = d < today;
@@ -301,9 +301,9 @@ export function BookingCalendar({
             );
           })}
         </div>
-        <p className="mb-0 mt-2.5 text-center text-[11px]" style={{ color: mut }}>
-          Times in {timezone}
-        </p>
+        <div className="mt-3.5 flex justify-center">
+          <TzChip accent={accent} ink={ink} line={line} label={`Times in ${timezone}`} />
+        </div>
       </div>
     );
   }
@@ -315,9 +315,9 @@ export function BookingCalendar({
 
   return (
     <div className="min-w-0">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-3.5 flex items-center justify-between gap-2">
         <h3 className="sw-title-lg m-0">Choose a day</h3>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <NavBtn
             label="Earlier days"
             disabled={!canPrevStrip}
@@ -343,7 +343,7 @@ export function BookingCalendar({
         </div>
       </div>
       <div
-        className="sw-w-scroll flex gap-2 overflow-x-auto pb-1"
+        className="sw-w-scroll flex gap-2.5 overflow-x-auto px-0.5 pb-1.5"
         style={{ scrollbarWidth: "thin" }}
       >
         {days.map((d) => {
@@ -369,10 +369,45 @@ export function BookingCalendar({
           );
         })}
       </div>
-      <p className="mb-0 mt-2 text-[11px]" style={{ color: mut }}>
-        {monthLabel} · times in {timezone}
-      </p>
+      <div className="mt-3">
+        <TzChip
+          accent={accent}
+          ink={ink}
+          line={line}
+          label={`${monthLabel} · times in ${timezone}`}
+        />
+      </div>
     </div>
+  );
+}
+
+function TzChip({
+  label,
+  accent,
+  ink,
+  line,
+}: {
+  label: string;
+  accent: string;
+  ink: string;
+  line: string;
+}) {
+  return (
+    <span
+      className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-wide"
+      style={{
+        borderColor: line,
+        color: `color-mix(in srgb, ${ink} 62%, transparent)`,
+        background: `color-mix(in srgb, ${accent} 8%, transparent)`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{ background: accent }}
+      />
+      {label}
+    </span>
   );
 }
 

@@ -1268,8 +1268,12 @@ export async function boot(root: HTMLElement) {
         </select>
       </label>
       <label class="field" id="stripWidthField" style="${state.branding?.calendarStyle === "HORIZONTAL" ? "display:none" : ""}">
-        <span>Strip width · <span id="stripWidthVal">${Math.min(520, Math.max(280, state.branding?.stripWidthPx ?? 360))}</span>px</span>
-        <input type="range" id="brandStripWidth" min="280" max="520" step="10" value="${Math.min(520, Math.max(280, state.branding?.stripWidthPx ?? 360))}" />
+        <span>Strip width · <span id="stripWidthVal">${Math.min(750, Math.max(320, state.branding?.stripWidthPx ?? 450))}</span>px</span>
+        <input type="range" id="brandStripWidth" min="320" max="750" step="10" value="${Math.min(750, Math.max(320, state.branding?.stripWidthPx ?? 450))}" />
+      </label>
+      <label class="field" id="popupButtonField" style="${state.branding?.layout === "POPUP" || state.branding?.layout === "FLOATING" ? "" : "display:none"}">
+        <span>Popup button text</span>
+        <input type="text" id="brandPopupButton" maxlength="48" value="${escapeHtml(state.branding?.popupButtonText || "Book now")}" placeholder="Book now" />
       </label>
       <button type="button" class="btn btn-primary btn-block" id="saveBranding">
         ${iconLabel(icons.check, "Save branding")}
@@ -1847,7 +1851,9 @@ export async function boot(root: HTMLElement) {
     const stripWidthInput = root.querySelector("#brandStripWidth") as HTMLInputElement | null;
     const stripWidthVal = root.querySelector("#stripWidthVal");
     const stripWidthField = root.querySelector("#stripWidthField") as HTMLElement | null;
+    const popupButtonField = root.querySelector("#popupButtonField") as HTMLElement | null;
     const calendarStyleEl = root.querySelector("#brandCalendarStyle") as HTMLSelectElement | null;
+    const layoutStyleEl = root.querySelector("#brandLayout") as HTMLSelectElement | null;
     stripWidthInput?.addEventListener("input", () => {
       if (stripWidthVal) stripWidthVal.textContent = stripWidthInput.value;
     });
@@ -1856,8 +1862,14 @@ export async function boot(root: HTMLElement) {
       stripWidthField.style.display =
         calendarStyleEl.value === "HORIZONTAL" ? "none" : "";
     };
+    const syncPopupButtonField = () => {
+      if (!popupButtonField || !layoutStyleEl) return;
+      popupButtonField.style.display = layoutStyleEl.value === "POPUP" ? "" : "none";
+    };
     calendarStyleEl?.addEventListener("change", syncStripField);
+    layoutStyleEl?.addEventListener("change", syncPopupButtonField);
     syncStripField();
+    syncPopupButtonField();
 
     root.querySelector("#saveBranding")?.addEventListener("click", async () => {
       if (!state.bootstrap) return;
@@ -1867,6 +1879,7 @@ export async function boot(root: HTMLElement) {
       const layoutEl = root.querySelector("#brandLayout") as HTMLSelectElement | null;
       const calendarEl = root.querySelector("#brandCalendarStyle") as HTMLSelectElement | null;
       const stripEl = root.querySelector("#brandStripWidth") as HTMLInputElement | null;
+      const popupBtnEl = root.querySelector("#brandPopupButton") as HTMLInputElement | null;
       try {
         setStatus("Saving branding…");
         const res = await api.patchBranding({
@@ -1879,6 +1892,7 @@ export async function boot(root: HTMLElement) {
           layout: (layoutEl?.value as "INLINE" | "POPUP") || undefined,
           calendarStyle: (calendarEl?.value as "MONTH" | "WEEK" | "HORIZONTAL") || undefined,
           stripWidthPx: stripEl ? Number(stripEl.value) : undefined,
+          popupButtonText: popupBtnEl?.value?.trim() || undefined,
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;

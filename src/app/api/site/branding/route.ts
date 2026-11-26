@@ -17,7 +17,8 @@ const patchSchema = z.object({
   font: z.string().min(1).optional(),
   layout: z.enum(["INLINE", "POPUP"]).optional(),
   calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
-  stripWidthPx: z.number().int().min(280).max(520).optional(),
+  stripWidthPx: z.number().int().min(320).max(750).optional(),
+  popupButtonText: z.string().min(1).max(48).optional(),
   businessName: z.string().max(120).optional(),
   showStaff: z.boolean().optional(),
   showPrice: z.boolean().optional(),
@@ -57,12 +58,12 @@ const patchSchema = z.object({
 
 function normalizeStripWidthPx(raw: unknown): number {
   const n = Number(raw);
-  if (!Number.isFinite(n)) return 360;
-  // Legacy percent values (50–100) → map onto 280–520px
+  if (!Number.isFinite(n)) return 450;
+  // Legacy percent values (50–100) → map onto 320–750px
   if (n > 0 && n <= 100) {
-    return Math.round(280 + ((n - 50) / 50) * 240);
+    return Math.round(320 + ((n - 50) / 50) * 430);
   }
-  return Math.min(520, Math.max(280, Math.round(n)));
+  return Math.min(750, Math.max(320, Math.round(n)));
 }
 
 function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
@@ -90,6 +91,9 @@ function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
     stripWidthPx: normalizeStripWidthPx(
       (branding as { stripWidthPx?: number | null })?.stripWidthPx,
     ),
+    popupButtonText:
+      ((branding as { popupButtonText?: string | null })?.popupButtonText || "").trim() ||
+      "Book now",
     businessName: branding?.businessName || site.name,
     showStaff: branding?.showStaff ?? true,
     showPrice: branding?.showPrice ?? true,
@@ -162,6 +166,9 @@ export async function PATCH(request: Request) {
       ...(body.stripWidthPx !== undefined
         ? { stripWidthPx: normalizeStripWidthPx(body.stripWidthPx) }
         : {}),
+      ...(body.popupButtonText !== undefined
+        ? { popupButtonText: body.popupButtonText.trim() || "Book now" }
+        : {}),
       ...(body.businessName !== undefined ? { businessName: body.businessName } : {}),
       ...(body.showStaff !== undefined ? { showStaff: body.showStaff } : {}),
       ...(body.showPrice !== undefined ? { showPrice: body.showPrice } : {}),
@@ -189,7 +196,8 @@ export async function PATCH(request: Request) {
         buttonStyle: theme?.button ?? "solid",
         layout: body.layout ?? "INLINE",
         calendarStyle: body.calendarStyle ?? "MONTH",
-        stripWidthPx: normalizeStripWidthPx(body.stripWidthPx ?? 360),
+        stripWidthPx: normalizeStripWidthPx(body.stripWidthPx ?? 450),
+        popupButtonText: body.popupButtonText?.trim() || "Book now",
         businessName: body.businessName ?? site.name,
         showStaff: body.showStaff ?? true,
         showPrice: body.showPrice ?? true,

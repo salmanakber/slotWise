@@ -24,7 +24,8 @@ const patchSchema = z.object({
   font: z.string().min(1).optional(),
   layout: z.enum(["INLINE", "POPUP"]).optional(),
   calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
-  stripWidthPx: z.number().int().min(280).max(520).optional(),
+  stripWidthPx: z.number().int().min(320).max(750).optional(),
+  popupButtonText: z.string().min(1).max(48).optional(),
 });
 
 type BrandingRow = {
@@ -36,16 +37,17 @@ type BrandingRow = {
   layout?: string | null;
   calendarStyle?: string | null;
   stripWidthPx?: number | null;
+  popupButtonText?: string | null;
   businessName?: string | null;
 };
 
 function normalizeStripWidthPx(raw: unknown): number {
   const n = Number(raw);
-  if (!Number.isFinite(n)) return 360;
+  if (!Number.isFinite(n)) return 450;
   if (n > 0 && n <= 100) {
-    return Math.round(280 + ((n - 50) / 50) * 240);
+    return Math.round(320 + ((n - 50) / 50) * 430);
   }
-  return Math.min(520, Math.max(280, Math.round(n)));
+  return Math.min(750, Math.max(320, Math.round(n)));
 }
 
 function readInk(branding: BrandingRow | null | undefined, fallback: string) {
@@ -70,6 +72,7 @@ function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteFor
           ? "HORIZONTAL"
           : "MONTH",
     stripWidthPx: normalizeStripWidthPx(branding?.stripWidthPx),
+    popupButtonText: (branding?.popupButtonText || "").trim() || "Book now",
     businessName: branding?.businessName ?? site.name,
     theme,
   };
@@ -109,6 +112,10 @@ export async function PATCH(request: Request) {
       calendarStyle: body.calendarStyle,
       stripWidthPx:
         body.stripWidthPx !== undefined ? normalizeStripWidthPx(body.stripWidthPx) : undefined,
+      popupButtonText:
+        body.popupButtonText !== undefined
+          ? body.popupButtonText.trim() || "Book now"
+          : undefined,
       buttonStyle: theme?.button,
     };
 
@@ -121,6 +128,7 @@ export async function PATCH(request: Request) {
       ...(data.layout !== undefined ? { layout: data.layout } : {}),
       ...(data.calendarStyle !== undefined ? { calendarStyle: data.calendarStyle } : {}),
       ...(data.stripWidthPx !== undefined ? { stripWidthPx: data.stripWidthPx } : {}),
+      ...(data.popupButtonText !== undefined ? { popupButtonText: data.popupButtonText } : {}),
       ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
     };
 
@@ -136,7 +144,8 @@ export async function PATCH(request: Request) {
         buttonStyle: data.buttonStyle ?? theme?.button ?? "solid",
         layout: data.layout ?? "INLINE",
         calendarStyle: data.calendarStyle ?? "MONTH",
-        stripWidthPx: data.stripWidthPx ?? 360,
+        stripWidthPx: data.stripWidthPx ?? 450,
+        popupButtonText: data.popupButtonText ?? "Book now",
         businessName: site.name,
         ...(data.inkColor !== undefined
           ? { inkColor: data.inkColor }

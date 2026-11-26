@@ -224,7 +224,9 @@ model Branding {
   /** Booking calendar UI: MONTH, WEEK, or HORIZONTAL (wide 3-column board). */
   calendarStyle String      @default("MONTH")
   /** Day/Week strip fixed width in px on customer sites. Ignored for Wide board. */
-  stripWidthPx  Int         @default(360)
+  stripWidthPx  Int         @default(450)
+  /** CTA label when layout is POPUP. */
+  popupButtonText String    @default("Book now")
   businessName String?
   showStaff    Boolean      @default(true)
   showPrice    Boolean      @default(true)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { BrandLoader } from "@/components/brand/loader";
 import { BookingCalendar } from "@/components/widget/booking-calendar";
 import { CalendarChat } from "@/components/widget/calendar-chat";
@@ -33,6 +34,7 @@ type SitePayload = {
     layout: string;
     calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL" | string;
     stripWidthPx?: number | null;
+    popupButtonText?: string | null;
     businessName: string | null;
     showStaff: boolean;
     showPrice: boolean;
@@ -87,6 +89,7 @@ export type BrandingPreview = {
   layout?: string;
   calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL" | string;
   stripWidthPx?: number | null;
+  popupButtonText?: string | null;
   businessName?: string | null;
   showStaff?: boolean;
   showPrice?: boolean;
@@ -306,13 +309,15 @@ export function BookingWidget({
         : "MONTH";
   const isHorizontal = calendarStyle === "HORIZONTAL";
   const calendarMode = calendarStyle === "WEEK" ? "WEEK" : "MONTH";
-  // Prefer stripWidthPx; map legacy percent (50–100) onto 280–520px.
-  const rawStrip = Number(branding?.stripWidthPx ?? 360) || 360;
+  // Prefer stripWidthPx; map legacy percent (50–100) onto 320–750px.
+  const rawStrip = Number(branding?.stripWidthPx ?? 450) || 450;
   const stripWidthPx =
     rawStrip > 0 && rawStrip <= 100
-      ? Math.round(280 + ((rawStrip - 50) / 50) * 240)
-      : Math.min(520, Math.max(280, Math.round(rawStrip)));
+      ? Math.round(320 + ((rawStrip - 50) / 50) * 430)
+      : Math.min(750, Math.max(320, Math.round(rawStrip)));
   const logoSrc = publicApiUrl("/logo.png", originBase);
+  const popupButtonText =
+    (branding?.popupButtonText || "").trim() || "Book now";
 
   useEffect(() => {
     if (!site) return;
@@ -330,7 +335,21 @@ export function BookingWidget({
     };
     apply(root);
     apply(host);
-  }, [site, stripWidthPx, isHorizontal, calendarStyle, step]);
+  }, [site, stripWidthPx, isHorizontal, calendarStyle, step, floatingOpen]);
+
+  useEffect(() => {
+    if (!floatingOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFloatingOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [floatingOpen]);
 
   function goToCheckout(url: string) {
     // Prefer _top so Webflow/iframe embeds leave the frame for Stripe Checkout
@@ -569,12 +588,17 @@ export function BookingWidget({
         .sw-widget .sw-title-lg {
           font-size: 13.5px !important;
           font-weight: 800 !important;
-          line-height: 1.25 !important;
+          line-height: 1.3 !important;
+          margin-bottom: 0 !important;
         }
         .sw-widget .sw-title-sm {
           font-size: 11px !important;
           font-weight: 600 !important;
-          line-height: 1.3 !important;
+          line-height: 1.4 !important;
+        }
+        .sw-widget .sw-tz-chip {
+          font-size: 10px !important;
+          line-height: 1.2 !important;
         }
         .sw-widget .sw-day-card small {
           font-size: 10px !important;
@@ -712,7 +736,7 @@ export function BookingWidget({
       </header>
 
       <div
-        className={`relative grid min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-hidden overflow-y-auto px-4 py-4 ${
+        className={`relative grid min-h-0 min-w-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 ${
           isHorizontal ? "sm:px-5 sm:py-5" : ""
         }`}
       >
@@ -861,7 +885,7 @@ export function BookingWidget({
                     {site.services.length} available
                   </span>
                 </div>
-                <div className="sw-w-scroll sw-w-svc-list grid max-h-[220px] gap-2 overflow-y-auto pb-0.5">
+                <div className="sw-w-scroll sw-w-svc-list grid max-h-[220px] gap-2.5 overflow-y-auto p-1">
                   {site.services.map((s) => {
                     const on = s.id === serviceId;
                     const priceLabel =
@@ -875,7 +899,7 @@ export function BookingWidget({
                         onClick={() => setServiceId(s.id)}
                         className="group flex min-h-[48px] w-full min-w-0 items-center justify-between gap-2.5 border px-3.5 py-3 text-left transition"
                         style={{
-                          borderRadius: Math.max(radius - 6, 10),
+                          borderRadius: Math.max(radius - 4, 12),
                           borderColor: on ? accent : line,
                           background: on
                             ? `color-mix(in srgb, ${accent} 12%, ${panel})`
@@ -908,8 +932,8 @@ export function BookingWidget({
 
               {branding?.showStaff !== false && site.staff.length > 0 ? (
                 <section className="min-w-0">
-                  <h3 className="sw-title-lg mb-2">Who</h3>
-                  <div className="flex min-w-0 flex-wrap gap-2">
+                  <h3 className="sw-title-lg mb-3">Book with</h3>
+                  <div className="flex min-w-0 flex-wrap gap-2.5">
                     <StaffChip
                       label="Anyone"
                       active={!staffId}
@@ -1010,23 +1034,23 @@ export function BookingWidget({
                   })
                 )}
               </div>
-              <p className="mb-0 mt-2.5 text-[12px]" style={{ color: mut }}>
-                Times shown in {site.timezone}
-              </p>
+              <div className="mt-3">
+                <TzChip accent={accent} ink={ink} line={line} label={`Times in ${site.timezone}`} />
+              </div>
             </section>
           </div>
         ) : null}
 
         {step === "pick" && !isHorizontal ? (
-          <div className="sw-w-rise grid min-w-0 gap-2.5">
+          <div className="sw-w-rise grid min-w-0 gap-4">
             <section className="min-w-0">
-              <div className="mb-1.5 flex min-w-0 items-end justify-between gap-2">
+              <div className="mb-2.5 flex min-w-0 items-end justify-between gap-2">
                 <h3 className="sw-title-lg">Service</h3>
                 <span className="sw-title-sm shrink-0" style={{ color: mut }}>
                   {site.services.length} available
                 </span>
               </div>
-              <div className="sw-w-scroll grid max-h-[132px] gap-1.5 overflow-y-auto pb-0.5">
+              <div className="sw-w-scroll grid max-h-[148px] gap-2 overflow-y-auto p-1">
                 {site.services.map((s) => {
                   const on = s.id === serviceId;
                   const priceLabel =
@@ -1038,9 +1062,9 @@ export function BookingWidget({
                       key={s.id}
                       type="button"
                       onClick={() => setServiceId(s.id)}
-                      className="group flex min-h-[40px] w-full min-w-0 items-center justify-between gap-2 border px-2.5 py-2 text-left transition"
+                      className="group flex min-h-[44px] w-full min-w-0 items-center justify-between gap-2 border px-3 py-2.5 text-left transition"
                       style={{
-                        borderRadius: Math.max(radius - 6, 10),
+                        borderRadius: Math.max(radius - 4, 12),
                         borderColor: on ? accent : line,
                         background: on
                           ? `color-mix(in srgb, ${accent} 12%, ${panel})`
@@ -1076,8 +1100,8 @@ export function BookingWidget({
 
             {branding?.showStaff !== false && site.staff.length > 0 ? (
               <section className="min-w-0">
-                <h3 className="sw-title-lg mb-2">Who</h3>
-                <div className="flex min-w-0 flex-wrap gap-2">
+                <h3 className="sw-title-lg mb-3">Book with</h3>
+                <div className="flex min-w-0 flex-wrap gap-2.5">
                   <StaffChip
                     label="Anyone"
                     active={!staffId}
@@ -1128,9 +1152,9 @@ export function BookingWidget({
             </section>
 
             <section className="min-w-0">
-              <div className="mb-2">
+              <div className="mb-3">
                 <h3 className="sw-title-lg m-0">Select time</h3>
-                <p className="sw-title-sm m-0 mt-0.5" style={{ color: mut }}>
+                <p className="sw-title-sm m-0 mt-1" style={{ color: mut }}>
                   {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
                     weekday: "long",
                     month: "long",
@@ -1142,7 +1166,7 @@ export function BookingWidget({
                 </p>
               </div>
               <div
-                className={`sw-w-scroll sw-w-times max-h-[260px] w-full min-w-0 overflow-y-auto pb-0.5 ${
+                className={`sw-w-scroll sw-w-times max-h-[260px] w-full min-w-0 overflow-y-auto p-1 ${
                   calendarStyle === "WEEK" ? "is-compact" : ""
                 }`}
               >
@@ -1428,39 +1452,100 @@ export function BookingWidget({
     return <div className="sw-w-rise w-full">{panelNode}</div>;
   }
 
+  const popupOverlay =
+    floatingOpen && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="sw-w-backdrop sw-popup-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Book an appointment"
+          >
+            <style>{`
+              .sw-popup-overlay {
+                position: fixed !important;
+                inset: 0 !important;
+                z-index: 2147483000 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 16px !important;
+                margin: 0 !important;
+                background: rgba(8, 12, 20, 0.52) !important;
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                box-sizing: border-box !important;
+              }
+              .sw-popup-panel {
+                position: relative !important;
+                z-index: 1 !important;
+                width: min(100%, ${isHorizontal ? 980 : stripWidthPx}px) !important;
+                max-width: 100% !important;
+                max-height: min(92vh, 860px) !important;
+                overflow: auto !important;
+                margin: 0 auto !important;
+              }
+            `}</style>
+            <button
+              type="button"
+              aria-label="Close booking"
+              className="absolute inset-0 cursor-default border-0 bg-transparent p-0"
+              onClick={() => setFloatingOpen(false)}
+            />
+            <div className="sw-w-pop sw-popup-panel">{panelNode}</div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className="relative min-h-[72px] w-full">
-      {floatingOpen ? (
-        <div
-          className="sw-w-backdrop fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-3 backdrop-blur-[2px] sm:items-center"
-          role="dialog"
-          aria-modal="true"
+      {popupOverlay}
+      <div className="sw-w-rise flex justify-center py-2">
+        <button
+          type="button"
+          className="rounded-full px-5 py-3 text-[13px] font-extrabold shadow-md transition hover:brightness-105"
+          style={{
+            background: accent,
+            color: onAccent,
+            boxShadow: `0 10px 24px color-mix(in srgb, ${accent} 32%, transparent)`,
+          }}
+          onClick={() => setFloatingOpen(true)}
         >
-          <button
-            type="button"
-            aria-label="Close booking"
-            className="absolute inset-0 cursor-default"
-            onClick={() => setFloatingOpen(false)}
-          />
-          <div className="sw-w-pop relative z-[1] w-full max-w-[32rem]">{panelNode}</div>
-        </div>
-      ) : (
-        <div className="sw-w-rise flex justify-center py-2">
-          <button
-            type="button"
-            className="rounded-full px-5 py-3 text-[13px] font-extrabold shadow-md transition hover:brightness-105"
-            style={{
-              background: accent,
-              color: onAccent,
-              boxShadow: `0 10px 24px color-mix(in srgb, ${accent} 32%, transparent)`,
-            }}
-            onClick={() => setFloatingOpen(true)}
-          >
-            Book now
-          </button>
-        </div>
-      )}
+          {popupButtonText}
+        </button>
+      </div>
     </div>
+  );
+}
+
+function TzChip({
+  label,
+  accent,
+  ink,
+  line,
+}: {
+  label: string;
+  accent: string;
+  ink: string;
+  line: string;
+}) {
+  return (
+    <span
+      className="sw-tz-chip inline-flex max-w-full items-center gap-1.5 truncate rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-wide"
+      style={{
+        borderColor: line,
+        color: `color-mix(in srgb, ${ink} 62%, transparent)`,
+        background: `color-mix(in srgb, ${accent} 8%, transparent)`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{ background: accent }}
+      />
+      {label}
+    </span>
   );
 }
 
