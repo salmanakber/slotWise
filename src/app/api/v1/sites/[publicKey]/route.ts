@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
 import { BookingError, loadSiteBundle } from "@/lib/booking/create";
+import { publicCorsOptions, publicJson } from "@/lib/cors";
 import { canUse } from "@/lib/plan-entitlements";
 import { prisma } from "@/lib/prisma";
 import { getTheme } from "@/lib/themes";
 import { validateWebflowConnection } from "@/lib/webflow-uninstall";
+
+export async function OPTIONS() {
+  return publicCorsOptions();
+}
 
 export async function GET(
   _request: Request,
@@ -23,7 +27,7 @@ export async function GET(
     const site = await loadSiteBundle(publicKey);
     const theme = getTheme(site.branding?.themeKey ?? "amber-light");
     const inkColor = site.branding?.inkColor || theme.ink;
-    return NextResponse.json({
+    return publicJson({
       publicKey: site.publicKey,
       name: site.name,
       timezone: site.timezone,
@@ -54,8 +58,11 @@ export async function GET(
     });
   } catch (e) {
     if (e instanceof BookingError) {
-      return NextResponse.json({ error: e.message, code: e.code }, { status: e.code === "NOT_FOUND" ? 404 : 400 });
+      return publicJson(
+        { error: e.message, code: e.code },
+        { status: e.code === "NOT_FOUND" ? 404 : 400 },
+      );
     }
-    return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+    return publicJson({ error: "Database unavailable" }, { status: 503 });
   }
 }

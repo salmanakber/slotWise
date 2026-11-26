@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { BookingError, createBooking } from "@/lib/booking/create";
+import { publicCorsOptions, publicJson } from "@/lib/cors";
 
 const bodySchema = z.object({
   serviceId: z.string().min(1),
@@ -12,6 +12,10 @@ const bodySchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
+export async function OPTIONS() {
+  return publicCorsOptions();
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ publicKey: string }> },
@@ -20,7 +24,10 @@ export async function POST(
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid booking payload", details: parsed.error.flatten() }, { status: 400 });
+    return publicJson(
+      { error: "Invalid booking payload", details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
 
   try {
@@ -35,7 +42,7 @@ export async function POST(
       notes: parsed.data.notes,
     });
 
-    return NextResponse.json(
+    return publicJson(
       {
         id: booking.id,
         reference: booking.reference,
@@ -66,9 +73,9 @@ export async function POST(
             : e.code === "LIMIT_REACHED"
               ? 403
               : 400;
-      return NextResponse.json({ error: e.message, code: e.code }, { status });
+      return publicJson({ error: e.message, code: e.code }, { status });
     }
     console.error(e);
-    return NextResponse.json({ error: "Could not create booking" }, { status: 500 });
+    return publicJson({ error: "Could not create booking" }, { status: 500 });
   }
 }

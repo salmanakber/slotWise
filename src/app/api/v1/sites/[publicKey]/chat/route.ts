@@ -1,11 +1,15 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { answerCalendarQuestion } from "@/lib/ai-calendar-chat";
 import { BookingError, createBooking, loadSiteBundle } from "@/lib/booking/create";
+import { publicCorsOptions, publicJson } from "@/lib/cors";
 import { canUse } from "@/lib/plan-entitlements";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+export async function OPTIONS() {
+  return publicCorsOptions();
+}
 
 const bodySchema = z.object({
   message: z.string().trim().min(1).max(500).optional(),
@@ -32,16 +36,16 @@ export async function POST(
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid chat request" }, { status: 400 });
+    return publicJson({ error: "Invalid chat request" }, { status: 400 });
   }
 
   try {
     const site = await loadSiteBundle(publicKey);
     if (!site.calendarChatEnabled) {
-      return NextResponse.json({ error: "Calendar chat is turned off" }, { status: 403 });
+      return publicJson({ error: "Calendar chat is turned off" }, { status: 403 });
     }
     if (!canUse(site.plan?.tier, "ai_calendar_chat")) {
-      return NextResponse.json(
+      return publicJson(
         { error: "Calendar chat is available on Business and Agency plans" },
         { status: 403 },
       );
@@ -58,7 +62,7 @@ export async function POST(
         customerPhone: parsed.data.book.customerPhone || undefined,
         notes: "Booked via calendar chat",
       });
-      return NextResponse.json({
+      return publicJson({
         booked: true,
         reference: booking.reference,
         manageToken: booking.manageToken,
@@ -74,7 +78,7 @@ export async function POST(
     }
 
     if (!parsed.data.message?.trim()) {
-      return NextResponse.json({ error: "Message required" }, { status: 400 });
+      return publicJson({ error: "Message required" }, { status: 400 });
     }
 
     let session =
@@ -98,7 +102,7 @@ export async function POST(
     }
 
     if (session.messageCount >= 40) {
-      return NextResponse.json(
+      return publicJson(
         { error: "This chat reached its message limit. Start a new chat." },
         { status: 429 },
       );
@@ -154,7 +158,7 @@ export async function POST(
         priceCents: s.priceCents,
       }));
 
-    return NextResponse.json({
+    return publicJson({
       sessionId: session.id,
       reply: answer.reply,
       source: answer.source,
@@ -165,13 +169,13 @@ export async function POST(
     });
   } catch (e) {
     if (e instanceof BookingError) {
-      return NextResponse.json(
+      return publicJson(
         { error: e.message, code: e.code },
         { status: e.code === "NOT_FOUND" ? 404 : 400 },
       );
     }
     console.error("[calendar-chat]", e);
-    return NextResponse.json({ error: "Chat unavailable" }, { status: 503 });
+    return publicJson({ error: "Chat unavailable" }, { status: 503 });
   }
 }
 
@@ -182,7 +186,7 @@ export async function GET(
   const { publicKey } = await context.params;
   try {
     const site = await loadSiteBundle(publicKey);
-    return NextResponse.json({
+    return publicJson({
       enabled: Boolean(site.calendarChatEnabled && canUse(site.plan?.tier, "ai_calendar_chat")),
       prompts: [
         "What’s available today?",
@@ -193,11 +197,11 @@ export async function GET(
     });
   } catch (e) {
     if (e instanceof BookingError) {
-      return NextResponse.json(
+      return publicJson(
         { error: e.message },
         { status: e.code === "NOT_FOUND" ? 404 : 400 },
       );
     }
-    return NextResponse.json({ error: "Unavailable" }, { status: 503 });
+    return publicJson({ error: "Unavailable" }, { status: 503 });
   }
 }

@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
   },
-  // SRI on published Webflow pages needs CORS on the runtime script.
+  // In-page Webflow embed: script + public booking APIs must be CORS-readable.
   async headers() {
     return [
       {
@@ -16,9 +16,19 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, HEAD, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "*" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Accept" },
           { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
           { key: "Timing-Allow-Origin", value: "*" },
+        ],
+      },
+      {
+        source: "/api/v1/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, PATCH, DELETE, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Accept, Authorization" },
+          { key: "Access-Control-Max-Age", value: "86400" },
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
         ],
       },
     ];

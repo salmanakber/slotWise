@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
+import { publicCorsOptions, publicJson } from "@/lib/cors";
 import { createMeetingLink, listMeetingTools } from "@/lib/meeting-tools";
 import { createOwnerNotification } from "@/lib/owner-notifications";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+export async function OPTIONS() {
+  return publicCorsOptions();
+}
 
 const bodySchema = z.object({
   provider: z.enum(["zoom", "meet", "google_calendar", "teams"]),
@@ -26,10 +30,10 @@ export async function GET(
     },
   });
   if (!booking || booking.status === "CANCELLED") {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    return publicJson({ error: "Booking not found" }, { status: 404 });
   }
   const tools = await listMeetingTools(booking.siteId);
-  return NextResponse.json({
+  return publicJson({
     meetingUrl: booking.meetingUrl,
     meetingProvider: booking.meetingProvider,
     tools: booking.meetingUrl ? [] : tools,
@@ -44,7 +48,7 @@ export async function POST(
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json(
+    return publicJson(
       { error: "Pick a partner app (Zoom, Meet, Teams, or Google Calendar)" },
       { status: 400 },
     );
@@ -55,10 +59,10 @@ export async function POST(
     include: { service: true, site: true },
   });
   if (!booking || booking.status === "CANCELLED") {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    return publicJson({ error: "Booking not found" }, { status: 404 });
   }
   if (booking.meetingUrl) {
-    return NextResponse.json({
+    return publicJson({
       meetingUrl: booking.meetingUrl,
       meetingProvider: booking.meetingProvider,
       alreadySet: true,
@@ -110,13 +114,13 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({
+    return publicJson({
       meetingUrl: updated.meetingUrl,
       meetingProvider: updated.meetingProvider,
       alreadySet: false,
     });
   } catch (e) {
-    return NextResponse.json(
+    return publicJson(
       { error: e instanceof Error ? e.message : "Could not create meeting" },
       { status: 502 },
     );

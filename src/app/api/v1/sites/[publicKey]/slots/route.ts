@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { BookingError, listSlotsForService } from "@/lib/booking/create";
+import { publicCorsOptions, publicJson } from "@/lib/cors";
 
 const querySchema = z.object({
   serviceId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   staffId: z.string().optional(),
 });
+
+export async function OPTIONS() {
+  return publicCorsOptions();
+}
 
 export async function GET(
   request: Request,
@@ -20,7 +24,7 @@ export async function GET(
     staffId: url.searchParams.get("staffId") || undefined,
   });
   if (!parsed.success) {
-    return NextResponse.json({ error: "serviceId and date (YYYY-MM-DD) required" }, { status: 400 });
+    return publicJson({ error: "serviceId and date (YYYY-MM-DD) required" }, { status: 400 });
   }
 
   try {
@@ -30,11 +34,14 @@ export async function GET(
       dateIso: parsed.data.date,
       staffId: parsed.data.staffId,
     });
-    return NextResponse.json(data);
+    return publicJson(data);
   } catch (e) {
     if (e instanceof BookingError) {
-      return NextResponse.json({ error: e.message, code: e.code }, { status: e.code === "NOT_FOUND" ? 404 : 400 });
+      return publicJson(
+        { error: e.message, code: e.code },
+        { status: e.code === "NOT_FOUND" ? 404 : 400 },
+      );
     }
-    return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+    return publicJson({ error: "Database unavailable" }, { status: 503 });
   }
 }
