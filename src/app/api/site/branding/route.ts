@@ -17,7 +17,7 @@ const patchSchema = z.object({
   font: z.string().min(1).optional(),
   layout: z.enum(["INLINE", "POPUP"]).optional(),
   calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
-  stripWidthPct: z.number().int().min(50).max(100).optional(),
+  stripWidthPx: z.number().int().min(280).max(520).optional(),
   businessName: z.string().max(120).optional(),
   showStaff: z.boolean().optional(),
   showPrice: z.boolean().optional(),
@@ -55,6 +55,16 @@ const patchSchema = z.object({
     }),
 });
 
+function normalizeStripWidthPx(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 360;
+  // Legacy percent values (50–100) → map onto 280–520px
+  if (n > 0 && n <= 100) {
+    return Math.round(280 + ((n - 50) / 50) * 240);
+  }
+  return Math.min(520, Math.max(280, Math.round(n)));
+}
+
 function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
   const branding = site.branding;
   const tokens = resolveSiteTheme({
@@ -77,9 +87,8 @@ function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
         : (branding as { calendarStyle?: string | null })?.calendarStyle === "HORIZONTAL"
           ? "HORIZONTAL"
           : "MONTH",
-    stripWidthPct: Math.min(
-      100,
-      Math.max(50, (branding as { stripWidthPct?: number | null })?.stripWidthPct ?? 100),
+    stripWidthPx: normalizeStripWidthPx(
+      (branding as { stripWidthPx?: number | null })?.stripWidthPx,
     ),
     businessName: branding?.businessName || site.name,
     showStaff: branding?.showStaff ?? true,
@@ -150,7 +159,9 @@ export async function PATCH(request: Request) {
           : {}),
       ...(body.layout !== undefined ? { layout: body.layout } : {}),
       ...(body.calendarStyle !== undefined ? { calendarStyle: body.calendarStyle } : {}),
-      ...(body.stripWidthPct !== undefined ? { stripWidthPct: body.stripWidthPct } : {}),
+      ...(body.stripWidthPx !== undefined
+        ? { stripWidthPx: normalizeStripWidthPx(body.stripWidthPx) }
+        : {}),
       ...(body.businessName !== undefined ? { businessName: body.businessName } : {}),
       ...(body.showStaff !== undefined ? { showStaff: body.showStaff } : {}),
       ...(body.showPrice !== undefined ? { showPrice: body.showPrice } : {}),
@@ -178,7 +189,7 @@ export async function PATCH(request: Request) {
         buttonStyle: theme?.button ?? "solid",
         layout: body.layout ?? "INLINE",
         calendarStyle: body.calendarStyle ?? "MONTH",
-        stripWidthPct: body.stripWidthPct ?? 100,
+        stripWidthPx: normalizeStripWidthPx(body.stripWidthPx ?? 360),
         businessName: body.businessName ?? site.name,
         showStaff: body.showStaff ?? true,
         showPrice: body.showPrice ?? true,

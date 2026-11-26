@@ -54,7 +54,7 @@ function sameDay(a: Date, b: Date) {
 
 function CalendarGlyph({ color }: { color: string }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
       <rect x="3" y="5" width="18" height="16" rx="2.5" stroke={color} strokeWidth="1.8" />
       <path d="M3 10h18" stroke={color} strokeWidth="1.8" />
       <path d="M8 3v4M16 3v4" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
@@ -85,7 +85,7 @@ function NavBtn({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid h-9 w-9 place-items-center border text-[17px] leading-none transition hover:bg-black/[0.03] disabled:opacity-35"
+      className="grid h-8 w-8 place-items-center border text-[15px] leading-none transition hover:bg-black/[0.03] disabled:opacity-35"
       style={{
         borderColor: line,
         borderRadius: Math.max(radius - 4, 999),
@@ -170,8 +170,8 @@ export function BookingCalendar({
       <div className="min-w-0">
         <div className="mb-3 flex items-start justify-between gap-2">
           <div>
-            <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Pick a day</h3>
-            <p className="m-0 mt-0.5 text-[12px]" style={{ color: mut }}>
+            <h3 className="sw-title-lg m-0">Pick a day</h3>
+            <p className="sw-title-sm m-0 mt-0.5" style={{ color: mut }}>
               {label}
             </p>
           </div>
@@ -251,8 +251,8 @@ export function BookingCalendar({
       <div className="min-w-0">
         <div className="mb-2.5 flex items-center justify-between gap-2">
           <div>
-            <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Choose a day</h3>
-            <p className="m-0 mt-0.5 text-[11.5px]" style={{ color: mut }}>
+            <h3 className="sw-title-lg m-0">Choose a day</h3>
+            <p className="sw-title-sm m-0 mt-0.5" style={{ color: mut }}>
               {label}
             </p>
           </div>
@@ -316,7 +316,7 @@ export function BookingCalendar({
   return (
     <div className="min-w-0">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Choose a day</h3>
+        <h3 className="sw-title-lg m-0">Choose a day</h3>
         <div className="flex items-center gap-1">
           <NavBtn
             label="Earlier days"
@@ -409,25 +409,22 @@ function DayCard({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1.5 border transition disabled:cursor-not-allowed disabled:opacity-35 ${
-        fixedWidth ? "h-[92px] w-[70px] shrink-0" : "min-h-[88px] w-full"
+      className={`sw-day-card flex flex-col items-center justify-center gap-1 border transition disabled:cursor-not-allowed disabled:opacity-35 ${
+        fixedWidth ? "h-[72px] w-[54px] shrink-0" : "min-h-[70px] w-full"
       }`}
       style={{
-        borderRadius: Math.max(radius - 2, 14),
+        borderRadius: Math.max(radius - 4, 12),
         borderColor: on ? accent : line,
         background: on ? accent : panel,
         color: on ? onAccent : ink,
-        boxShadow: on ? `0 8px 18px color-mix(in srgb, ${accent} 28%, transparent)` : "none",
+        boxShadow: on ? `0 6px 14px color-mix(in srgb, ${accent} 24%, transparent)` : "none",
       }}
     >
       <CalendarGlyph color={glyph} />
-      <small
-        className="text-[11px] font-bold uppercase tracking-[0.05em]"
-        style={{ color: on ? onAccent : mut }}
-      >
+      <small style={{ color: on ? onAccent : mut }}>
         {day.toLocaleDateString(undefined, { weekday: "short" })}
       </small>
-      <b className="text-[18px] font-extrabold leading-none tracking-tight">{day.getDate()}</b>
+      <b>{day.getDate()}</b>
     </button>
   );
 }

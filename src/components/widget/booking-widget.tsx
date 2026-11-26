@@ -32,7 +32,7 @@ type SitePayload = {
     font: string;
     layout: string;
     calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL" | string;
-    stripWidthPct?: number | null;
+    stripWidthPx?: number | null;
     businessName: string | null;
     showStaff: boolean;
     showPrice: boolean;
@@ -86,7 +86,7 @@ export type BrandingPreview = {
   font?: string;
   layout?: string;
   calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL" | string;
-  stripWidthPct?: number | null;
+  stripWidthPx?: number | null;
   businessName?: string | null;
   showStaff?: boolean;
   showPrice?: boolean;
@@ -447,27 +447,42 @@ export function BookingWidget({
   const layoutMode =
     branding?.layout === "POPUP" || branding?.layout === "FLOATING" ? "POPUP" : "INLINE";
   const usePopupShell = layoutMode === "POPUP";
-  const stripPct = Math.min(
-    100,
-    Math.max(50, Number(branding?.stripWidthPct ?? 100) || 100),
-  );
-  const stripMax =
-    isHorizontal
-      ? "min(100%, 1280px)"
-      : `min(100%, ${Math.round((28 * stripPct) / 100)}rem)`;
+  // Prefer stripWidthPx; map legacy percent (50–100) onto 280–520px.
+  const rawStrip = Number(branding?.stripWidthPx ?? 360) || 360;
+  const stripWidthPx =
+    rawStrip > 0 && rawStrip <= 100
+      ? Math.round(280 + ((rawStrip - 50) / 50) * 240)
+      : Math.min(520, Math.max(280, Math.round(rawStrip)));
   const logoSrc = publicApiUrl("/logo.png", originBase);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || isHorizontal) return;
+    const host = root.closest(".slotwise-host") as HTMLElement | null;
+    const apply = (el: HTMLElement | null) => {
+      if (!el) return;
+      el.style.setProperty("width", `${stripWidthPx}px`, "important");
+      el.style.setProperty("max-width", "100%", "important");
+      el.style.setProperty("min-width", "0", "important");
+      el.style.setProperty("margin-left", "auto", "important");
+      el.style.setProperty("margin-right", "auto", "important");
+      el.style.setProperty("box-sizing", "border-box", "important");
+    };
+    apply(root);
+    apply(host);
+  }, [stripWidthPx, isHorizontal, calendarStyle, step]);
 
   const panelNode = (
     <div
       ref={rootRef}
-      className="sw-widget relative mx-auto box-border w-full overflow-hidden"
+      className="sw-widget relative mx-auto box-border overflow-hidden"
       style={{
         background: panel,
         color: ink,
         border: `1px solid ${line}`,
         borderRadius: embed || effectiveHost === "inline" ? Math.min(radius, 18) : radius,
-        width: "100%",
-        maxWidth: stripMax,
+        width: isHorizontal ? "100%" : `${stripWidthPx}px`,
+        maxWidth: isHorizontal ? "min(100%, 1280px)" : "100%",
         maxHeight: isHorizontal
           ? embed || effectiveHost === "inline"
             ? "min(92vh, 880px)"
@@ -480,14 +495,17 @@ export function BookingWidget({
         display: "flex",
         flexDirection: "column",
         containerType: "inline-size",
-        fontSize: "14.5px",
+        fontSize: "14px",
+        lineHeight: "1.4",
+        letterSpacing: "normal",
+        textAlign: "left",
         boxShadow:
           embed || effectiveHost === "inline"
             ? `0 10px 28px color-mix(in srgb, ${ink} 8%, transparent)`
             : `0 1px 2px color-mix(in srgb, ${ink} 6%, transparent), 0 22px 48px color-mix(in srgb, ${ink} 10%, transparent)`,
         fontFamily:
           branding?.font === "Match my site" || !branding?.font
-            ? "inherit"
+            ? 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
             : `${branding.font}, system-ui, sans-serif`,
       }}
       data-slotwise-root
@@ -495,9 +513,78 @@ export function BookingWidget({
       data-host={effectiveHost}
       data-layout={layoutMode}
       data-calendar={calendarStyle}
-      data-strip-width={isHorizontal ? undefined : String(stripPct)}
+      data-strip-width={isHorizontal ? undefined : String(stripWidthPx)}
     >
       <style>{`
+        /* Lock typography + width against Webflow / host theme CSS */
+        .slotwise-host {
+          font-size: 14px !important;
+          line-height: 1.4 !important;
+          letter-spacing: normal !important;
+        }
+        .slotwise-host:has(.sw-widget[data-calendar="MONTH"]),
+        .slotwise-host:has(.sw-widget[data-calendar="WEEK"]) {
+          width: ${stripWidthPx}px !important;
+          max-width: 100% !important;
+        }
+        .sw-widget {
+          font-size: 14px !important;
+          line-height: 1.4 !important;
+          letter-spacing: normal !important;
+          text-align: left !important;
+          -webkit-font-smoothing: antialiased;
+        }
+        .sw-widget[data-calendar="MONTH"],
+        .sw-widget[data-calendar="WEEK"] {
+          width: ${stripWidthPx}px !important;
+          max-width: 100% !important;
+        }
+        .sw-widget h1, .sw-widget h2, .sw-widget h3, .sw-widget h4,
+        .sw-widget p, .sw-widget span, .sw-widget b, .sw-widget em,
+        .sw-widget small, .sw-widget label, .sw-widget a,
+        .sw-widget button, .sw-widget input, .sw-widget textarea {
+          font-family: inherit !important;
+          letter-spacing: normal !important;
+          text-transform: none !important;
+          font-stretch: normal !important;
+        }
+        .sw-widget h3 {
+          font-size: 13px !important;
+          font-weight: 800 !important;
+          line-height: 1.25 !important;
+          margin: 0 !important;
+        }
+        .sw-widget p {
+          font-size: 12px !important;
+          font-weight: 500 !important;
+          line-height: 1.4 !important;
+          margin: 0 !important;
+        }
+        .sw-widget button {
+          font-size: 12.5px !important;
+          line-height: 1.25 !important;
+        }
+        .sw-widget .sw-title-lg {
+          font-size: 13.5px !important;
+          font-weight: 800 !important;
+          line-height: 1.25 !important;
+        }
+        .sw-widget .sw-title-sm {
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          line-height: 1.3 !important;
+        }
+        .sw-widget .sw-day-card small {
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.04em !important;
+          text-transform: uppercase !important;
+        }
+        .sw-widget .sw-day-card b {
+          font-size: 15px !important;
+          font-weight: 800 !important;
+          line-height: 1 !important;
+        }
         @keyframes sw-w-in {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: none; }
@@ -580,8 +667,8 @@ export function BookingWidget({
               {initials(business)}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[14px] font-extrabold tracking-tight">{business}</div>
-              <div className="truncate text-[11px]" style={{ color: mut }}>
+              <div className="sw-title-lg truncate">{business}</div>
+              <div className="sw-title-sm truncate" style={{ color: mut }}>
                 {step === "done" ? "Booking confirmed" : "Pick a time"}
               </div>
             </div>
@@ -767,8 +854,8 @@ export function BookingWidget({
             <div className="grid min-w-0 gap-3.5">
               <section className="min-w-0">
                 <div className="mb-2 flex min-w-0 items-end justify-between gap-2">
-                  <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Choose a service</h3>
-                  <span className="shrink-0 text-[11px]" style={{ color: mut }}>
+                  <h3 className="sw-title-lg m-0">Choose a service</h3>
+                  <span className="sw-title-sm shrink-0" style={{ color: mut }}>
                     {site.services.length} available
                   </span>
                 </div>
@@ -819,7 +906,7 @@ export function BookingWidget({
 
               {branding?.showStaff !== false && site.staff.length > 0 ? (
                 <section className="min-w-0">
-                  <h3 className="mb-2 text-[13px] font-extrabold tracking-tight">Who</h3>
+                  <h3 className="sw-title-lg mb-2">Who</h3>
                   <div className="flex min-w-0 flex-wrap gap-2">
                     <StaffChip
                       label="Anyone"
@@ -873,8 +960,8 @@ export function BookingWidget({
 
             <section className="min-w-0">
               <div className="mb-2">
-                <h3 className="m-0 text-[15px] font-extrabold tracking-tight">Pick a time</h3>
-                <p className="m-0 mt-0.5 text-[12px]" style={{ color: mut }}>
+                <h3 className="sw-title-lg m-0">Pick a time</h3>
+                <p className="sw-title-sm m-0 mt-0.5" style={{ color: mut }}>
                   {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
                     weekday: "long",
                     month: "long",
@@ -932,8 +1019,8 @@ export function BookingWidget({
           <div className="sw-w-rise grid min-w-0 gap-2.5">
             <section className="min-w-0">
               <div className="mb-1.5 flex min-w-0 items-end justify-between gap-2">
-                <h3 className="text-[13px] font-extrabold tracking-tight">Service</h3>
-                <span className="shrink-0 text-[10px]" style={{ color: mut }}>
+                <h3 className="sw-title-lg">Service</h3>
+                <span className="sw-title-sm shrink-0" style={{ color: mut }}>
                   {site.services.length} available
                 </span>
               </div>
@@ -987,7 +1074,7 @@ export function BookingWidget({
 
             {branding?.showStaff !== false && site.staff.length > 0 ? (
               <section className="min-w-0">
-                <h3 className="mb-2 text-[12.5px] font-extrabold tracking-tight">Who</h3>
+                <h3 className="sw-title-lg mb-2">Who</h3>
                 <div className="flex min-w-0 flex-wrap gap-2">
                   <StaffChip
                     label="Anyone"
@@ -1040,8 +1127,8 @@ export function BookingWidget({
 
             <section className="min-w-0">
               <div className="mb-2">
-                <h3 className="m-0 text-[14px] font-extrabold tracking-tight">Select time</h3>
-                <p className="m-0 mt-0.5 text-[11.5px]" style={{ color: mut }}>
+                <h3 className="sw-title-lg m-0">Select time</h3>
+                <p className="sw-title-sm m-0 mt-0.5" style={{ color: mut }}>
                   {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
                     weekday: "long",
                     month: "long",
@@ -1133,7 +1220,7 @@ export function BookingWidget({
                 </p>
               ) : null}
             </div>
-            <h3 className="text-[15px] font-extrabold tracking-tight">Your details</h3>
+            <h3 className="sw-title-lg">Your details</h3>
             <Field
               label="Full name"
               value={name}

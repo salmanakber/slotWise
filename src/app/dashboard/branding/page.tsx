@@ -20,7 +20,7 @@ export default function BrandingPage() {
   const [font, setFont] = useState("Match my site");
   const [layout, setLayout] = useState<"INLINE" | "POPUP">("INLINE");
   const [calendarStyle, setCalendarStyle] = useState<"MONTH" | "WEEK" | "HORIZONTAL">("MONTH");
-  const [stripWidthPct, setStripWidthPct] = useState(100);
+  const [stripWidthPx, setStripWidthPx] = useState(360);
   const [name, setName] = useState("Your business");
   const [showLoader, setShowLoader] = useState(true);
   const [loaderStyle, setLoaderStyle] = useState("PULSE");
@@ -43,7 +43,7 @@ export default function BrandingPage() {
       font,
       layout,
       calendarStyle,
-      stripWidthPct,
+      stripWidthPx,
       businessName: name,
       showStaff,
       showPrice,
@@ -66,7 +66,7 @@ export default function BrandingPage() {
       font,
       layout,
       calendarStyle,
-      stripWidthPct,
+      stripWidthPx,
       name,
       showStaff,
       showPrice,
@@ -117,8 +117,13 @@ export default function BrandingPage() {
         ) {
           setCalendarStyle(data.calendarStyle);
         }
-        if (typeof data.stripWidthPct === "number") {
-          setStripWidthPct(Math.min(100, Math.max(50, data.stripWidthPct)));
+        if (typeof data.stripWidthPx === "number") {
+          const n = data.stripWidthPx;
+          const px =
+            n > 0 && n <= 100
+              ? Math.round(280 + ((n - 50) / 50) * 240)
+              : Math.min(520, Math.max(280, n));
+          setStripWidthPx(px);
         }
         if (data.businessName) setName(data.businessName);
         if (typeof data.showLoader === "boolean") setShowLoader(data.showLoader);
@@ -169,7 +174,7 @@ export default function BrandingPage() {
           font,
           layout,
           calendarStyle,
-          stripWidthPct,
+          stripWidthPx,
           businessName: name,
           showStaff,
           showPrice,
@@ -311,14 +316,14 @@ export default function BrandingPage() {
             </select>
           </Row>
           {calendarStyle === "MONTH" || calendarStyle === "WEEK" ? (
-            <Row label={`Strip width · ${stripWidthPct}%`}>
+            <Row label={`Strip width · ${stripWidthPx}px`}>
               <input
                 type="range"
-                min={50}
-                max={100}
-                step={5}
-                value={stripWidthPct}
-                onChange={(e) => setStripWidthPct(Number(e.target.value))}
+                min={280}
+                max={520}
+                step={10}
+                value={stripWidthPx}
+                onChange={(e) => setStripWidthPx(Number(e.target.value))}
                 className="w-full max-w-[220px]"
               />
             </Row>
@@ -397,10 +402,11 @@ export default function BrandingPage() {
           >
             {publicKey ? (
               <div
+                className="slotwise-host mx-auto"
                 style={
                   calendarStyle === "HORIZONTAL"
                     ? { minWidth: 980, width: "100%" }
-                    : { width: "100%" }
+                    : { width: "100%", maxWidth: "100%" }
                 }
               >
                 <BookingWidget

@@ -1268,8 +1268,8 @@ export async function boot(root: HTMLElement) {
         </select>
       </label>
       <label class="field" id="stripWidthField" style="${state.branding?.calendarStyle === "HORIZONTAL" ? "display:none" : ""}">
-        <span>Strip width · <span id="stripWidthVal">${Math.min(100, Math.max(50, state.branding?.stripWidthPct ?? 100))}</span>%</span>
-        <input type="range" id="brandStripWidth" min="50" max="100" step="5" value="${Math.min(100, Math.max(50, state.branding?.stripWidthPct ?? 100))}" />
+        <span>Strip width · <span id="stripWidthVal">${Math.min(520, Math.max(280, state.branding?.stripWidthPx ?? 360))}</span>px</span>
+        <input type="range" id="brandStripWidth" min="280" max="520" step="10" value="${Math.min(520, Math.max(280, state.branding?.stripWidthPx ?? 360))}" />
       </label>
       <button type="button" class="btn btn-primary btn-block" id="saveBranding">
         ${iconLabel(icons.check, "Save branding")}
@@ -1878,7 +1878,7 @@ export async function boot(root: HTMLElement) {
           radius: radiusInput ? Number(radiusInput.value) : undefined,
           layout: (layoutEl?.value as "INLINE" | "POPUP") || undefined,
           calendarStyle: (calendarEl?.value as "MONTH" | "WEEK" | "HORIZONTAL") || undefined,
-          stripWidthPct: stripEl ? Number(stripEl.value) : undefined,
+          stripWidthPx: stripEl ? Number(stripEl.value) : undefined,
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;

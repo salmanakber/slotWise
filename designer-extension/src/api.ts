@@ -250,7 +250,7 @@ export type DesignerBranding = {
   font: string;
   layout?: "INLINE" | "POPUP" | "FLOATING" | string;
   calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL" | string;
-  stripWidthPct?: number;
+  stripWidthPx?: number;
   businessName?: string | null;
   theme?: DesignerTheme;
 };
@@ -276,7 +276,7 @@ export function patchBranding(body: {
   font?: string;
   layout?: "INLINE" | "POPUP";
   calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL";
-  stripWidthPct?: number;
+  stripWidthPx?: number;
 }) {
   return req<{ branding: DesignerBranding }>("/api/designer/branding", {
     method: "PATCH",

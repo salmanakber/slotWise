@@ -24,7 +24,7 @@ const patchSchema = z.object({
   font: z.string().min(1).optional(),
   layout: z.enum(["INLINE", "POPUP"]).optional(),
   calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
-  stripWidthPct: z.number().int().min(50).max(100).optional(),
+  stripWidthPx: z.number().int().min(280).max(520).optional(),
 });
 
 type BrandingRow = {
@@ -35,9 +35,18 @@ type BrandingRow = {
   font?: string | null;
   layout?: string | null;
   calendarStyle?: string | null;
-  stripWidthPct?: number | null;
+  stripWidthPx?: number | null;
   businessName?: string | null;
 };
+
+function normalizeStripWidthPx(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 360;
+  if (n > 0 && n <= 100) {
+    return Math.round(280 + ((n - 50) / 50) * 240);
+  }
+  return Math.min(520, Math.max(280, Math.round(n)));
+}
 
 function readInk(branding: BrandingRow | null | undefined, fallback: string) {
   return branding?.inkColor ?? fallback;
@@ -60,7 +69,7 @@ function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteFor
         : branding?.calendarStyle === "HORIZONTAL"
           ? "HORIZONTAL"
           : "MONTH",
-    stripWidthPct: Math.min(100, Math.max(50, branding?.stripWidthPct ?? 100)),
+    stripWidthPx: normalizeStripWidthPx(branding?.stripWidthPx),
     businessName: branding?.businessName ?? site.name,
     theme,
   };
@@ -98,7 +107,8 @@ export async function PATCH(request: Request) {
       font: body.font ?? theme?.font,
       layout: body.layout,
       calendarStyle: body.calendarStyle,
-      stripWidthPct: body.stripWidthPct,
+      stripWidthPx:
+        body.stripWidthPx !== undefined ? normalizeStripWidthPx(body.stripWidthPx) : undefined,
       buttonStyle: theme?.button,
     };
 
@@ -110,7 +120,7 @@ export async function PATCH(request: Request) {
       ...(data.font !== undefined ? { font: data.font } : {}),
       ...(data.layout !== undefined ? { layout: data.layout } : {}),
       ...(data.calendarStyle !== undefined ? { calendarStyle: data.calendarStyle } : {}),
-      ...(data.stripWidthPct !== undefined ? { stripWidthPct: data.stripWidthPct } : {}),
+      ...(data.stripWidthPx !== undefined ? { stripWidthPx: data.stripWidthPx } : {}),
       ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
     };
 
@@ -126,7 +136,7 @@ export async function PATCH(request: Request) {
         buttonStyle: data.buttonStyle ?? theme?.button ?? "solid",
         layout: data.layout ?? "INLINE",
         calendarStyle: data.calendarStyle ?? "MONTH",
-        stripWidthPct: data.stripWidthPct ?? 100,
+        stripWidthPx: data.stripWidthPx ?? 360,
         businessName: site.name,
         ...(data.inkColor !== undefined
           ? { inkColor: data.inkColor }

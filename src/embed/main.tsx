@@ -55,10 +55,13 @@ function mountOne(el: HTMLElement, apiBase: string) {
   el.innerHTML = "";
   el.setAttribute("data-slotwise-mounted", "1");
   el.classList.add("slotwise-host");
-  el.style.width = "100%";
-  el.style.maxWidth = "100%";
-  el.style.minWidth = "0";
-  el.style.boxSizing = "border-box";
+  // Width is applied by BookingWidget (fixed px + !important for Day/Week strip).
+  // Start fluid so Wide board can fill; strip modes override with !important.
+  el.style.setProperty("max-width", "100%", "important");
+  el.style.setProperty("min-width", "0", "important");
+  el.style.setProperty("box-sizing", "border-box", "important");
+  el.style.setProperty("margin-left", "auto", "important");
+  el.style.setProperty("margin-right", "auto", "important");
 
   const rootEl = document.createElement("div");
   rootEl.className = "slotwise-root";
