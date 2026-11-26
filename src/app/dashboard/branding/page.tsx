@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { BrandLoader } from "@/components/brand/loader";
 import { BookingWidget, type BrandingPreview } from "@/components/widget/booking-widget";
 import { LOADER_STYLES, THEMES } from "@/lib/themes";
 import {
@@ -358,6 +359,18 @@ export default function BrandingPage() {
               ))}
             </select>
           </Row>
+          {showLoader ? (
+            <div
+              className="mt-3 flex min-h-[110px] items-center justify-center rounded-[14px] border border-[var(--ln)]"
+              style={{ background: "var(--bg)" }}
+            >
+              <BrandLoader
+                style={loaderStyle}
+                accent={accent}
+                label={LOADER_STYLES.find((s) => s.key === loaderStyle)?.label ?? "Loading…"}
+              />
+            </div>
+          ) : null}
         </section>
 
         <div className="flex flex-wrap items-center gap-3">

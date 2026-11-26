@@ -111,10 +111,10 @@ export const THEMES: ThemeDefinition[] = [
 ];
 
 export const LOADER_STYLES = [
-  { key: "PULSE", label: "Slot pulse" },
-  { key: "SPIN", label: "Clock spin" },
-  { key: "DRAW", label: "S draw" },
-  { key: "CALENDAR", label: "Calendar blink" },
+  { key: "PULSE", label: "Soft pulse" },
+  { key: "SPIN", label: "Orbit spin" },
+  { key: "DRAW", label: "Check draw" },
+  { key: "CALENDAR", label: "Day bounce" },
 ] as const;
 
 export function getTheme(key: string) {

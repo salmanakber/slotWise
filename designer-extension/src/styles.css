@@ -1158,30 +1158,110 @@ html[data-panel="full"] .app,
 .sw-loader {
   display: grid;
   justify-items: center;
-  gap: 7px;
+  gap: 8px;
   padding: 28px 10px;
   color: var(--mut);
   font-size: 11px;
   font-weight: 700;
+  --pac: var(--ac);
 }
 .sw-loader-mark {
-  width: 40px;
-  height: 40px;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
 }
-.sw-loader-mark svg { width: 100%; height: 100%; }
-@keyframes sw-spin { to { transform: rotate(360deg); } }
-@keyframes sw-pulse {
-  0%, 100% { opacity: .55; transform: scale(.96); }
-  50% { opacity: 1; transform: scale(1); }
+@keyframes sw-ldr-pulse {
+  0%, 100% { transform: scale(.88); opacity: .45; }
+  50% { transform: scale(1); opacity: 1; }
 }
-.ldr-ring { transform-origin: 42px 46px; animation: sw-spin 1.2s linear infinite; }
-.ldr-dot { animation: sw-pulse 1.4s ease-in-out infinite; }
-.ldr-s { stroke-dasharray: 60; stroke-dashoffset: 60; animation: sw-draw 1.8s ease-in-out infinite; }
-@keyframes sw-draw {
-  0% { stroke-dashoffset: 60; }
-  50% { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -60; }
+@keyframes sw-ldr-orbit { to { transform: rotate(360deg); } }
+@keyframes sw-ldr-dot {
+  0%, 80%, 100% { transform: scale(.55); opacity: .35; }
+  40% { transform: scale(1); opacity: 1; }
 }
+@keyframes sw-ldr-draw {
+  0% { stroke-dashoffset: 28; opacity: .35; }
+  55% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: .85; }
+}
+@keyframes sw-ldr-bounce {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(-3px); }
+}
+@keyframes sw-ldr-fade {
+  0%, 100% { opacity: .35; }
+  50% { opacity: 1; }
+}
+.sw-loader[data-style="PULSE"] .sw-ldr-ring-outer {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--pac) 28%, transparent);
+}
+.sw-loader[data-style="PULSE"] .sw-ldr-ring-mid {
+  position: absolute; inset: 6px; border-radius: 50%;
+  border: 2.5px solid color-mix(in srgb, var(--pac) 55%, transparent);
+  animation: sw-ldr-pulse 1.25s ease-in-out infinite;
+}
+.sw-loader[data-style="PULSE"] .sw-ldr-core {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--pac);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--pac) 16%, transparent);
+  animation: sw-ldr-pulse 1.25s ease-in-out infinite .12s;
+}
+.sw-loader[data-style="SPIN"] .sw-ldr-track {
+  position: absolute; inset: 2px; border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--pac) 16%, transparent);
+}
+.sw-loader[data-style="SPIN"] .sw-ldr-arc {
+  position: absolute; inset: 2px; border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--pac);
+  border-right-color: color-mix(in srgb, var(--pac) 55%, transparent);
+  animation: sw-ldr-orbit .85s cubic-bezier(.5,.15,.5,.85) infinite;
+}
+.sw-loader[data-style="SPIN"] .sw-ldr-hub {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--pac);
+}
+.sw-loader[data-style="DRAW"] .sw-ldr-card {
+  width: 36px; height: 36px; border-radius: 10px;
+  border: 1.5px solid color-mix(in srgb, var(--pac) 35%, transparent);
+  background: color-mix(in srgb, var(--pac) 8%, transparent);
+  display: grid; place-items: center;
+}
+.sw-loader[data-style="DRAW"] svg { width: 20px; height: 20px; }
+.sw-loader[data-style="DRAW"] .sw-ldr-check {
+  fill: none; stroke: var(--pac); stroke-width: 2.6;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 28; stroke-dashoffset: 28;
+  animation: sw-ldr-draw 1.35s ease-in-out infinite;
+}
+.sw-loader[data-style="CALENDAR"] .sw-ldr-cal {
+  width: 36px; height: 38px; border-radius: 9px; overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--pac) 40%, transparent);
+  background: #fff;
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--pac) 18%, transparent);
+  animation: sw-ldr-bounce 1.4s ease-in-out infinite;
+}
+.sw-loader[data-style="CALENDAR"] .sw-ldr-cal-top {
+  height: 11px; background: var(--pac);
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.sw-loader[data-style="CALENDAR"] .sw-ldr-cal-top i {
+  width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .9;
+}
+.sw-loader[data-style="CALENDAR"] .sw-ldr-cal-body {
+  height: 25px; display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; color: var(--pac);
+  animation: sw-ldr-fade 1.4s ease-in-out infinite;
+}
+.sw-ldr-dots { display: flex; gap: 4px; }
+.sw-ldr-dots i {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--pac);
+  animation: sw-ldr-dot 1.05s ease-in-out infinite;
+}
+.sw-ldr-dots i:nth-child(2) { animation-delay: .15s; }
+.sw-ldr-dots i:nth-child(3) { animation-delay: .3s; }
 
 details summary {
   font-weight: 700;

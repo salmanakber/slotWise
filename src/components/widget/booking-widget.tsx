@@ -298,6 +298,40 @@ export function BookingWidget({
     return formatCustomerPrice(payCents, site.currency);
   }, [payCents, site]);
 
+  const calendarStyle =
+    branding?.calendarStyle === "WEEK"
+      ? "WEEK"
+      : branding?.calendarStyle === "HORIZONTAL"
+        ? "HORIZONTAL"
+        : "MONTH";
+  const isHorizontal = calendarStyle === "HORIZONTAL";
+  const calendarMode = calendarStyle === "WEEK" ? "WEEK" : "MONTH";
+  // Prefer stripWidthPx; map legacy percent (50–100) onto 280–520px.
+  const rawStrip = Number(branding?.stripWidthPx ?? 360) || 360;
+  const stripWidthPx =
+    rawStrip > 0 && rawStrip <= 100
+      ? Math.round(280 + ((rawStrip - 50) / 50) * 240)
+      : Math.min(520, Math.max(280, Math.round(rawStrip)));
+  const logoSrc = publicApiUrl("/logo.png", originBase);
+
+  useEffect(() => {
+    if (!site) return;
+    const root = rootRef.current;
+    if (!root || isHorizontal) return;
+    const host = root.closest(".slotwise-host") as HTMLElement | null;
+    const apply = (el: HTMLElement | null) => {
+      if (!el) return;
+      el.style.setProperty("width", `${stripWidthPx}px`, "important");
+      el.style.setProperty("max-width", "100%", "important");
+      el.style.setProperty("min-width", "0", "important");
+      el.style.setProperty("margin-left", "auto", "important");
+      el.style.setProperty("margin-right", "auto", "important");
+      el.style.setProperty("box-sizing", "border-box", "important");
+    };
+    apply(root);
+    apply(host);
+  }, [site, stripWidthPx, isHorizontal, calendarStyle, step]);
+
   function goToCheckout(url: string) {
     // Prefer _top so Webflow/iframe embeds leave the frame for Stripe Checkout
     try {
@@ -429,14 +463,6 @@ export function BookingWidget({
     );
   }
 
-  const calendarStyle =
-    branding?.calendarStyle === "WEEK"
-      ? "WEEK"
-      : branding?.calendarStyle === "HORIZONTAL"
-        ? "HORIZONTAL"
-        : "MONTH";
-  const isHorizontal = calendarStyle === "HORIZONTAL";
-  const calendarMode = calendarStyle === "WEEK" ? "WEEK" : "MONTH";
   const steps = [
     { key: "pick", label: "Time" },
     { key: "details", label: "Details" },
@@ -447,30 +473,6 @@ export function BookingWidget({
   const layoutMode =
     branding?.layout === "POPUP" || branding?.layout === "FLOATING" ? "POPUP" : "INLINE";
   const usePopupShell = layoutMode === "POPUP";
-  // Prefer stripWidthPx; map legacy percent (50–100) onto 280–520px.
-  const rawStrip = Number(branding?.stripWidthPx ?? 360) || 360;
-  const stripWidthPx =
-    rawStrip > 0 && rawStrip <= 100
-      ? Math.round(280 + ((rawStrip - 50) / 50) * 240)
-      : Math.min(520, Math.max(280, Math.round(rawStrip)));
-  const logoSrc = publicApiUrl("/logo.png", originBase);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || isHorizontal) return;
-    const host = root.closest(".slotwise-host") as HTMLElement | null;
-    const apply = (el: HTMLElement | null) => {
-      if (!el) return;
-      el.style.setProperty("width", `${stripWidthPx}px`, "important");
-      el.style.setProperty("max-width", "100%", "important");
-      el.style.setProperty("min-width", "0", "important");
-      el.style.setProperty("margin-left", "auto", "important");
-      el.style.setProperty("margin-right", "auto", "important");
-      el.style.setProperty("box-sizing", "border-box", "important");
-    };
-    apply(root);
-    apply(host);
-  }, [stripWidthPx, isHorizontal, calendarStyle, step]);
 
   const panelNode = (
     <div
