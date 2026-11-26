@@ -1256,9 +1256,8 @@ export async function boot(root: HTMLElement) {
       </label>
       <label class="field"><span>How it opens</span>
         <select id="brandLayout">
-          <option value="INLINE" ${state.branding?.layout === "INLINE" || !state.branding?.layout ? "selected" : ""}>Inline</option>
-          <option value="POPUP" ${state.branding?.layout === "POPUP" ? "selected" : ""}>Popup</option>
-          <option value="FLOATING" ${state.branding?.layout === "FLOATING" ? "selected" : ""}>Floating button</option>
+          <option value="INLINE" ${state.branding?.layout === "POPUP" || state.branding?.layout === "FLOATING" ? "" : "selected"}>Inline</option>
+          <option value="POPUP" ${state.branding?.layout === "POPUP" || state.branding?.layout === "FLOATING" ? "selected" : ""}>Popup</option>
         </select>
       </label>
       <label class="field"><span>Calendar style</span>
@@ -1267,6 +1266,10 @@ export async function boot(root: HTMLElement) {
           <option value="WEEK" ${state.branding?.calendarStyle === "WEEK" ? "selected" : ""}>Week strip</option>
           <option value="HORIZONTAL" ${state.branding?.calendarStyle === "HORIZONTAL" ? "selected" : ""}>Wide board</option>
         </select>
+      </label>
+      <label class="field" id="stripWidthField" style="${state.branding?.calendarStyle === "HORIZONTAL" ? "display:none" : ""}">
+        <span>Strip width · <span id="stripWidthVal">${Math.min(100, Math.max(50, state.branding?.stripWidthPct ?? 100))}</span>%</span>
+        <input type="range" id="brandStripWidth" min="50" max="100" step="5" value="${Math.min(100, Math.max(50, state.branding?.stripWidthPct ?? 100))}" />
       </label>
       <button type="button" class="btn btn-primary btn-block" id="saveBranding">
         ${iconLabel(icons.check, "Save branding")}
@@ -1841,6 +1844,21 @@ export async function boot(root: HTMLElement) {
       syncThemeLive();
     });
 
+    const stripWidthInput = root.querySelector("#brandStripWidth") as HTMLInputElement | null;
+    const stripWidthVal = root.querySelector("#stripWidthVal");
+    const stripWidthField = root.querySelector("#stripWidthField") as HTMLElement | null;
+    const calendarStyleEl = root.querySelector("#brandCalendarStyle") as HTMLSelectElement | null;
+    stripWidthInput?.addEventListener("input", () => {
+      if (stripWidthVal) stripWidthVal.textContent = stripWidthInput.value;
+    });
+    const syncStripField = () => {
+      if (!stripWidthField || !calendarStyleEl) return;
+      stripWidthField.style.display =
+        calendarStyleEl.value === "HORIZONTAL" ? "none" : "";
+    };
+    calendarStyleEl?.addEventListener("change", syncStripField);
+    syncStripField();
+
     root.querySelector("#saveBranding")?.addEventListener("click", async () => {
       if (!state.bootstrap) return;
       const accentEl = root.querySelector("#brandAccent") as HTMLInputElement | null;
@@ -1848,6 +1866,7 @@ export async function boot(root: HTMLElement) {
       const radiusInput = root.querySelector("#brandRadius") as HTMLInputElement | null;
       const layoutEl = root.querySelector("#brandLayout") as HTMLSelectElement | null;
       const calendarEl = root.querySelector("#brandCalendarStyle") as HTMLSelectElement | null;
+      const stripEl = root.querySelector("#brandStripWidth") as HTMLInputElement | null;
       try {
         setStatus("Saving branding…");
         const res = await api.patchBranding({
@@ -1857,8 +1876,9 @@ export async function boot(root: HTMLElement) {
           accent: accentEl?.value,
           inkColor: inkEl?.value,
           radius: radiusInput ? Number(radiusInput.value) : undefined,
-          layout: (layoutEl?.value as "INLINE" | "POPUP" | "FLOATING") || undefined,
+          layout: (layoutEl?.value as "INLINE" | "POPUP") || undefined,
           calendarStyle: (calendarEl?.value as "MONTH" | "WEEK" | "HORIZONTAL") || undefined,
+          stripWidthPct: stripEl ? Number(stripEl.value) : undefined,
         });
         state.branding = res.branding;
         state.bootstrap.site.accent = res.branding.accent;

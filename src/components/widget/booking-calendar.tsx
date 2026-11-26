@@ -85,13 +85,14 @@ function NavBtn({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid h-8 w-8 place-items-center border text-[18px] leading-none transition disabled:opacity-35"
+      className="grid h-9 w-9 place-items-center border text-[17px] leading-none transition hover:bg-black/[0.03] disabled:opacity-35"
       style={{
         borderColor: line,
         borderRadius: Math.max(radius - 4, 999),
         color: ink,
         background: "transparent",
       }}
+      onMouseDown={(e) => e.preventDefault()}
     >
       {children}
     </button>
@@ -125,27 +126,31 @@ export function BookingCalendar({
       : new Date(selected.getFullYear(), selected.getMonth(), 1),
   );
 
+  // Sync cursor only when the selected *date string* changes — never on every render.
+  // (Using a Date object in deps remounted cursor and made prev/next arrows flash.)
   useEffect(() => {
+    const sel = parseIso(date);
     if (look === "wide" && mode === "MONTH") {
       setCursor((c) => {
-        if (selected.getMonth() === c.getMonth() && selected.getFullYear() === c.getFullYear()) {
-          return c;
-        }
-        return new Date(selected.getFullYear(), selected.getMonth(), 1);
+        if (sel.getMonth() === c.getMonth() && sel.getFullYear() === c.getFullYear()) return c;
+        return new Date(sel.getFullYear(), sel.getMonth(), 1);
       });
       return;
     }
     if (mode === "WEEK") {
-      const w = startOfWeek(selected);
+      const w = startOfWeek(sel);
       setCursor((c) => (sameDay(w, c) ? c : w));
       return;
     }
-    // classic MONTH day-strip: keep strip rooted near selected
-    const start = selected < today ? today : selected;
-    const anchor = addDays(start, -3);
-    const rooted = anchor < today ? today : anchor;
-    setCursor((c) => (sameDay(rooted, c) ? c : rooted));
-  }, [date, mode, look, selected, today]);
+    // classic MONTH day-strip: only re-anchor when selection leaves the visible window
+    setCursor((c) => {
+      const windowEnd = addDays(c, 20);
+      if (sel >= c && sel <= windowEnd) return c;
+      const start = sel < today ? today : sel;
+      const anchor = addDays(start, -3);
+      return anchor < today ? today : anchor;
+    });
+  }, [date, mode, look, today]);
 
   // Wide month grid (HORIZONTAL board only)
   if (look === "wide" && mode === "MONTH") {
@@ -273,7 +278,7 @@ export function BookingCalendar({
             </NavBtn>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-2">
           {days.map((d) => {
             const iso = toIsoLocal(d);
             const past = d < today;
@@ -404,24 +409,25 @@ function DayCard({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 border transition disabled:cursor-not-allowed disabled:opacity-35 ${
-        fixedWidth ? "h-[76px] w-[58px] shrink-0" : "min-h-[72px] w-full"
+      className={`flex flex-col items-center justify-center gap-1.5 border transition disabled:cursor-not-allowed disabled:opacity-35 ${
+        fixedWidth ? "h-[92px] w-[70px] shrink-0" : "min-h-[88px] w-full"
       }`}
       style={{
-        borderRadius: Math.max(radius - 4, 12),
+        borderRadius: Math.max(radius - 2, 14),
         borderColor: on ? accent : line,
         background: on ? accent : panel,
         color: on ? onAccent : ink,
+        boxShadow: on ? `0 8px 18px color-mix(in srgb, ${accent} 28%, transparent)` : "none",
       }}
     >
       <CalendarGlyph color={glyph} />
       <small
-        className="text-[10px] font-bold uppercase tracking-[0.04em]"
+        className="text-[11px] font-bold uppercase tracking-[0.05em]"
         style={{ color: on ? onAccent : mut }}
       >
         {day.toLocaleDateString(undefined, { weekday: "short" })}
       </small>
-      <b className="text-[16px] font-extrabold leading-none tracking-tight">{day.getDate()}</b>
+      <b className="text-[18px] font-extrabold leading-none tracking-tight">{day.getDate()}</b>
     </button>
   );
 }

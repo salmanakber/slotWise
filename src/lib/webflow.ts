@@ -236,7 +236,7 @@ export async function fetchWebflowSites(accessToken: string) {
 }
 
 /** Hosted runtime version — bump when public/embed/widget.js bytes change. */
-export const SLOTWISE_WIDGET_SCRIPT_VERSION = "0.4.1";
+export const SLOTWISE_WIDGET_SCRIPT_VERSION = "0.4.2";
 export const SLOTWISE_WIDGET_SCRIPT_NAME = "Slotwise Widget";
 
 type RegisteredScript = {

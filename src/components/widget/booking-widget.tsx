@@ -32,6 +32,7 @@ type SitePayload = {
     font: string;
     layout: string;
     calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL" | string;
+    stripWidthPct?: number | null;
     businessName: string | null;
     showStaff: boolean;
     showPrice: boolean;
@@ -85,6 +86,7 @@ export type BrandingPreview = {
   font?: string;
   layout?: string;
   calendarStyle?: "MONTH" | "WEEK" | "HORIZONTAL" | string;
+  stripWidthPct?: number | null;
   businessName?: string | null;
   showStaff?: boolean;
   showPrice?: boolean;
@@ -442,7 +444,18 @@ export function BookingWidget({
   ] as const;
   const stepIndex = steps.findIndex((s) => s.key === step);
 
-  const isFloating = branding?.layout === "FLOATING" && !embed;
+  const layoutMode =
+    branding?.layout === "POPUP" || branding?.layout === "FLOATING" ? "POPUP" : "INLINE";
+  const usePopupShell = layoutMode === "POPUP";
+  const stripPct = Math.min(
+    100,
+    Math.max(50, Number(branding?.stripWidthPct ?? 100) || 100),
+  );
+  const stripMax =
+    isHorizontal
+      ? "min(100%, 1280px)"
+      : `min(100%, ${Math.round((28 * stripPct) / 100)}rem)`;
+  const logoSrc = publicApiUrl("/logo.png", originBase);
 
   const panelNode = (
     <div
@@ -452,28 +465,26 @@ export function BookingWidget({
         background: panel,
         color: ink,
         border: `1px solid ${line}`,
-        borderRadius: embed ? Math.min(radius, 18) : radius,
+        borderRadius: embed || effectiveHost === "inline" ? Math.min(radius, 18) : radius,
         width: "100%",
-        maxWidth: isHorizontal
-          ? "min(100%, 1280px)"
-          : calendarStyle === "MONTH"
-            ? "min(100%, 28rem)"
-            : "min(100%, 28rem)",
+        maxWidth: stripMax,
         maxHeight: isHorizontal
-          ? embed
+          ? embed || effectiveHost === "inline"
             ? "min(92vh, 880px)"
             : "min(96vh, 920px)"
-          : embed
+          : embed || effectiveHost === "inline"
             ? "min(92vh, 720px)"
             : "min(92vh, 820px)",
-        marginTop: embed ? 20 : 0,
+        marginTop: embed || effectiveHost === "inline" ? 12 : 0,
         marginInline: "auto",
         display: "flex",
         flexDirection: "column",
         containerType: "inline-size",
-        boxShadow: embed
-          ? "none"
-          : `0 1px 2px color-mix(in srgb, ${ink} 6%, transparent), 0 22px 48px color-mix(in srgb, ${ink} 10%, transparent)`,
+        fontSize: "14.5px",
+        boxShadow:
+          embed || effectiveHost === "inline"
+            ? `0 10px 28px color-mix(in srgb, ${ink} 8%, transparent)`
+            : `0 1px 2px color-mix(in srgb, ${ink} 6%, transparent), 0 22px 48px color-mix(in srgb, ${ink} 10%, transparent)`,
         fontFamily:
           branding?.font === "Match my site" || !branding?.font
             ? "inherit"
@@ -481,20 +492,32 @@ export function BookingWidget({
       }}
       data-slotwise-root
       data-embed={embed ? "1" : undefined}
-      data-layout={branding?.layout || "INLINE"}
+      data-host={effectiveHost}
+      data-layout={layoutMode}
       data-calendar={calendarStyle}
+      data-strip-width={isHorizontal ? undefined : String(stripPct)}
     >
       <style>{`
         @keyframes sw-w-in {
-          from { opacity: 0; transform: translateY(8px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: none; }
+        }
+        @keyframes sw-w-pop {
+          from { opacity: 0; transform: translateY(18px) scale(.96); }
+          to { opacity: 1; transform: none; }
+        }
+        @keyframes sw-w-backdrop {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         @keyframes sw-w-check {
           0% { transform: scale(.6); opacity: 0; }
           60% { transform: scale(1.08); }
           100% { transform: scale(1); opacity: 1; }
         }
-        .sw-w-rise { animation: sw-w-in .35s cubic-bezier(.2,.8,.2,1) both; }
+        .sw-w-rise { animation: sw-w-in .38s cubic-bezier(.2,.8,.2,1) both; }
+        .sw-w-pop { animation: sw-w-pop .42s cubic-bezier(.2,.85,.2,1) both; }
+        .sw-w-backdrop { animation: sw-w-backdrop .28s ease both; }
         .sw-w-check { animation: sw-w-check .55s cubic-bezier(.2,.8,.2,1) both; }
         .sw-w-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
         .sw-w-scroll::-webkit-scrollbar { height: 3px; width: 3px; }
@@ -533,7 +556,7 @@ export function BookingWidget({
           .sw-widget[data-calendar="HORIZONTAL"] .sw-w-board .sw-w-times { max-height: min(52vh, 420px) !important; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .sw-w-rise, .sw-w-check { animation: none !important; }
+          .sw-w-rise, .sw-w-pop, .sw-w-backdrop, .sw-w-check { animation: none !important; }
         }
       `}</style>
 
@@ -796,28 +819,32 @@ export function BookingWidget({
 
               {branding?.showStaff !== false && site.staff.length > 0 ? (
                 <section className="min-w-0">
-                  <h3 className="mb-2 text-[15px] font-extrabold tracking-tight">Who</h3>
-                  <div className="flex min-w-0 flex-wrap gap-1.5">
-                    <Chip
+                  <h3 className="mb-2 text-[13px] font-extrabold tracking-tight">Who</h3>
+                  <div className="flex min-w-0 flex-wrap gap-2">
+                    <StaffChip
+                      label="Anyone"
                       active={!staffId}
                       accent={accent}
                       onAccent={onAccent}
+                      ink={ink}
+                      mut={mut}
                       line={line}
+                      panel={panel}
                       onClick={() => setStaffId("")}
-                    >
-                      Anyone
-                    </Chip>
+                    />
                     {site.staff.map((s) => (
-                      <Chip
+                      <StaffChip
                         key={s.id}
+                        label={s.name}
                         active={staffId === s.id}
                         accent={accent}
                         onAccent={onAccent}
+                        ink={ink}
+                        mut={mut}
                         line={line}
+                        panel={panel}
                         onClick={() => setStaffId(s.id)}
-                      >
-                        {s.name}
-                      </Chip>
+                      />
                     ))}
                   </div>
                 </section>
@@ -960,28 +987,32 @@ export function BookingWidget({
 
             {branding?.showStaff !== false && site.staff.length > 0 ? (
               <section className="min-w-0">
-                <h3 className="mb-2 text-[14px] font-extrabold tracking-tight">Who</h3>
-                <div className="flex min-w-0 flex-wrap gap-1.5">
-                  <Chip
+                <h3 className="mb-2 text-[12.5px] font-extrabold tracking-tight">Who</h3>
+                <div className="flex min-w-0 flex-wrap gap-2">
+                  <StaffChip
+                    label="Anyone"
                     active={!staffId}
                     accent={accent}
                     onAccent={onAccent}
+                    ink={ink}
+                    mut={mut}
                     line={line}
+                    panel={panel}
                     onClick={() => setStaffId("")}
-                  >
-                    Anyone
-                  </Chip>
+                  />
                   {site.staff.map((s) => (
-                    <Chip
+                    <StaffChip
                       key={s.id}
+                      label={s.name}
                       active={staffId === s.id}
                       accent={accent}
                       onAccent={onAccent}
+                      ink={ink}
+                      mut={mut}
                       line={line}
+                      panel={panel}
                       onClick={() => setStaffId(s.id)}
-                    >
-                      {s.name}
-                    </Chip>
+                    />
                   ))}
                 </div>
               </section>
@@ -1292,7 +1323,7 @@ export function BookingWidget({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo.png"
+            src={logoSrc}
             alt=""
             width={14}
             height={14}
@@ -1304,29 +1335,42 @@ export function BookingWidget({
     </div>
   );
 
-  if (!isFloating) return panelNode;
+  if (!usePopupShell) {
+    return <div className="sw-w-rise w-full">{panelNode}</div>;
+  }
 
   return (
-    <div className="relative min-h-[120px] w-full">
+    <div className="relative min-h-[72px] w-full">
       {floatingOpen ? (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 p-3 sm:items-center">
+        <div
+          className="sw-w-backdrop fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-3 backdrop-blur-[2px] sm:items-center"
+          role="dialog"
+          aria-modal="true"
+        >
           <button
             type="button"
             aria-label="Close booking"
             className="absolute inset-0 cursor-default"
             onClick={() => setFloatingOpen(false)}
           />
-          <div className="relative z-[1] w-full max-w-[32rem]">{panelNode}</div>
+          <div className="sw-w-pop relative z-[1] w-full max-w-[32rem]">{panelNode}</div>
         </div>
-      ) : null}
-      <button
-        type="button"
-        className="fixed bottom-5 right-5 z-[70] rounded-full px-5 py-3.5 text-[14px] font-extrabold shadow-lg"
-        style={{ background: accent, color: onAccent }}
-        onClick={() => setFloatingOpen(true)}
-      >
-        Book now
-      </button>
+      ) : (
+        <div className="sw-w-rise flex justify-center py-2">
+          <button
+            type="button"
+            className="rounded-full px-5 py-3 text-[13px] font-extrabold shadow-md transition hover:brightness-105"
+            style={{
+              background: accent,
+              color: onAccent,
+              boxShadow: `0 10px 24px color-mix(in srgb, ${accent} 32%, transparent)`,
+            }}
+            onClick={() => setFloatingOpen(true)}
+          >
+            Book now
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1341,33 +1385,54 @@ function TimeGlyph({ color, size = 14 }: { color: string; size?: number }) {
   );
 }
 
-function Chip({
-  children,
+function StaffChip({
+  label,
   active,
   accent,
   onAccent,
+  ink,
+  mut,
   line,
+  panel,
   onClick,
 }: {
-  children: React.ReactNode;
+  label: string;
   active: boolean;
   accent: string;
   onAccent: string;
+  ink: string;
+  mut: string;
   line: string;
+  panel: string;
   onClick: () => void;
 }) {
+  const mark = initials(label) || "?";
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full border px-3.5 py-1.5 text-[13px] font-bold transition"
+      className="inline-flex min-h-[40px] items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3 text-left transition"
       style={{
         borderColor: active ? accent : line,
-        background: active ? accent : "transparent",
-        color: active ? onAccent : "inherit",
+        background: active ? `color-mix(in srgb, ${accent} 14%, ${panel})` : panel,
+        boxShadow: active ? `0 0 0 1px ${accent}` : "none",
       }}
     >
-      {children}
+      <span
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-extrabold"
+        style={{
+          background: active ? accent : `color-mix(in srgb, ${ink} 8%, ${panel})`,
+          color: active ? onAccent : ink,
+        }}
+      >
+        {mark}
+      </span>
+      <span
+        className="max-w-[9rem] truncate text-[12.5px] font-bold"
+        style={{ color: active ? ink : mut }}
+      >
+        {label}
+      </span>
     </button>
   );
 }

@@ -15,8 +15,9 @@ const patchSchema = z.object({
   inkColor: z.string().min(4).max(9).optional().nullable(),
   radius: z.number().int().min(0).max(28).optional(),
   font: z.string().min(1).optional(),
-  layout: z.enum(["INLINE", "POPUP", "FLOATING"]).optional(),
+  layout: z.enum(["INLINE", "POPUP"]).optional(),
   calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
+  stripWidthPct: z.number().int().min(50).max(100).optional(),
   businessName: z.string().max(120).optional(),
   showStaff: z.boolean().optional(),
   showPrice: z.boolean().optional(),
@@ -68,13 +69,18 @@ function payloadFromSite(site: Awaited<ReturnType<typeof requireDemoSite>>) {
     publicKey: site.publicKey,
     currency: site.currency,
     ...tokens,
-    layout: branding?.layout ?? "INLINE",
+    layout:
+      branding?.layout === "POPUP" || branding?.layout === "FLOATING" ? "POPUP" : "INLINE",
     calendarStyle:
       (branding as { calendarStyle?: string | null })?.calendarStyle === "WEEK"
         ? "WEEK"
         : (branding as { calendarStyle?: string | null })?.calendarStyle === "HORIZONTAL"
           ? "HORIZONTAL"
           : "MONTH",
+    stripWidthPct: Math.min(
+      100,
+      Math.max(50, (branding as { stripWidthPct?: number | null })?.stripWidthPct ?? 100),
+    ),
     businessName: branding?.businessName || site.name,
     showStaff: branding?.showStaff ?? true,
     showPrice: branding?.showPrice ?? true,
@@ -144,6 +150,7 @@ export async function PATCH(request: Request) {
           : {}),
       ...(body.layout !== undefined ? { layout: body.layout } : {}),
       ...(body.calendarStyle !== undefined ? { calendarStyle: body.calendarStyle } : {}),
+      ...(body.stripWidthPct !== undefined ? { stripWidthPct: body.stripWidthPct } : {}),
       ...(body.businessName !== undefined ? { businessName: body.businessName } : {}),
       ...(body.showStaff !== undefined ? { showStaff: body.showStaff } : {}),
       ...(body.showPrice !== undefined ? { showPrice: body.showPrice } : {}),
@@ -171,6 +178,7 @@ export async function PATCH(request: Request) {
         buttonStyle: theme?.button ?? "solid",
         layout: body.layout ?? "INLINE",
         calendarStyle: body.calendarStyle ?? "MONTH",
+        stripWidthPct: body.stripWidthPct ?? 100,
         businessName: body.businessName ?? site.name,
         showStaff: body.showStaff ?? true,
         showPrice: body.showPrice ?? true,

@@ -223,6 +223,8 @@ model Branding {
   layout       WidgetLayout @default(INLINE)
   /** Booking calendar UI: MONTH, WEEK, or HORIZONTAL (wide 3-column board). */
   calendarStyle String      @default("MONTH")
+  /** Day/Week strip width on customer sites (50–100). Ignored for Wide board. */
+  stripWidthPct Int         @default(100)
   businessName String?
   showStaff    Boolean      @default(true)
   showPrice    Boolean      @default(true)

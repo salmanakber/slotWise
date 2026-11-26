@@ -22,8 +22,9 @@ const patchSchema = z.object({
   inkColor: z.string().min(4).max(9).optional().nullable(),
   radius: z.number().int().min(0).max(28).optional(),
   font: z.string().min(1).optional(),
-  layout: z.enum(["INLINE", "POPUP", "FLOATING"]).optional(),
+  layout: z.enum(["INLINE", "POPUP"]).optional(),
   calendarStyle: z.enum(["MONTH", "WEEK", "HORIZONTAL"]).optional(),
+  stripWidthPct: z.number().int().min(50).max(100).optional(),
 });
 
 type BrandingRow = {
@@ -34,6 +35,7 @@ type BrandingRow = {
   font?: string | null;
   layout?: string | null;
   calendarStyle?: string | null;
+  stripWidthPct?: number | null;
   businessName?: string | null;
 };
 
@@ -50,13 +52,15 @@ function brandingPayload(site: NonNullable<Awaited<ReturnType<typeof findSiteFor
     inkColor: readInk(branding, theme.ink),
     radius: branding?.radius ?? theme.radius,
     font: branding?.font ?? theme.font,
-    layout: branding?.layout ?? "INLINE",
+    layout:
+      branding?.layout === "POPUP" || branding?.layout === "FLOATING" ? "POPUP" : "INLINE",
     calendarStyle:
       branding?.calendarStyle === "WEEK"
         ? "WEEK"
         : branding?.calendarStyle === "HORIZONTAL"
           ? "HORIZONTAL"
           : "MONTH",
+    stripWidthPct: Math.min(100, Math.max(50, branding?.stripWidthPct ?? 100)),
     businessName: branding?.businessName ?? site.name,
     theme,
   };
@@ -94,6 +98,7 @@ export async function PATCH(request: Request) {
       font: body.font ?? theme?.font,
       layout: body.layout,
       calendarStyle: body.calendarStyle,
+      stripWidthPct: body.stripWidthPct,
       buttonStyle: theme?.button,
     };
 
@@ -105,6 +110,7 @@ export async function PATCH(request: Request) {
       ...(data.font !== undefined ? { font: data.font } : {}),
       ...(data.layout !== undefined ? { layout: data.layout } : {}),
       ...(data.calendarStyle !== undefined ? { calendarStyle: data.calendarStyle } : {}),
+      ...(data.stripWidthPct !== undefined ? { stripWidthPct: data.stripWidthPct } : {}),
       ...(data.buttonStyle !== undefined ? { buttonStyle: data.buttonStyle } : {}),
     };
 
@@ -120,6 +126,7 @@ export async function PATCH(request: Request) {
         buttonStyle: data.buttonStyle ?? theme?.button ?? "solid",
         layout: data.layout ?? "INLINE",
         calendarStyle: data.calendarStyle ?? "MONTH",
+        stripWidthPct: data.stripWidthPct ?? 100,
         businessName: site.name,
         ...(data.inkColor !== undefined
           ? { inkColor: data.inkColor }

@@ -18,8 +18,9 @@ export default function BrandingPage() {
   const [inkColor, setInkColor] = useState("#0f1b2d");
   const [radius, setRadius] = useState(14);
   const [font, setFont] = useState("Match my site");
-  const [layout, setLayout] = useState<"INLINE" | "POPUP" | "FLOATING">("INLINE");
+  const [layout, setLayout] = useState<"INLINE" | "POPUP">("INLINE");
   const [calendarStyle, setCalendarStyle] = useState<"MONTH" | "WEEK" | "HORIZONTAL">("MONTH");
+  const [stripWidthPct, setStripWidthPct] = useState(100);
   const [name, setName] = useState("Your business");
   const [showLoader, setShowLoader] = useState(true);
   const [loaderStyle, setLoaderStyle] = useState("PULSE");
@@ -42,6 +43,7 @@ export default function BrandingPage() {
       font,
       layout,
       calendarStyle,
+      stripWidthPct,
       businessName: name,
       showStaff,
       showPrice,
@@ -64,6 +66,7 @@ export default function BrandingPage() {
       font,
       layout,
       calendarStyle,
+      stripWidthPct,
       name,
       showStaff,
       showPrice,
@@ -105,15 +108,17 @@ export default function BrandingPage() {
         if (data.inkColor) setInkColor(data.inkColor);
         if (typeof data.radius === "number") setRadius(data.radius);
         if (data.font) setFont(data.font);
-        if (data.layout === "INLINE" || data.layout === "POPUP" || data.layout === "FLOATING") {
-          setLayout(data.layout);
-        }
+        if (data.layout === "POPUP" || data.layout === "FLOATING") setLayout("POPUP");
+        else if (data.layout === "INLINE") setLayout("INLINE");
         if (
           data.calendarStyle === "WEEK" ||
           data.calendarStyle === "MONTH" ||
           data.calendarStyle === "HORIZONTAL"
         ) {
           setCalendarStyle(data.calendarStyle);
+        }
+        if (typeof data.stripWidthPct === "number") {
+          setStripWidthPct(Math.min(100, Math.max(50, data.stripWidthPct)));
         }
         if (data.businessName) setName(data.businessName);
         if (typeof data.showLoader === "boolean") setShowLoader(data.showLoader);
@@ -164,6 +169,7 @@ export default function BrandingPage() {
           font,
           layout,
           calendarStyle,
+          stripWidthPct,
           businessName: name,
           showStaff,
           showPrice,
@@ -291,7 +297,6 @@ export default function BrandingPage() {
             >
               <option value="INLINE">Inline</option>
               <option value="POPUP">Popup</option>
-              <option value="FLOATING">Floating button</option>
             </select>
           </Row>
           <Row label="Calendar style">
@@ -305,6 +310,19 @@ export default function BrandingPage() {
               <option value="HORIZONTAL">Wide board</option>
             </select>
           </Row>
+          {calendarStyle === "MONTH" || calendarStyle === "WEEK" ? (
+            <Row label={`Strip width · ${stripWidthPct}%`}>
+              <input
+                type="range"
+                min={50}
+                max={100}
+                step={5}
+                value={stripWidthPct}
+                onChange={(e) => setStripWidthPct(Number(e.target.value))}
+                className="w-full max-w-[220px]"
+              />
+            </Row>
+          ) : null}
           <Row label="Business name">
             <input
               className="w-full max-w-[220px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
