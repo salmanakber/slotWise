@@ -1,0 +1,5 @@
+integrity=sha256-hfCXOPsr5/tZ+e9XqUx7E6GwQrq0gZ/a+ZYGddPztto=
+sha256-hex=85f09738fb2be7fb59f9ef57a94c7b13a1b042bab4819fdaf9960675d3f3b6da
+url=https://slotwise.hindaralabs.com/embed/widget.js
+note=Live server bytes as of last check. After deploying local public/embed/widget.js, re-run npm run build:embed / write-widget-sri and re-Add booking.
+
