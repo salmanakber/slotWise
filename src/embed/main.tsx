@@ -101,16 +101,27 @@ function markRuntimeReady() {
   }
 }
 
+function resolveAppOrigin(): string {
+  // document.currentScript is null when boot runs after DOMContentLoaded
+  const current = document.currentScript as HTMLScriptElement | null;
+  if (current?.src) {
+    return current.src.replace(/\/embed\/widget\.js(?:\.map)?.*$/, "") || APP_ORIGIN;
+  }
+  const tags = document.querySelectorAll<HTMLScriptElement>('script[src*="/embed/widget.js"]');
+  const last = tags[tags.length - 1];
+  if (last?.src) {
+    return last.src.replace(/\/embed\/widget\.js(?:\.map)?.*$/, "") || APP_ORIGIN;
+  }
+  return APP_ORIGIN;
+}
+
 function boot() {
   if (window.__slotwiseBooted) return;
   window.__slotwiseBooted = true;
 
   ensureStyles();
 
-  const script = document.currentScript as HTMLScriptElement | null;
-  const base =
-    (script?.src && script.src.replace(/\/embed\/widget\.js(?:\.map)?.*$/, "")) ||
-    APP_ORIGIN;
+  const base = resolveAppOrigin();
 
   const nodes = document.querySelectorAll<HTMLElement>("[data-slotwise-widget]");
   nodes.forEach((el) => mountOne(el, base));

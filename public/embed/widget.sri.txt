@@ -1,4 +1,4 @@
-integrity=sha256-B3DkCwSw1K+u8Q/8DFiNWteXQyOidmgrX39Req5KDoU=
-sha256-hex=0770e40b04b0d4afaef10ffc0c588d5ad7974323a276682b5f7f517aae4a0e85
+integrity=sha256-NnO2jjj++OTylYG3y9KKls1TS8F7eFzWEV5JDuuUHNY=
+sha256-hex=3673b68e38fef8e4f29581b7cbd28a96cd534bc17b785cd6115e490eeb941cd6
 url=https://slotwise.hindaralabs.com/embed/widget.js
-script=<script src="https://slotwise.hindaralabs.com/embed/widget.js" integrity="sha256-B3DkCwSw1K+u8Q/8DFiNWteXQyOidmgrX39Req5KDoU=" crossorigin="anonymous"></script>
+script=<script src="https://slotwise.hindaralabs.com/embed/widget.js" integrity="sha256-NnO2jjj++OTylYG3y9KKls1TS8F7eFzWEV5JDuuUHNY=" crossorigin="anonymous"></script>

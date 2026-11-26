@@ -16,5 +16,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/v1/:path*"],
+  // Broad match so nested App Router paths always get CORS (Webflow in-page embed).
+  matcher: ["/api/v1/:path*", "/api/v1/:path*/:path*", "/api/v1/:path*/:path*/:path*"],
 };
