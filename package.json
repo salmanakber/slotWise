@@ -16,6 +16,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test:availability": "tsx src/lib/booking/availability.test.ts",
+    "build:embed": "node scripts/build-embed.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -36,12 +37,14 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/cli": "^4.3.5",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.18.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@types/uuid": "^10.0.0",
+    "esbuild": "0.25.0",
     "eslint": "^9.35.0",
     "eslint-config-next": "^15.5.3",
     "prisma": "^6.16.0",

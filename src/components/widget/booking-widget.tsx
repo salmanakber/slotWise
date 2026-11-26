@@ -5,6 +5,7 @@ import { BrandLoader } from "@/components/brand/loader";
 import { BookingCalendar } from "@/components/widget/booking-calendar";
 import { CalendarChat } from "@/components/widget/calendar-chat";
 import { PartnerAppsPanel, PartnerReadyLink } from "@/components/widget/partner-apps";
+import { publicApiUrl, resolvePublicApiBase } from "@/lib/public-api";
 import { formatCustomerPrice } from "@/lib/utils";
 
 type Service = {
@@ -98,14 +99,28 @@ export function BookingWidget({
   publicKey,
   initial,
   embed = false,
+  host,
+  apiBase,
   brandingPreview,
 }: {
   publicKey: string;
   initial?: SitePayload;
+  /** @deprecated Prefer host="iframe" — kept for /book?embed=1 */
   embed?: boolean;
+  /**
+   * page = standalone Slotwise book URL
+   * iframe = legacy framed embed (not used on Webflow customer sites)
+   * inline = in-page mount via widget.js on customer sites (Marketplace-compliant)
+   */
+  host?: "page" | "iframe" | "inline";
+  /** Absolute origin for API calls when mounted on a third-party host. */
+  apiBase?: string;
   /** Live unsaved branding overrides (dashboard Branding page preview). */
   brandingPreview?: BrandingPreview | null;
 }) {
+  const effectiveHost = host ?? (embed ? "iframe" : "page");
+  const isFramed = effectiveHost === "iframe";
+  const originBase = resolvePublicApiBase(apiBase);
   const rootRef = useRef<HTMLDivElement>(null);
   const [site, setSite] = useState<SitePayload | null>(initial ?? null);
   const [serviceId, setServiceId] = useState(initial?.services[0]?.id ?? "");
@@ -136,7 +151,7 @@ export function BookingWidget({
 
   useEffect(() => {
     if (site) return;
-    fetch(`/api/v1/sites/${publicKey}`)
+    fetch(publicApiUrl(`/api/v1/sites/${publicKey}`, originBase))
       .then(async (r) => {
         if (!r.ok) throw new Error("Site unavailable");
         return r.json();
@@ -146,7 +161,7 @@ export function BookingWidget({
         setServiceId(data.services[0]?.id ?? "");
       })
       .catch((e) => setError(e.message));
-  }, [publicKey, site]);
+  }, [publicKey, site, originBase]);
 
   useEffect(() => {
     if (!site || !serviceId || !date) return;
@@ -155,7 +170,7 @@ export function BookingWidget({
     setSlotStart("");
     const qs = new URLSearchParams({ serviceId, date });
     if (staffId) qs.set("staffId", staffId);
-    fetch(`/api/v1/sites/${publicKey}/slots?${qs}`)
+    fetch(publicApiUrl(`/api/v1/sites/${publicKey}/slots?${qs}`, originBase))
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || "Could not load slots");
@@ -173,10 +188,10 @@ export function BookingWidget({
     return () => {
       cancelled = true;
     };
-  }, [serviceId, date, staffId, publicKey, site?.publicKey]);
+  }, [serviceId, date, staffId, publicKey, site?.publicKey, originBase]);
 
   useEffect(() => {
-    if (!embed || typeof window === "undefined") return;
+    if (!isFramed || typeof window === "undefined") return;
     const el = rootRef.current;
     if (!el) return;
 
@@ -220,7 +235,7 @@ export function BookingWidget({
     ro.observe(el);
     return () => ro.disconnect();
   }, [
-    embed,
+    isFramed,
     publicKey,
     step,
     site,
@@ -232,13 +247,12 @@ export function BookingWidget({
   ]);
 
   useEffect(() => {
-    if (!embed || typeof window === "undefined" || !error) return;
-    // Do not send height:0 alone — host widget.js used to treat that as “destroy iframe”.
+    if (!isFramed || typeof window === "undefined" || !error) return;
     window.parent.postMessage(
       { source: "slotwise", type: "unavailable", unavailable: true, publicKey, height: 0 },
       "*",
     );
-  }, [embed, error, publicKey]);
+  }, [isFramed, error, publicKey]);
 
   const service = useMemo(
     () => site?.services.find((s) => s.id === serviceId) ?? null,
@@ -315,7 +329,7 @@ export function BookingWidget({
     const ctrl = new AbortController();
     const timeoutId = window.setTimeout(() => ctrl.abort(), 28_000);
     try {
-      const res = await fetch(`/api/v1/sites/${publicKey}/bookings`, {
+      const res = await fetch(publicApiUrl(`/api/v1/sites/${publicKey}/bookings`, originBase), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: ctrl.signal,
@@ -674,7 +688,7 @@ export function BookingWidget({
                     setMeetingError(null);
                     try {
                       const res = await fetch(
-                        `/api/v1/manage/${confirmation.manageToken}/meeting`,
+                        publicApiUrl(`/api/v1/manage/${confirmation.manageToken}/meeting`, originBase),
                         {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -713,7 +727,7 @@ export function BookingWidget({
 
             <a
               className="mx-auto inline-flex items-center justify-center border px-5 py-2.5 text-[13px] font-bold transition"
-              href={`/manage/${confirmation.manageToken}`}
+              href={publicApiUrl(`/manage/${confirmation.manageToken}`, originBase)}
               style={{
                 borderColor: line,
                 borderRadius: Math.max(radius - 4, 10),
@@ -1154,6 +1168,7 @@ export function BookingWidget({
       {step === "pick" ? (
         <CalendarChat
           publicKey={publicKey}
+          apiBase={originBase}
           currency={site.currency}
           accent={accent}
           onAccent={onAccent}
@@ -1163,7 +1178,7 @@ export function BookingWidget({
           mut={mut}
           radius={radius}
           enabled={site.calendarChatEnabled !== false}
-          source={embed ? "widget" : "book_page"}
+          source={effectiveHost === "page" ? "book_page" : "widget"}
           onPickEvent={(id) => setServiceId(id)}
           onPickSlot={({ serviceId: sid, dateIso, start }) => {
             setServiceId(sid);

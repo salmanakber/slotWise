@@ -11,7 +11,7 @@ export async function GET(
 ) {
   const { publicKey } = await context.params;
   try {
-    // If Webflow app was uninstalled, deactivate so leftover iframes stop working
+    // If Webflow app was uninstalled, deactivate so leftover mounts stop working
     const row = await prisma.site.findUnique({
       where: { publicKey },
       select: { id: true, webflowSiteId: true, status: true },

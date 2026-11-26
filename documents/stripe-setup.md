@@ -127,5 +127,5 @@ Create the webhook **in the same mode** (Test/Live) as the keys you paste into S
 
 ## Support
 
-App contact: tidyflaw@gmail.com  
+App contact: hindarapro@gmail.com  
 Domain: https://slotwise.hindaralabs.com  

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { publicApiUrl } from "@/lib/public-api";
 import { formatCustomerPrice } from "@/lib/utils";
 
 type SuggestedSlot = {
@@ -23,6 +24,7 @@ type ChatMsg = {
 
 type Props = {
   publicKey: string;
+  apiBase?: string;
   currency: string;
   accent: string;
   onAccent: string;
@@ -70,6 +72,7 @@ const DEFAULT_PROMPTS = [
 
 export function CalendarChat({
   publicKey,
+  apiBase,
   currency,
   accent,
   onAccent,
@@ -107,13 +110,13 @@ export function CalendarChat({
 
   useEffect(() => {
     if (!enabled) return;
-    fetch(`/api/v1/sites/${publicKey}/chat`)
+    fetch(publicApiUrl(`/api/v1/sites/${publicKey}/chat`, apiBase))
       .then((r) => r.json())
       .then((d) => {
         if (Array.isArray(d.prompts) && d.prompts.length) setPrompts(d.prompts);
       })
       .catch(() => undefined);
-  }, [publicKey, enabled]);
+  }, [publicKey, enabled, apiBase]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -149,7 +152,7 @@ export function CalendarChat({
     const userId = `u_${Date.now()}`;
     setMsgs((m) => [...m, { id: userId, role: "user", content: message }]);
     try {
-      const res = await fetch(`/api/v1/sites/${publicKey}/chat`, {
+      const res = await fetch(publicApiUrl(`/api/v1/sites/${publicKey}/chat`, apiBase), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,7 +208,7 @@ export function CalendarChat({
     setBusy(true);
     setBookError(null);
     try {
-      const res = await fetch(`/api/v1/sites/${publicKey}/chat`, {
+      const res = await fetch(publicApiUrl(`/api/v1/sites/${publicKey}/chat`, apiBase), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

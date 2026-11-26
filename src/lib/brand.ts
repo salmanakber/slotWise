@@ -1,4 +1,4 @@
-/** Public contact for Slotwise support / Marketplace. */
-export const CONTACT_EMAIL = "tidyflaw@gmail.com";
-export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
-export const DEFAULT_EMAIL_FROM = CONTACT_EMAIL;
+/** Public contact for Slotwise support / Marketplace — must match legal.ts. */
+export { SUPPORT_EMAIL as CONTACT_EMAIL, SUPPORT_MAILTO as CONTACT_MAILTO, LEGAL_ENTITY } from "@/lib/legal";
+import { SUPPORT_EMAIL } from "@/lib/legal";
+export const DEFAULT_EMAIL_FROM = SUPPORT_EMAIL;

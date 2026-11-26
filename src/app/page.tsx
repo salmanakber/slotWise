@@ -68,7 +68,7 @@ const STEPS = [
     n: "01",
     badge: "2-min install",
     title: "Connect your Webflow site",
-    body: "Authorize Slotwise via the Webflow Marketplace or launch the Designer extension. Bind directly to static pages or Webflow CMS templates with zero iframe height glitches.",
+    body: "Authorize Slotwise via the Webflow Marketplace or launch the Designer extension. Place a mount on the canvas; a hosted script renders the booking UI in-page after you publish.",
   },
   {
     n: "02",
@@ -119,7 +119,7 @@ const COMPARISON_ROWS = [
   {
     feature: "Built natively for Webflow Designer & CMS",
     slotwise: "Native app & OAuth bind",
-    generic: "Copy-paste generic iframe",
+    generic: "Copy-paste third-party embed",
   },
   {
     feature: "Booking & payout commission",
@@ -151,11 +151,11 @@ const COMPARISON_ROWS = [
 const FAQ = [
   {
     q: "Does Slotwise charge a booking commission or transaction fee?",
-    a: "Never. Your Stripe Connect payouts go 100% directly to your Stripe account. You only pay your Slotwise subscription plan (or start on Free) plus standard Stripe card processing fees.",
+    a: "Slotwise does not take a booking commission by default — payouts go to your Stripe Connect account. You pay your Slotwise plan (or use Free) plus standard Stripe card processing fees.",
   },
   {
-    q: "Why use Slotwise instead of pasting a generic calendar iframe into Webflow?",
-    a: "Generic iframes often look out of place, cause awkward double scrollbars, slow down Largest Contentful Paint, and force visitors onto external domains. Slotwise connects natively through Webflow, inherits your brand styles, stays responsive across breakpoints, and cleans up embeds automatically if uninstalled.",
+    q: "How does Slotwise run on my Webflow site?",
+    a: "The Designer places a mount div on your canvas. Slotwise applies a hosted widget.js script through Webflow Custom Code. On the published site that script renders the booking UI in-page (not in an externally hosted iframe), calls Slotwise APIs over HTTPS, and is removed on uninstall after you publish.",
   },
   {
     q: "Can I use Slotwise with Webflow CMS Collection pages?",
@@ -544,7 +544,7 @@ export default async function HomePage() {
               </h1>
 
               <p className="sw-rise-3 mt-6 max-w-[47ch] text-base leading-relaxed text-slate-600 sm:text-lg">
-                Stop embedding clunky third-party iframes. Slotwise installs inside Webflow,
+                Skip bolt-on booking popups that break your layout. Slotwise installs inside Webflow,
                 inherits your site’s design tokens automatically, and sends Stripe deposits straight
                 to you with <strong className="font-semibold text-slate-900">0% booking commission</strong>.
               </p>
@@ -918,7 +918,7 @@ export default async function HomePage() {
                     </div>
                     <div className="mt-2.5 flex items-baseline justify-between">
                       <span className="text-2xl font-extrabold text-slate-950">$250.00</span>
-                      <span className="text-xs font-semibold text-emerald-700">100% → Your Bank</span>
+                      <span className="text-xs font-semibold text-emerald-700">Payouts → Your Stripe</span>
                     </div>
                   </div>
                   <h3 className="text-lg font-extrabold text-slate-950">Zero-Commission Payouts</h3>
@@ -1267,10 +1267,10 @@ export default async function HomePage() {
                 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl"
                 style={{ fontFamily: "var(--font-sora), Sora, system-ui" }}
               >
-                Slotwise vs. generic iframe schedulers
+                Slotwise vs. bolt-on booking embeds
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-base text-slate-600">
-                See why Webflow agencies choose a native Webflow calendar over pasting generic
+                See why Webflow agencies choose a native Webflow calendar over pasting
                 third-party booking embeds.
               </p>
             </div>
@@ -1391,7 +1391,7 @@ export default async function HomePage() {
                 Make booking feel native to your Webflow brand.
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-base text-slate-600">
-                Launch your appointment calendar in minutes, keep 100% of your Stripe payouts, and
+                Launch your appointment calendar in minutes, keep your Stripe payouts (no Slotwise booking commission), and
                 manage every client site from one clean console.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3.5">

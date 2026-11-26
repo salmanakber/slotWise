@@ -571,7 +571,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
               className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
               value={form.supportEmail ?? ""}
               onChange={(e) => set("supportEmail", e.target.value || null)}
-              placeholder="tidyflaw@gmail.com"
+              placeholder="hindarapro@gmail.com"
             />
           </Field>
         </section>

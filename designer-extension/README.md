@@ -134,4 +134,4 @@ After authorize, users land on `/install?status=connected` which:
 1. Says **you can close this window**
 2. Opens Designer with Slotwise via deep link `https://<site>.design.webflow.com?app=<clientId>`
 
-Support: tidyflaw@gmail.com
+Support: hindarapro@gmail.com

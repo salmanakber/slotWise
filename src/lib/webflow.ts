@@ -47,13 +47,13 @@ export function webflowRedirectUri() {
 }
 
 export function webflowScopes() {
-  // Only scopes we actually call. Unused scopes (e.g. cms:*) risk Marketplace rejection.
+  // Only scopes invoked by documented API calls (least privilege).
+  // pages:write is NOT required — page Custom Code delete uses custom_code:write.
   return [
     "authorized_user:read",
     "sites:read",
     "sites:write",
     "pages:read",
-    "pages:write",
     "custom_code:read",
     "custom_code:write",
   ].join(" ");
@@ -236,7 +236,7 @@ export async function fetchWebflowSites(accessToken: string) {
 }
 
 /** Hosted runtime version — bump when public/embed/widget.js bytes change. */
-export const SLOTWISE_WIDGET_SCRIPT_VERSION = "0.3.2";
+export const SLOTWISE_WIDGET_SCRIPT_VERSION = "0.4.0";
 export const SLOTWISE_WIDGET_SCRIPT_NAME = "Slotwise Widget";
 
 type RegisteredScript = {

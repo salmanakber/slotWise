@@ -3,7 +3,7 @@ import {
   canDesignOnCanvas,
   detectWebflowSiteId,
   getDesignerMode,
-  insertBookingIframe,
+  insertBookingMount,
   notify,
   removeSlotwiseEmbedsFromCanvas,
   setExtensionLarge,
@@ -259,7 +259,7 @@ export async function boot(root: HTMLElement) {
           ${modeBanner()}
           <main class="main main-full">${body}</main>
           <p id="status" class="status" data-tone="${state.statusOk ? "ok" : "bad"}">${state.status}</p>
-          <p class="footer-note">Support <a href="mailto:tidyflaw@gmail.com">tidyflaw@gmail.com</a></p>
+          <p class="footer-note">Support <a href="mailto:hindarapro@gmail.com">hindarapro@gmail.com</a></p>
         </div>
         <button type="button" class="fab${showFab ? "" : " is-hidden"}" id="fabNew" title="New event">
           <span class="fab-plus"><span class="ico">${icons.plus}</span></span>
@@ -282,7 +282,7 @@ export async function boot(root: HTMLElement) {
         <nav class="tabs" role="tablist">${tabs}</nav>
         <main class="main">${body}</main>
         <p id="status" class="status" data-tone="${state.statusOk ? "ok" : "bad"}">${state.status}</p>
-        <p class="footer-note">Support <a href="mailto:tidyflaw@gmail.com">tidyflaw@gmail.com</a></p>
+        <p class="footer-note">Support <a href="mailto:hindarapro@gmail.com">hindarapro@gmail.com</a></p>
         <button type="button" class="fab${showFab ? "" : " is-hidden"}" id="fabNew" title="New event">
           <span class="fab-plus"><span class="ico">${icons.plus}</span></span>
           New event
@@ -443,11 +443,11 @@ export async function boot(root: HTMLElement) {
       } catch (runtimeErr) {
         console.warn("[slotwise] ensureRuntime", runtimeErr);
       }
-      await insertBookingIframe(state.bootstrap.site.publicKey, { calendarStyle });
+      await insertBookingMount(state.bootstrap.site.publicKey, { calendarStyle });
       setStatus(
         calendarStyle === "HORIZONTAL"
-          ? "Widget placed (Wide board). Publish site so widget.js loads live."
-          : "Widget placed. Publish site so widget.js loads live.",
+          ? "Mount placed (Wide). Publish so in-page widget.js loads."
+          : "Mount placed. Publish so in-page widget.js loads.",
       );
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Embed failed", false);
@@ -1356,7 +1356,7 @@ export async function boot(root: HTMLElement) {
     </section>
     <section class="card">
       ${cardTitle(icons.layout, "Canvas")}
-      <p class="lead">Insert a live booking iframe. Width follows Branding → Calendar style (Wide board = 70%).</p>
+      <p class="lead">Insert a booking mount (no iframe). Width follows Branding → Calendar style (Wide board = 70%). Live UI loads after Publish via hosted widget.js.</p>
       <div class="seg" id="canvasWideSeg">
         <button type="button" class="btn ${!state.canvasWide && state.branding?.calendarStyle !== "HORIZONTAL" ? "btn-primary" : ""}" data-canvas-wide="0">${iconLabel(icons.phone, "Mobile width")}</button>
         <button type="button" class="btn ${state.canvasWide || state.branding?.calendarStyle === "HORIZONTAL" ? "btn-primary" : ""}" data-canvas-wide="1">${iconLabel(icons.expand, "Wide 70%")}</button>

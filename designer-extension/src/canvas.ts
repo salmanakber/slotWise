@@ -63,7 +63,6 @@ export async function canDesignOnCanvas(): Promise<{ ok: boolean; mode: string |
     /* ignore */
   }
 
-  // Fallback: if we know mode explicitly
   if (mode) return { ok: mode === "design", mode };
   return { ok: true, mode };
 }
@@ -79,15 +78,14 @@ export function subscribeMode(cb: (mode: string | null) => void) {
 }
 
 export type InsertBookingOptions = {
-  /** From workspace branding — HORIZONTAL (Wide board) forces 70% iframe width. */
   calendarStyle?: string | null;
 };
 
 /**
- * Direct canvas embed: insert an iframe pointing at the live booking widget.
- * Requires Webflow **Design** mode (not Build / Preview / Comment).
+ * Place a mount node only — no externally hosted iframe (Marketplace rule).
+ * Published pages load widget.js via Custom Code, which renders the booking UI in-page.
  */
-export async function insertBookingIframe(
+export async function insertBookingMount(
   publicKey: string,
   options?: InsertBookingOptions,
 ) {
@@ -117,11 +115,9 @@ export async function insertBookingIframe(
   }
   if (!parent?.append) throw new Error("Select a section or container on the canvas first");
 
-  const src = `${APP_URL}/book/${encodeURIComponent(publicKey)}?embed=1`;
   const calendarStyle = options?.calendarStyle || null;
   const canvasWide =
     typeof localStorage !== "undefined" && localStorage.getItem("slotwise-canvas-wide") === "1";
-  // Wide board → always 70%. Day/Week strip → compact. Unknown → Designer toggle.
   const useWide =
     calendarStyle === "HORIZONTAL"
       ? true
@@ -129,12 +125,9 @@ export async function insertBookingIframe(
         ? false
         : canvasWide;
 
-  const wrapStyle =
-    "width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow:hidden;display:block;";
-  // Start short; widget.js / postMessage grows height. Avoids a tall empty box after uninstall.
-  const frameStyle = useWide
-    ? "display:block;width:70%;max-width:70%;margin-left:auto;margin-right:auto;height:720px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;"
-    : "display:block;width:100%;max-width:29.2rem;margin-left:auto;margin-right:auto;height:640px;min-height:0;border:0;border-radius:16px;overflow:hidden;box-sizing:border-box;";
+  const wrapStyle = useWide
+    ? "width:70%;max-width:70%;margin-left:auto;margin-right:auto;min-width:0;box-sizing:border-box;display:block;padding:20px;border:1px dashed #c5ceda;border-radius:16px;background:#f7f8fb;text-align:center;color:#5b6575;font:600 13px/1.45 system-ui,sans-serif;"
+    : "width:100%;max-width:29.2rem;margin-left:auto;margin-right:auto;min-width:0;box-sizing:border-box;display:block;padding:20px;border:1px dashed #c5ceda;border-radius:16px;background:#f7f8fb;text-align:center;color:#5b6575;font:600 13px/1.45 system-ui,sans-serif;";
 
   try {
     if (typeof api.elementBuilder === "function") {
@@ -143,15 +136,12 @@ export async function insertBookingIframe(
       root.setAttribute("data-slotwise-widget", publicKey);
       root.setAttribute("data-site", publicKey);
       if (calendarStyle) root.setAttribute("data-calendar-style", calendarStyle);
+      // Placeholder styling only — live UI renders after Publish via hosted widget.js
       root.setAttribute("style", wrapStyle);
-      const frame = root.append(api.elementPresets.DOM);
-      frame.setTag("iframe");
-      frame.setAttribute("src", src);
-      frame.setAttribute("title", "Slotwise booking");
-      frame.setAttribute("loading", "lazy");
-      frame.setAttribute("scrolling", "no");
-      frame.setAttribute("style", frameStyle);
-      if (calendarStyle) frame.setAttribute("data-calendar-style", calendarStyle);
+      root.setAttribute(
+        "data-slotwise-placeholder",
+        "Booking appears on publish (in-page, no iframe)",
+      );
       await parent.append(root);
     } else {
       const wrap = await parent.append(api.elementPresets.DOM);
@@ -160,14 +150,10 @@ export async function insertBookingIframe(
       await wrap.setAttribute("data-site", publicKey);
       if (calendarStyle) await wrap.setAttribute("data-calendar-style", calendarStyle);
       await wrap.setAttribute("style", wrapStyle);
-      const iframe = await wrap.append(api.elementPresets.DOM);
-      await iframe.setTag("iframe");
-      await iframe.setAttribute("src", src);
-      await iframe.setAttribute("title", "Slotwise booking");
-      await iframe.setAttribute("loading", "lazy");
-      await iframe.setAttribute("scrolling", "no");
-      await iframe.setAttribute("style", frameStyle);
-      if (calendarStyle) await iframe.setAttribute("data-calendar-style", calendarStyle);
+      await wrap.setAttribute(
+        "data-slotwise-placeholder",
+        "Booking appears on publish (in-page, no iframe)",
+      );
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -179,17 +165,20 @@ export async function insertBookingIframe(
     throw e instanceof Error ? e : new Error(msg);
   }
 
+  void APP_URL; // kept for future deep-links / docs
   await notify(
     "Success",
     useWide
-      ? "Booking widget placed (Wide board · 70% width)"
-      : "Booking widget placed on the canvas",
+      ? "Booking mount placed (Wide · publish to load in-page UI)"
+      : "Booking mount placed — publish to load in-page UI",
   );
 }
 
+/** @deprecated Use insertBookingMount — iframes are not Marketplace-compliant. */
+export const insertBookingIframe = insertBookingMount;
+
 /**
  * Remove leftover Slotwise booking blocks from the current Designer page.
- * Call after uninstall — Webflow keeps canvas elements even when the app is removed.
  */
 export async function removeSlotwiseEmbedsFromCanvas() {
   const api = wf();
