@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PUBLIC_CORS_HEADERS } from "@/lib/cors";
 
-/** Ensure every /api/v1 response (and preflight) is readable from Webflow pages. */
+/**
+ * Ensure cross-origin callers can read API responses:
+ * - /api/v1/* → customer Webflow sites (in-page widget)
+ * - /api/designer/* → Webflow Designer Extension iframe
+ */
 export function middleware(request: NextRequest) {
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { status: 204, headers: PUBLIC_CORS_HEADERS });
@@ -16,6 +20,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Broad match so nested App Router paths always get CORS (Webflow in-page embed).
-  matcher: ["/api/v1/:path*", "/api/v1/:path*/:path*", "/api/v1/:path*/:path*/:path*"],
+  matcher: [
+    "/api/v1/:path*",
+    "/api/designer/:path*",
+  ],
 };

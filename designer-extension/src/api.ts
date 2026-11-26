@@ -119,13 +119,36 @@ export type Service = {
 };
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${APP_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-  });
+  const method = (init?.method || "GET").toUpperCase();
+  const hasBody = init?.body != null && init.body !== "";
+  // Avoid Content-Type on GETs — it forces a CORS preflight and can fail inside Webflow's iframe.
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...((init?.headers as Record<string, string> | undefined) || {}),
+  };
+  if (hasBody || (method !== "GET" && method !== "HEAD")) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${APP_URL}${path}`, {
+      ...init,
+      method,
+      headers,
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+    });
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : "network error";
+    throw new Error(
+      reason === "Failed to fetch"
+        ? `Cannot reach Slotwise (${APP_URL}). Check the site is online, then reconnect the Webflow app.`
+        : reason,
+    );
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error((data as { error?: string }).error || `Request failed (${res.status})`) as Error & {
