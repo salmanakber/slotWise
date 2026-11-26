@@ -25,6 +25,7 @@
     "documents",
     "designer-extension",
     "slotwise-extension",
+    "src/embed",
     "**/bundle.zip"
   ]
 }
