@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BrandLoader } from "@/components/brand/loader";
+import { WixInstallCard } from "@/components/wix/wix-install-card";
 import { BookingWidget, type BrandingPreview } from "@/components/widget/booking-widget";
 import { LOADER_STYLES, THEMES } from "@/lib/themes";
 import {
@@ -472,6 +473,8 @@ export default function BrandingPage() {
             ) : null}
           </div>
         </section>
+
+        {publicKey ? <WixInstallCard publicKey={publicKey} /> : null}
       </div>
     </div>
   );

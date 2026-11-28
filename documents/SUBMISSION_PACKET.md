@@ -14,8 +14,8 @@
 
 **Hosted runtime (pin in Preflight)**
 - URL: `https://slotwise.hindaralabs.com/embed/widget.js`
-- SHA-256 hex: `0770e40b04b0d4afaef10ffc0c588d5ad7974323a276682b5f7f517aae4a0e85`
-- SRI: `sha256-B3DkCwSw1K+u8Q/8DFiNWteXQyOidmgrX39Req5KDoU=`
+- SHA-256 hex: `64da7374b0c3378ad038a3b62463ab935f2ebce9842d1825ddcae150adcf8b14`
+- SRI: `sha256-ZNpzdLDDN4rQOKO2JGOrk18uvOmELRgl3crhUK3PixQ=`
 
 ---
 

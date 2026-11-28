@@ -1468,6 +1468,9 @@ export default async function HomePage() {
                 <Link href="/docs/webflow" className="sw-nav-link hover:underline">
                   Webflow docs
                 </Link>
+                <Link href="/wix" className="sw-nav-link hover:underline">
+                  Slotwise for Wix
+                </Link>
                 <Link href="/privacy" className="sw-nav-link hover:underline">
                   Privacy Policy
                 </Link>

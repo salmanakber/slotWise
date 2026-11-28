@@ -18,6 +18,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
   const [metaWhatsappAccessToken, setMetaWhatsappAccessToken] = useState("");
   const [openwaApiKey, setOpenwaApiKey] = useState("");
   const [webflowClientSecret, setWebflowClientSecret] = useState("");
+  const [wixAppSecret, setWixAppSecret] = useState("");
   const [googleClientSecret, setGoogleClientSecret] = useState("");
   const [microsoftClientSecret, setMicrosoftClientSecret] = useState("");
   const [zoomClientSecret, setZoomClientSecret] = useState("");
@@ -66,6 +67,8 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         payload.openwaBaseUrl = form.openwaBaseUrl;
         payload.openwaSessionId = form.openwaSessionId;
         payload.webflowClientId = form.webflowClientId;
+        payload.wixAppId = form.wixAppId;
+        payload.wixPublicKey = form.wixPublicKey;
         payload.googleClientId = form.googleClientId;
         payload.microsoftClientId = form.microsoftClientId;
         payload.zoomClientId = form.zoomClientId;
@@ -80,6 +83,7 @@ export function PlatformSettingsForm({ initial, section }: Props) {
         }
         if (openwaApiKey.trim()) payload.openwaApiKey = openwaApiKey.trim();
         if (webflowClientSecret.trim()) payload.webflowClientSecret = webflowClientSecret.trim();
+        if (wixAppSecret.trim()) payload.wixAppSecret = wixAppSecret.trim();
         if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
         if (microsoftClientSecret.trim()) payload.microsoftClientSecret = microsoftClientSecret.trim();
         if (zoomClientSecret.trim()) payload.zoomClientSecret = zoomClientSecret.trim();
@@ -398,6 +402,40 @@ export function PlatformSettingsForm({ initial, section }: Props) {
                 className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
                 value={webflowClientSecret}
                 onChange={(e) => setWebflowClientSecret(e.target.value)}
+                placeholder="Paste new secret to rotate"
+                autoComplete="new-password"
+              />
+            </Field>
+          </section>
+
+          <section className="sw-card">
+            <h2 className="mb-1 text-[15px] font-extrabold">Wix app</h2>
+            <p className="mb-3 text-[13px]" style={{ color: "var(--mut)" }}>
+              Phase 1 prep — store Wix Dev Center credentials here. OAuth routes land in{" "}
+              <code className="text-[12px]">/api/wix/*</code> later; Webflow config above is
+              untouched.
+            </p>
+            <Field label="App ID">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.wixAppId ?? ""}
+                onChange={(e) => set("wixAppId", e.target.value || null)}
+                placeholder="Wix app id"
+              />
+            </Field>
+            <Field label="Public key" hint="Optional JWT public key from Wix">
+              <input
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={form.wixPublicKey ?? ""}
+                onChange={(e) => set("wixPublicKey", e.target.value || null)}
+              />
+            </Field>
+            <Field label="App secret" hint={form.wixAppSecretSet ? "Configured" : "Not set"}>
+              <input
+                type="password"
+                className="min-w-[260px] rounded-[10px] border border-[var(--ln)] bg-[var(--bg)] px-2.5 py-2"
+                value={wixAppSecret}
+                onChange={(e) => setWixAppSecret(e.target.value)}
                 placeholder="Paste new secret to rotate"
                 autoComplete="new-password"
               />

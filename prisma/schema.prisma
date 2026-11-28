@@ -28,6 +28,13 @@ enum SiteStatus {
   SUSPENDED
 }
 
+/** Where the booking widget is primarily installed. Existing rows default WEBFLOW. */
+enum SiteChannel {
+  WEBFLOW
+  WIX
+  DIRECT
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
@@ -130,8 +137,13 @@ model Site {
   timezone        String     @default("UTC")
   locale          String     @default("en")
   currency        String     @default("USD")
+  /** Install channel — WEBFLOW (default), WIX, or DIRECT (book page / manual embed). */
+  channel         SiteChannel @default(WEBFLOW)
   webflowSiteId   String?    @unique
   webflowSiteName String?
+  /** Wix site / metaSite id when channel is WIX (Phase 3 OAuth). */
+  wixSiteId       String?    @unique
+  wixSiteName     String?
   customCodeApplied Boolean  @default(false)
   lastSeenAt      DateTime?
   createdAt       DateTime   @default(now())
@@ -145,6 +157,7 @@ model Site {
 
   branding        Branding?
   webflowToken    WebflowToken?
+  wixToken        WixToken?
   stripeAccount   StripeAccount?
   integrations    SiteIntegration[]
   services        Service[]
@@ -251,6 +264,23 @@ model WebflowToken {
   expiresAt             DateTime?
   scopes                String[] @default([])
   /** Last successful Webflow API check — used to detect uninstall/revoke. */
+  lastValidatedAt       DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+/** Wix App instance credentials — parallel to WebflowToken; never shared with Webflow flows. */
+model WixToken {
+  id                    String   @id @default(cuid())
+  siteId                String   @unique
+  site                  Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  /** Wix app instance id for this site install (permanent). */
+  instanceId            String   @unique
+  /** Optional tenant / metaSite id from install redirect. */
+  tenantId              String?
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  expiresAt             DateTime?
   lastValidatedAt       DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -505,6 +535,11 @@ model PlatformConfig {
   // Webflow app credentials (optional override of env)
   webflowClientId                  String?
   webflowClientSecretEncrypted     String?
+
+  // Wix app credentials (Phase 3 — optional override of env; unused until OAuth ships)
+  wixAppId                         String?
+  wixAppSecretEncrypted            String?
+  wixPublicKey                     String?
 
   // AI (Designer event descriptions) — platform admin only
   aiProvider                       String  @default("openai") // openai | groq | template

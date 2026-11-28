@@ -87,6 +87,17 @@ export async function GET() {
         installUrl: webflowReady ? "/api/webflow/install" : null,
         hint: webflowReady ? null : "Webflow isn’t finished setting up yet",
       },
+      wix: {
+        provider: "wix",
+        platformConfigured: Boolean(settings.wixAppId && settings.wixAppSecretSet),
+        installUrl: settings.wixAppId && settings.wixAppSecretSet ? "/api/wix/install" : null,
+        landingUrl: "/wix",
+        docsUrl: "/docs/wix",
+        hint:
+          settings.wixAppId && settings.wixAppSecretSet
+            ? "Connect via Wix App install, then place the embed from Branding"
+            : "Add Wix App ID/secret in Platform settings — or use manual embed from Branding",
+      },
       stripe: {
         provider: "stripe",
         platformConfigured: stripeReady,

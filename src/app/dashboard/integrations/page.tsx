@@ -22,6 +22,14 @@ type IntegrationsPayload = {
     installUrl: string | null;
     hint: string | null;
   };
+  wix?: {
+    provider: string;
+    platformConfigured: boolean;
+    installUrl?: string | null;
+    landingUrl: string;
+    docsUrl: string;
+    hint: string | null;
+  };
   stripe: {
     provider: string;
     platformConfigured: boolean;
@@ -632,6 +640,34 @@ function IntegrationsClient() {
                   ) : (
                     <em className="sw-tag sw-tag-muted">Unavailable</em>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--ln)] bg-[var(--sf)] p-4">
+            <div className="flex items-start gap-3">
+              <LogoMark bg="#0A0A0A">
+                <span className="text-[13px] font-black text-[#0eb894]">Xi</span>
+              </LogoMark>
+              <div className="min-w-0 flex-1">
+                <div className="font-extrabold">Wix</div>
+                <p className="m-0 mt-1 text-[12.5px]" style={{ color: "var(--mut)" }}>
+                  {data.wix?.hint || "Manual embed or Wix App install"}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {data.wix?.platformConfigured && data.wix.installUrl ? (
+                    <a href={data.wix.installUrl} className="sw-btn sw-btn-primary">
+                      Connect
+                    </a>
+                  ) : (
+                    <Link href={data.wix?.docsUrl || "/docs/wix"} className="sw-btn sw-btn-primary">
+                      Wix docs
+                    </Link>
+                  )}
+                  <Link href={data.wix?.landingUrl || "/wix"} className="sw-btn">
+                    Slotwise for Wix
+                  </Link>
                 </div>
               </div>
             </div>

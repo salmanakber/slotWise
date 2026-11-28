@@ -41,6 +41,9 @@ export type PlatformPublicSettings = {
   openwaSessionId: string | null;
   webflowClientId: string | null;
   webflowClientSecretSet: boolean;
+  wixAppId: string | null;
+  wixAppSecretSet: boolean;
+  wixPublicKey: string | null;
   googleClientId: string | null;
   googleClientSecretSet: boolean;
   googleClientSecretHint: string | null;
@@ -154,6 +157,16 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       webflowClientSecretSet: Boolean(
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET,
       ),
+      wixAppId:
+        (row as { wixAppId?: string | null }).wixAppId || process.env.WIX_APP_ID || null,
+      wixAppSecretSet: Boolean(
+        safeDecrypt((row as { wixAppSecretEncrypted?: string | null }).wixAppSecretEncrypted) ||
+          process.env.WIX_APP_SECRET,
+      ),
+      wixPublicKey:
+        (row as { wixPublicKey?: string | null }).wixPublicKey ||
+        process.env.WIX_PUBLIC_KEY ||
+        null,
       googleClientId: row.googleClientId || process.env.GOOGLE_CLIENT_ID || null,
       googleClientSecretSet: Boolean(
         safeDecrypt(row.googleClientSecretEncrypted) || process.env.GOOGLE_CLIENT_SECRET,
@@ -256,6 +269,9 @@ export async function getPlatformPublicSettings(): Promise<PlatformPublicSetting
       openwaSessionId: process.env.OPENWA_SESSION_ID || "default",
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecretSet: Boolean(process.env.WEBFLOW_CLIENT_SECRET),
+      wixAppId: process.env.WIX_APP_ID || null,
+      wixAppSecretSet: Boolean(process.env.WIX_APP_SECRET),
+      wixPublicKey: process.env.WIX_PUBLIC_KEY || null,
       googleClientId: process.env.GOOGLE_CLIENT_ID || null,
       googleClientSecretSet: Boolean(process.env.GOOGLE_CLIENT_SECRET),
       googleClientSecretHint: maskSecret(process.env.GOOGLE_CLIENT_SECRET),
@@ -329,6 +345,14 @@ export async function getPlatformSecrets() {
       webflowClientId: row.webflowClientId || process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret:
         safeDecrypt(row.webflowClientSecretEncrypted) || process.env.WEBFLOW_CLIENT_SECRET || null,
+      wixAppId:
+        (row as { wixAppId?: string | null }).wixAppId || process.env.WIX_APP_ID || null,
+      wixAppSecret:
+        safeDecrypt((row as { wixAppSecretEncrypted?: string | null }).wixAppSecretEncrypted) ||
+        process.env.WIX_APP_SECRET ||
+        null,
+      wixPublicKey:
+        (row as { wixPublicKey?: string | null }).wixPublicKey || process.env.WIX_PUBLIC_KEY || null,
       googleClientId: row.googleClientId || process.env.GOOGLE_CLIENT_ID || null,
       googleClientSecret:
         safeDecrypt(row.googleClientSecretEncrypted) || process.env.GOOGLE_CLIENT_SECRET || null,
@@ -393,6 +417,9 @@ export async function getPlatformSecrets() {
       openwaSessionId: process.env.OPENWA_SESSION_ID || "default",
       webflowClientId: process.env.WEBFLOW_CLIENT_ID || null,
       webflowClientSecret: process.env.WEBFLOW_CLIENT_SECRET || null,
+      wixAppId: process.env.WIX_APP_ID || null,
+      wixAppSecret: process.env.WIX_APP_SECRET || null,
+      wixPublicKey: process.env.WIX_PUBLIC_KEY || null,
       googleClientId: process.env.GOOGLE_CLIENT_ID || null,
       googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
       microsoftClientId: process.env.MICROSOFT_CLIENT_ID || null,
@@ -444,6 +471,9 @@ export type PlatformSettingsUpdate = {
   openwaSessionId?: string | null;
   webflowClientId?: string | null;
   webflowClientSecret?: string;
+  wixAppId?: string | null;
+  wixAppSecret?: string;
+  wixPublicKey?: string | null;
   googleClientId?: string | null;
   googleClientSecret?: string;
   microsoftClientId?: string | null;
@@ -517,6 +547,11 @@ export async function updatePlatformSettings(input: PlatformSettingsUpdate) {
   if (input.webflowClientSecret?.trim()) {
     data.webflowClientSecretEncrypted = encryptSecret(input.webflowClientSecret.trim());
   }
+  if (input.wixAppId !== undefined) data.wixAppId = input.wixAppId || null;
+  if (input.wixAppSecret?.trim()) {
+    data.wixAppSecretEncrypted = encryptSecret(input.wixAppSecret.trim());
+  }
+  if (input.wixPublicKey !== undefined) data.wixPublicKey = input.wixPublicKey || null;
   if (input.googleClientId !== undefined) data.googleClientId = input.googleClientId || null;
   if (input.googleClientSecret?.trim()) {
     data.googleClientSecretEncrypted = encryptSecret(input.googleClientSecret.trim());
